@@ -63,6 +63,26 @@ tag as source provenance and the npm `gitHead` and integrity as separate package
 - the initial clone preserves history and is not a shallow clone, archive download, or history-free source snapshot;
 - future upstream synchronization must be explicit and reviewable and must never silently overwrite documentation-engineering commits.
 
+## 自动化边界 / Automation boundary
+
+HIA `main` 不启用上游自动化。仓库保留上游 workflow 文件用于来源审阅，但 repository-level GitHub Actions 已关闭；
+上游 `.github/dependabot.yml` 已从 HIA 分支移除，避免在文档化工程尚未建立门禁时自动创建依赖升级分支或 PR。
+Pages、构建、测试、发布和依赖更新自动化均须在后续独立周期中显式评审后启用。
+
+导入时，GitHub 在安全开关完成前自动运行了 2 个 Dependabot update job，并创建 9 个未合并 PR。HIA 随即关闭这些 PR、
+删除对应自动分支；没有 repository CI/build/test workflow 运行，也没有自动更新进入 `main`。
+
+Upstream workflow files are retained for provenance review, while repository-level
+GitHub Actions are disabled. The upstream `.github/dependabot.yml` is removed from HIA
+`main` so dependency-update branches and pull requests cannot be created before an
+explicit documentation-engineering automation review. Pages, build, test, release,
+and dependency-update automation remain disabled until a later dedicated cycle.
+
+During import, GitHub started two Dependabot update jobs before the safety setting was
+applied and created nine unmerged pull requests. HIA closed those pull requests and
+deleted their automation branches. No repository CI/build/test workflow ran, and no
+automated update entered `main`.
+
 ## 验证说明 / Verification note
 
 采集时 GitHub API 对 `v3.0.8` annotated tag/commit 的 verification 返回 `verified=false`、reason `bad_cert`。本仓库据此不

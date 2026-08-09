@@ -1,3 +1,13 @@
+> [!IMPORTANT]
+> **HIA 文档化工程版本 / HIA Documentation Engineering Edition**
+>
+> 本仓库以 [js-cookie](https://github.com/js-cookie/js-cookie) `v3.0.8` 为可复现上游基线，用于展示代码注释、源码关联、
+> 文档生成与呈现治理。它不是 js-cookie 官方仓库，也不表示上游作者认可或支持本衍生项目。
+>
+> This repository uses [js-cookie](https://github.com/js-cookie/js-cookie) `v3.0.8` as a reproducible upstream baseline for
+> documentation engineering. It is not the official js-cookie repository and does not imply upstream endorsement.
+> See [UPSTREAM.md](UPSTREAM.md) for provenance and synchronization policy.
+
 <p align="center">
   <img src="https://cloud.githubusercontent.com/assets/835857/14581711/ba623018-0436-11e6-8fce-d2ccd4d379c9.gif">
 </p>

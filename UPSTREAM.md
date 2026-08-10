@@ -17,15 +17,15 @@ Issues and changes should be filed with this derivative or the [upstream project
 
 ## 冻结的源码基线 / Frozen source baseline
 
-| 字段 / Field | 值 / Value |
-| --- | --- |
-| 上游仓库 / Upstream repository | `https://github.com/js-cookie/js-cookie.git` |
-| 正式版本 / Release | [`v3.0.8`](https://github.com/js-cookie/js-cookie/releases/tag/v3.0.8) |
-| Annotated tag object | `4e322ed321604ec1978d8fa94fb9d178f5bdbc44` |
-| Peeled source commit | `d7a10966e3f2cbcbfa96e34e7544d23aab9e3372` |
-| 基线采集日 / Capture date | `2026-08-09` |
-| 上游许可证 / Upstream license | MIT；保留仓库根目录 [`LICENSE`](LICENSE) |
-| LICENSE SHA-256 | `f23a2e184e548200955485849b6a57b423a0f0e42d174410fb1047348cd51711` |
+| 字段 / Field                   | 值 / Value                                                             |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| 上游仓库 / Upstream repository | `https://github.com/js-cookie/js-cookie.git`                           |
+| 正式版本 / Release             | [`v3.0.8`](https://github.com/js-cookie/js-cookie/releases/tag/v3.0.8) |
+| Annotated tag object           | `4e322ed321604ec1978d8fa94fb9d178f5bdbc44`                             |
+| Peeled source commit           | `d7a10966e3f2cbcbfa96e34e7544d23aab9e3372`                             |
+| 基线采集日 / Capture date      | `2026-08-09`                                                           |
+| 上游许可证 / Upstream license  | MIT；保留仓库根目录 [`LICENSE`](LICENSE)                               |
+| LICENSE SHA-256                | `f23a2e184e548200955485849b6a57b423a0f0e42d174410fb1047348cd51711`     |
 
 HIA 文档化改动从上述 peeled commit 之后的独立提交开始。`main` 不会因重新 fetch 自动改变基线；任何上游升级都必须经过
 单独 review，并记录新旧 tag/commit、license、测试和文档差异。
@@ -35,10 +35,10 @@ Every upstream upgrade requires an explicit review of tag/commit identity, licen
 
 ## npm 分发对应关系 / npm distribution relationship
 
-| 字段 / Field | 值 / Value |
-| --- | --- |
-| npm package | [`js-cookie@3.0.8`](https://www.npmjs.com/package/js-cookie/v/3.0.8) |
-| npm `gitHead` | `248e685e20c7aa9553453f0084f14a62173462d2` |
+| 字段 / Field  | 值 / Value                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| npm package   | [`js-cookie@3.0.8`](https://www.npmjs.com/package/js-cookie/v/3.0.8)                              |
+| npm `gitHead` | `248e685e20c7aa9553453f0084f14a62173462d2`                                                        |
 | npm integrity | `sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==` |
 
 npm `gitHead` 是 release tag peeled commit 的直接父提交。两者之间的 `Craft v3.0.8 release` 提交只修改

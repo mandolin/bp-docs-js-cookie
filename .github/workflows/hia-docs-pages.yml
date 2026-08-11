@@ -65,10 +65,12 @@ jobs:
             node = "24.12.0"
             pnpm = "10.34.4"
 
-      - name: Install owner dependencies
-        run: |
-          mise exec node@24.12.0 -- npm ci --ignore-scripts --prefix .hia-docs-owners/HIA/jsdoc-plugin-hia-sys
-          mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
+      - name: Install pinned documentation runtime
+        working-directory: tools/hia-docs/runtime
+        run: mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install HIA Portal owner dependencies
+        run: mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
 
       - name: Build and verify public Portal
         env:

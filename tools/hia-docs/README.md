@@ -24,10 +24,10 @@ Sibling owners are accepted only at these exact, clean commits:
 | -------------------------------- | ------------------------------------------ | ----------------- |
 | `@mandolin/jsdoc-plugin-hia-sys` | `3cdd56469044bf40881cf88c4905110ad656ab13` | MIT               |
 | `@mandolin/jsdoc-theme-hia`      | `e2e85fb23ad9274b730c84c24af9e78f19fb8885` | MIT               |
-| HIA main Portal/CLI              | `75f50884c69c2dbe7ffc6f4a22fe15988d5b476d` | MIT package train |
+| HIA main Portal/CLI              | `07b4235ab9f251ef65d6863903cf097042918596` | MIT package train |
 
-JSDoc `4.0.5` is supplied by the plugin owner's existing lock/install and is Apache-2.0. This BP adds no dependency and does not consume
-the private `hia-jsdoc` umbrella.
+JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. This private tool runtime is not part of the js-cookie
+package, does not change the root manifest/lockfile or JPHS dependency tree, and does not consume the private `hia-jsdoc` umbrella.
 
 ## Run
 
@@ -39,12 +39,11 @@ mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
 mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
 ```
 
-To verify compatibility, repeat both commands with `node@22.23.0`. The build invokes the main owner's own mise/pnpm lock before running
-its CLI. If the pinned JPHS `node_modules/jsdoc/jsdoc.js` is absent, bootstrap that owner explicitly with its lock:
+Install the private documentation runtime once, then repeat both commands with `node@22.23.0` to verify compatibility. The build invokes
+the main owner's own mise/pnpm lock before running its CLI:
 
 ```bash
-cd ../../HIA/jsdoc-plugin-hia-sys
-mise exec node@24.12.0 npm@11.8.0 -- npm ci --ignore-scripts --no-audit --no-fund
+mise exec node@24.12.0 -- npm ci --ignore-scripts --prefix tools/hia-docs/runtime
 ```
 
 ## Outputs and privacy

@@ -96,7 +96,13 @@ export function resolveTopology(
     jsdocNativeRoot: path.join(generatedRoot, 'jsdoc-native'),
     portalOutputRoot: path.join(generatedRoot, 'portal'),
     evidenceRoot: path.join(generatedRoot, 'evidence'),
-    cacheRoot: path.join(generatedRoot, 'cache')
+    cacheRoot: path.join(generatedRoot, 'cache'),
+    documentationRuntimeRoot: path.join(
+      repositoryRoot,
+      'tools',
+      'hia-docs',
+      'runtime'
+    )
   }
 }
 

@@ -232,16 +232,16 @@ function main() {
   validateOwner(topology.portalRoot, OWNER_COMMITS.portal, 'HIA Portal')
   resetGeneratedRoot()
 
-  // <lang><zh-CN>JSDoc runtime 由 pinned JPHS lock 安装；缺失时拒绝隐式下载或改变 BP dependency tree。</zh-CN><en>The JSDoc runtime is installed by the pinned JPHS lock; when absent, refuse implicit downloads or BP dependency-tree changes.</en></lang>
+  // <lang><zh-CN>JSDoc runtime 由 BP 工具专属 exact lock 安装；缺失时拒绝隐式下载或改变 BP root/JPHS dependency tree。</zh-CN><en>The JSDoc runtime is installed by the BP tool-specific exact lock; when absent, refuse implicit downloads or changes to the BP root or JPHS dependency trees.</en></lang>
   const jsdocEntry = path.join(
-    topology.pluginRoot,
+    topology.documentationRuntimeRoot,
     'node_modules',
     'jsdoc',
     'jsdoc.js'
   )
   if (!fs.existsSync(jsdocEntry)) {
     throw new Error(
-      'Pinned JPHS dependencies are missing; run its npm ci through mise before rebuilding documentation.'
+      'Pinned documentation runtime is missing; run its npm ci through mise before rebuilding documentation.'
     )
   }
 

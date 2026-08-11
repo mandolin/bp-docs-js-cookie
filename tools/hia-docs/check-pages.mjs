@@ -28,6 +28,16 @@ const workflowPath = path.join(
   'workflows',
   'hia-docs-pages.yml'
 )
+/** @lang zh-CN BP 工具专属 JSDoc manifest。 @lang en BP tool-specific JSDoc manifest. */
+const runtimePackagePath = path.join(
+  topology.documentationRuntimeRoot,
+  'package.json'
+)
+/** @lang zh-CN BP 工具专属 exact npm lock。 @lang en BP tool-specific exact npm lock. */
+const runtimeLockPath = path.join(
+  topology.documentationRuntimeRoot,
+  'package-lock.json'
+)
 
 /** @lang zh-CN W-P111 复核过的不可变 action pin。 @lang en Immutable action pins verified by W-P111. */
 const ACTION_PINS = Object.freeze({
@@ -178,6 +188,15 @@ function validateWorkflow() {
     'Workflow commands must be orchestrated by mise.'
   )
   assert(
+    workflow.includes('working-directory: tools/hia-docs/runtime') &&
+      workflow.includes('npm ci --ignore-scripts --no-audit --no-fund'),
+    'Workflow must install the isolated exact-lock documentation runtime.'
+  )
+  assert(
+    !workflow.includes('npm install'),
+    'Workflow must not resolve an unlocked npm dependency tree.'
+  )
+  assert(
     !/BROWSERSTACK_|NPM_TOKEN|NODE_AUTH_TOKEN|HIA_NPM_/u.test(workflow),
     'Pages workflow must not consume unrelated credentials.'
   )
@@ -189,6 +208,76 @@ function validateWorkflow() {
   return {
     actionUseCount: actionUses.length,
     ownerCheckoutCount: Object.keys(OWNER_COMMITS).length
+  }
+}
+
+/**
+ * <lang><zh-CN>验证隔离 JSDoc runtime 的 direct pin、lock 与 registry integrity。</zh-CN><en>Validates the isolated JSDoc runtime direct pin, lock, and registry integrity.</en></lang>
+ *
+ * @returns {{dependencyCount: number, jsdocVersion: string, integrityCount: number}} <lang><zh-CN>可公开的依赖计数摘要。</zh-CN><en>Public-safe dependency-count summary.</en></lang>
+ * @lang zh-CN 该门禁不读取用户 npm 配置；所有 resolved URL 必须固定到公开 npm registry。
+ * @lang en This gate does not read user npm configuration; every resolved URL must be pinned to the public npm registry.
+ */
+function validateDocumentationRuntime() {
+  assert(
+    fs.existsSync(runtimePackagePath) && fs.existsSync(runtimeLockPath),
+    'Pinned documentation runtime manifest or lock is missing.'
+  )
+  /** @lang zh-CN 私有 runtime manifest。 @lang en Private runtime manifest. */
+  const packageManifest = JSON.parse(
+    fs.readFileSync(runtimePackagePath, 'utf8')
+  )
+  /** @lang zh-CN npm lockfile v3 document。 @lang en npm lockfile v3 document. */
+  const lock = JSON.parse(fs.readFileSync(runtimeLockPath, 'utf8'))
+
+  assert(
+    packageManifest.private === true,
+    'Documentation runtime must remain private.'
+  )
+  assert(
+    Object.keys(packageManifest.devDependencies || {}).length === 1 &&
+      packageManifest.devDependencies.jsdoc === '4.0.5' &&
+      packageManifest.dependencies === undefined,
+    'Documentation runtime must contain only the exact jsdoc@4.0.5 development dependency.'
+  )
+  assert(
+    lock.lockfileVersion === 3,
+    'Documentation runtime must use npm lockfile v3.'
+  )
+  assert(
+    lock.packages?.['']?.devDependencies?.jsdoc === '4.0.5' &&
+      lock.packages?.['']?.dependencies === undefined,
+    'Documentation runtime lock root does not match its exact manifest.'
+  )
+  /** @lang zh-CN lock 中全部 registry package entry。 @lang en Every registry package entry in the lock. */
+  const dependencyEntries = Object.entries(lock.packages || {}).filter(
+    ([relativePath]) => relativePath.startsWith('node_modules/')
+  )
+  assert(
+    dependencyEntries.length === 30,
+    'Documentation runtime dependency count drifted from the audited lock.'
+  )
+  for (const [relativePath, dependency] of dependencyEntries) {
+    assert(
+      typeof dependency.resolved === 'string' &&
+        dependency.resolved.startsWith('https://registry.npmjs.org/'),
+      `Documentation runtime dependency ${relativePath} uses an unexpected registry.`
+    )
+    assert(
+      typeof dependency.integrity === 'string' &&
+        dependency.integrity.startsWith('sha512-'),
+      `Documentation runtime dependency ${relativePath} lacks SHA-512 integrity.`
+    )
+  }
+  assert(
+    lock.packages['node_modules/jsdoc']?.version === '4.0.5',
+    'Documentation runtime lock does not resolve jsdoc@4.0.5.'
+  )
+
+  return {
+    dependencyCount: dependencyEntries.length,
+    jsdocVersion: lock.packages['node_modules/jsdoc'].version,
+    integrityCount: dependencyEntries.length
   }
 }
 
@@ -324,6 +413,8 @@ function main() {
   )
   /** @lang zh-CN workflow 静态门禁摘要。 @lang en Static workflow-gate summary. */
   const workflow = validateWorkflow()
+  /** @lang zh-CN 隔离 exact-lock JSDoc runtime 摘要。 @lang en Isolated exact-lock JSDoc runtime summary. */
+  const documentationRuntime = validateDocumentationRuntime()
   /** @lang zh-CN 无 link 的 Portal artifact 文件摘要。 @lang en Link-free Portal artifact file summary. */
   const files = listArtifactFiles(topology.portalOutputRoot)
   /** @lang zh-CN artifact base-path/privacy 摘要。 @lang en Artifact base-path and privacy summary. */
@@ -358,6 +449,12 @@ function main() {
       immutableActionPins: Object.keys(ACTION_PINS).length,
       generatedBranchCommit: false,
       miseManaged: true
+    },
+    documentationRuntime: {
+      isolatedFromRootPackage: true,
+      isolatedFromPluginOwner: true,
+      registry: 'https://registry.npmjs.org/',
+      ...documentationRuntime
     },
     privacy: {
       sourceContentPolicy: 'none',

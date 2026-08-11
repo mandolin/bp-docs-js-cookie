@@ -1,0 +1,103 @@
+name: HIA Documentation Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: hia-documentation-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build public Portal artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      # 中文：所有 checkout 均固定 ref 且不保留凭据；BP 需要完整历史验证 upstream baseline。
+      # English: Every checkout pins a ref and drops credentials; the BP needs full history to verify its upstream baseline.
+      - name: Check out bp-docs-js-cookie
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out JSDoc plugin owner
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: mandolin/jsdoc-plugin-hia-sys
+          ref: 3cdd56469044bf40881cf88c4905110ad656ab13
+          path: .hia-docs-owners/HIA/jsdoc-plugin-hia-sys
+          persist-credentials: false
+
+      - name: Check out JSDoc theme owner
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: mandolin/jsdoc-theme-hia
+          ref: e2e85fb23ad9274b730c84c24af9e78f19fb8885
+          path: .hia-docs-owners/HIA/jsdoc-theme-hia
+          persist-credentials: false
+
+      - name: Check out HIA Portal owner
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: mandolin/HIA-Documentation
+          ref: 07b4235ab9f251ef65d6863903cf097042918596
+          path: .hia-docs-owners/main-repo
+          persist-credentials: false
+
+      # 中文：mise 是唯一工具版本入口，不复用 runner 浮动 Node/pnpm。
+      # English: mise is the sole tool-version entry point; runner-floating Node/pnpm are not reused.
+      - name: Install pinned toolchain with mise
+        uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+        with:
+          cache: true
+          mise_toml: |
+            [tools]
+            node = "24.12.0"
+            pnpm = "10.34.4"
+
+      - name: Install owner dependencies
+        run: |
+          mise exec node@24.12.0 -- npm ci --ignore-scripts --prefix .hia-docs-owners/HIA/jsdoc-plugin-hia-sys
+          mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
+
+      - name: Build and verify public Portal
+        env:
+          HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
+        run: |
+          mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
+          mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
+          mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload Portal-only Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ./build/hia-docs/portal
+
+  deploy:
+    name: Deploy public Portal
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

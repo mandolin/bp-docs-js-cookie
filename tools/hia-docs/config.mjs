@@ -7,6 +7,7 @@
  */
 
 import path from 'node:path'
+import process from 'node:process'
 
 /** @lang zh-CN W-P107 冻结的 BP 文档化基线 commit。 @lang en BP documentation baseline commit frozen by W-P107. */
 export const BASELINE_COMMIT = '630038410a1e0738dc761de653c6f6a09b2d8930'
@@ -22,6 +23,7 @@ export const SOURCE_FILES = Object.freeze([
 /** @lang zh-CN W-P109 可变更的辅助路径模式；root package/lock、test、dist 与 workflow 不在其中。 @lang en Auxiliary path patterns writable in W-P109; root package/lock, tests, dist, and workflows are excluded. */
 export const ALLOWED_CHANGE_PATTERNS = Object.freeze([
   '.gitignore',
+  '.github/workflows/hia-docs-pages.yml',
   'README.md',
   'UPSTREAM.md',
   ...SOURCE_FILES,
@@ -33,7 +35,13 @@ export const ALLOWED_CHANGE_PATTERNS = Object.freeze([
 export const OWNER_COMMITS = Object.freeze({
   plugin: '3cdd56469044bf40881cf88c4905110ad656ab13',
   theme: 'e2e85fb23ad9274b730c84c24af9e78f19fb8885',
-  portal: '75f50884c69c2dbe7ffc6f4a22fe15988d5b476d'
+  portal: '07b4235ab9f251ef65d6863903cf097042918596'
+})
+
+/** @lang zh-CN GitHub project Pages 的精确公开地址与 base path。 @lang en Exact public URL and base path for the GitHub project Pages site. */
+export const PAGES_SITE = Object.freeze({
+  canonicalUrl: 'https://mandolin.github.io/bp-docs-js-cookie/',
+  projectBasePath: '/bp-docs-js-cookie/'
 })
 
 /** @lang zh-CN 文档工具支持窗口；Node 20 只属于上游复现，不属于该集合。 @lang en Documentation-tool support window; Node 20 belongs only to upstream reproduction and is not in this set. */
@@ -57,13 +65,24 @@ export const PRIVACY_POLICY = Object.freeze({
  * <lang><zh-CN>从 BP root 推导已冻结的 workspace sibling topology 与 ignored 输出位置。</zh-CN><en>Derives the frozen workspace sibling topology and ignored output locations from the BP root.</en></lang>
  *
  * @param {string} repositoryRoot <lang><zh-CN>bp-docs-js-cookie 仓库绝对根目录。</zh-CN><en>Absolute bp-docs-js-cookie repository root.</en></lang>
+ * @param {string | undefined} ownerRootOverride <lang><zh-CN>runner 可显式提供的 owner 容器绝对路径；本地缺省使用既有 sibling workspace。</zh-CN><en>Optional absolute owner-container path for a runner; local builds retain the sibling-workspace default.</en></lang>
  * @returns {Object} <lang><zh-CN>只在当前进程内使用的绝对路径集合。</zh-CN><en>Absolute paths used only in the current process.</en></lang>
  * @lang zh-CN 返回值不得序列化到公开产物；build evidence 只保存相对路径、commit、计数和 hash。
  * @lang en The return value must not be serialized to public artifacts; build evidence stores only relative paths, commits, counts, and hashes.
  */
-export function resolveTopology(repositoryRoot) {
-  // <lang><zh-CN>workspace root 是 BP 仓库向上两级；该固定关系来自 W-P107 的 sibling owner 决策。</zh-CN><en>The workspace root is two levels above the BP repository; this fixed relation comes from the W-P107 sibling-owner decision.</en></lang>
-  const workspaceRoot = path.resolve(repositoryRoot, '..', '..')
+export function resolveTopology(
+  repositoryRoot,
+  ownerRootOverride = process.env.HIA_DOCS_OWNER_ROOT
+) {
+  // <lang><zh-CN>CI 只能使用显式绝对 owner root；本地仍复用 W-P107 冻结的两级 sibling topology。</zh-CN><en>CI may use only an explicit absolute owner root; local builds retain the two-level sibling topology frozen by W-P107.</en></lang>
+  const normalizedOwnerRoot = ownerRootOverride?.trim()
+  if (normalizedOwnerRoot && !path.isAbsolute(normalizedOwnerRoot)) {
+    throw new Error('HIA_DOCS_OWNER_ROOT must be an absolute path when set.')
+  }
+  /** @type {string} */
+  const workspaceRoot = normalizedOwnerRoot
+    ? path.resolve(normalizedOwnerRoot)
+    : path.resolve(repositoryRoot, '..', '..')
   // <lang><zh-CN>所有生成输出共享一个可边界验证的 ignored root，便于安全重建而不触碰其他 build 目录。</zh-CN><en>All generated outputs share one boundary-checkable ignored root so it can be safely rebuilt without touching other build directories.</en></lang>
   const generatedRoot = path.join(repositoryRoot, 'build', 'hia-docs')
 
@@ -78,6 +97,64 @@ export function resolveTopology(repositoryRoot) {
     portalOutputRoot: path.join(generatedRoot, 'portal'),
     evidenceRoot: path.join(generatedRoot, 'evidence'),
     cacheRoot: path.join(generatedRoot, 'cache')
+  }
+}
+
+/**
+ * <lang><zh-CN>创建公开 Portal 使用的最小 project manifest。</zh-CN><en>Creates the minimal project manifest used by the public Portal.</en></lang>
+ *
+ * @returns {Object} <lang><zh-CN>只引用同一临时目录内 public integration 的安全 manifest。</zh-CN><en>A safe manifest that references only the public integration in the same temporary directory.</en></lang>
+ * @lang zh-CN 标题和 semantic path 明示这是 bp-docs-js-cookie 文档工程，不把它伪装成上游官方站点。
+ * @lang en The title and semantic path identify this as bp-docs-js-cookie documentation engineering rather than an upstream official site.
+ */
+export function createPortalProjectManifest() {
+  return {
+    schemaVersion: '0.1.0-draft',
+    project: {
+      id: 'project:bp-docs-js-cookie',
+      name: 'bp-docs-js-cookie',
+      title: 'bp-docs-js-cookie 文档工程 / Documentation Engineering',
+      defaultLocale: 'zh-CN',
+      locales: ['zh-CN', 'en'],
+      productVersion: '3.0.8'
+    },
+    inputs: [
+      {
+        kind: 'jsdoc-integration',
+        path: 'hia-integration.public.json',
+        domain: 'js',
+        semanticPath: [
+          {
+            kind: 'repository',
+            id: 'bp-docs-js-cookie',
+            label: 'bp-docs-js-cookie'
+          },
+          {
+            kind: 'package',
+            id: 'js-cookie',
+            label: 'js-cookie 3.0.8'
+          }
+        ]
+      }
+    ]
+  }
+}
+
+/**
+ * <lang><zh-CN>创建首个小型 BP 公开站的单页 renderer 配置。</zh-CN><en>Creates the single-page renderer configuration for the first small BP public site.</en></lang>
+ *
+ * @returns {Object} <lang><zh-CN>无路径、无 credential 的 HIA CLI 配置。</zh-CN><en>Path-free, credential-free HIA CLI configuration.</en></lang>
+ * @lang zh-CN 18-node 站点使用单页是为了让关闭 JavaScript 时正文仍存在；大型项目的 split-site 默认不因此改变。
+ * @lang en The 18-node site uses a single page so content remains present without JavaScript; the split-site default for large projects is unchanged.
+ */
+export function createPortalConfig() {
+  return {
+    schemaVersion: '0.1.0',
+    docs: {
+      renderer: {
+        projectLayout: 'single-page'
+      }
+    }
   }
 }
 

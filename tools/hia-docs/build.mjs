@@ -20,7 +20,9 @@ import {
   OWNER_COMMITS,
   PRIVACY_POLICY,
   SOURCE_FILES,
+  createPortalConfig,
   createJsdocConfig,
+  createPortalProjectManifest,
   resolveTopology
 } from './config.mjs'
 import { sanitizeJsonFile } from './sanitize.mjs'
@@ -253,6 +255,16 @@ function main() {
     topology.cacheRoot,
     'hia-integration.public.json'
   )
+  /** @lang zh-CN 临时 project manifest 只承载公开标题、locale 与同目录 integration 引用。 @lang en Temporary project manifest carries only the public title, locales, and same-directory integration reference. */
+  const portalProjectManifestPath = path.join(
+    topology.cacheRoot,
+    'portal-project.hia-project.json'
+  )
+  /** @lang zh-CN 单页 Portal 配置只改变公开小站布局，不改变 owner contract。 @lang en Single-page Portal config changes only the small public-site layout, not owner contracts. */
+  const portalConfigPath = path.join(
+    topology.cacheRoot,
+    'portal.hia.config.json'
+  )
 
   try {
     const jsdocConfig = createJsdocConfig(topology, buildCommit)
@@ -283,6 +295,16 @@ function main() {
     // <lang><zh-CN>Portal 只消费清洗后的 integration；raw artifact 绝不跨过此 handoff。</zh-CN><en>The Portal consumes only the sanitized integration; the raw artifact never crosses this handoff.</en></lang>
     sanitizeJsonFile(rawIntegrationPath, publicIntegrationPath)
     sanitizeJsonTree(topology.jsdocNativeRoot)
+    fs.writeFileSync(
+      portalProjectManifestPath,
+      `${JSON.stringify(createPortalProjectManifest(), null, 2)}\n`,
+      'utf8'
+    )
+    fs.writeFileSync(
+      portalConfigPath,
+      `${JSON.stringify(createPortalConfig(), null, 2)}\n`,
+      'utf8'
+    )
 
     // <lang><zh-CN>main owner 先按自身 mise/pnpm lock 构建，BP 不建立跨仓依赖或修改其 dist。</zh-CN><en>The main owner builds first under its own mise/pnpm lock; the BP creates no cross-repository dependency and does not modify its dist.</en></lang>
     runCommand(
@@ -307,8 +329,10 @@ function main() {
         cliEntry,
         'docs',
         'build',
-        '--jsdoc-integration',
-        publicIntegrationPath,
+        '--config',
+        portalConfigPath,
+        '--project-manifest',
+        portalProjectManifestPath,
         '--out',
         topology.portalOutputRoot,
         '--locale',
@@ -321,6 +345,8 @@ function main() {
     // <lang><zh-CN>无论 build 成功或失败都移除带绝对路径的 config 与带正文的 raw integration。</zh-CN><en>Remove the absolute-path config and source-bearing raw integration whether the build succeeds or fails.</en></lang>
     fs.rmSync(temporaryConfigPath, { force: true })
     fs.rmSync(rawIntegrationPath, { force: true })
+    fs.rmSync(portalProjectManifestPath, { force: true })
+    fs.rmSync(portalConfigPath, { force: true })
   }
 
   // <lang><zh-CN>public integration 经过 JSON parse 后只读取计数/diagnostic summary，不向 evidence 复制节点正文。</zh-CN><en>After JSON parsing, only counts and diagnostic summaries are read from the public integration; node bodies are not copied into evidence.</en></lang>
@@ -330,7 +356,7 @@ function main() {
   const buildEvidence = {
     contract: 'bp-js-cookie-local-documentation-build',
     contractVersion: '0.1.0-draft',
-    status: 'ready-for-wp109-check',
+    status: 'ready-for-wp111-pages-check',
     buildCommit,
     runtime: {
       node: process.versions.node,

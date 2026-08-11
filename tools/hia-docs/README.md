@@ -56,6 +56,33 @@ Generated files are ignored under `build/hia-docs/`:
 - `cache/hia-integration.public.json`: sanitized handoff consumed by the Portal;
 - `evidence/`: counts, relative filenames, hashes, policy, and status only.
 
+## GitHub Pages showcase
+
+W-P111 publishes only `build/hia-docs/portal/` to
+`https://mandolin.github.io/bp-docs-js-cookie/`. The independent JSDoc output remains a separate local/build artifact and is never
+folded into the Pages upload. The workflow checks out each HIA owner at the full commit recorded in `config.mjs`, installs the exact
+Node/pnpm toolchain through mise, and uses GitHub's official artifact deployment path without committing a generated branch.
+
+Run the local Pages readiness gate after the normal build and check:
+
+```bash
+mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
+```
+
+After a deployment, the anonymous online check reads only the canonical root, theme assets, manifest, and navigation root under the
+project-site origin:
+
+```bash
+mise exec node@24.12.0 -- node tools/hia-docs/check-pages-online.mjs
+```
+
+For local browser review, serve the ignored Portal root on loopback with
+`mise exec node@24.12.0 -- node tools/hia-docs/serve.mjs 4179`. The server rejects traversal, links, non-file entries, and non-loopback
+binding.
+
+中文：Pages artifact 只含已清洗 Portal，不含独立 JSDoc、源码正文、raw comment、绝对路径或 credential；所有源码链接继续 pin
+到实际 BP build commit，并以 `/bp-docs-js-cookie/` project base 验证相对 asset/data route。
+
 The source presentation policy is `none/link`: source links are pinned to the exact BP build commit, preview/embed is disabled, and the
 generated site performs no source fetch. The build removes temporary config and raw integration files even on failure. The checker
 refuses absolute paths, source-body fingerprints, raw comments/locale tags, credential markers, unpinned source links, or source-content
@@ -68,4 +95,5 @@ ignored `build/hia-docs/` directory after resolving that boundary under the BP r
 local generated output; reverting the focused HIA documentation commit rolls back the authored overlay without rewriting upstream
 history.
 
-This tooling does not enable GitHub Actions or Pages, publish a package, use BrowserStack, read credentials, or access a target project.
+The local build/check tooling does not enable Pages, publish a package, use BrowserStack, read credentials, or access a target project.
+Only the separately reviewed `hia-docs-pages.yml` workflow may deploy the already-sanitized Portal artifact.

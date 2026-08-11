@@ -32,6 +32,11 @@ The same checks support Node `22.23.0` as the documentation compatibility runtim
 source bodies are not embedded or fetched, and links are pinned to the exact build commit. See
 [`tools/hia-docs/README.md`](tools/hia-docs/README.md) for topology, privacy, and reproducibility details.
 
+The unified Portal is also published as a GitHub project site at
+[mandolin.github.io/bp-docs-js-cookie](https://mandolin.github.io/bp-docs-js-cookie/). Its Pages artifact is rebuilt from pinned HIA
+owners, contains only the sanitized Portal output, and retains the same link-only/no-fetch source policy. This public site is a
+documentation-engineering showcase, not an official js-cookie site.
+
 <p align="center">
   <img src="https://cloud.githubusercontent.com/assets/835857/14581711/ba623018-0436-11e6-8fce-d2ccd4d379c9.gif">
 </p>

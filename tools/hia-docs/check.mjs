@@ -399,6 +399,11 @@ function main() {
       `${portalHtml}\n${portalManifest}`.includes('0.1.0-draft'),
     'Portal output lacks the frozen W-P104 theme contract reference.'
   )
+  assert(
+    portalHtml.includes('bp-docs-js-cookie') &&
+      portalManifest.includes('bp-docs-js-cookie'),
+    'Portal output lacks the explicit BP documentation-engineering identity.'
+  )
 
   const integration = JSON.parse(fs.readFileSync(publicIntegrationPath, 'utf8'))
   assert(

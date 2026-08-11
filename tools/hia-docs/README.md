@@ -31,8 +31,9 @@ package, does not change the root manifest/lockfile or JPHS dependency tree, and
 
 ## Run
 
-Node `24.12.0` is primary and `22.23.0` is the compatibility runtime. Node 20 remains an upstream-reproduction slot and is not a new
-documentation-tool support promise. Every Node/npm/pnpm command is launched through mise:
+Node `24.12.0` and pnpm `10.34.4` are frozen in the repository `mise.toml`; Node `22.23.0` is the compatibility runtime used by the
+explicit cross-version gate. Node 20 remains an upstream-reproduction slot and is not a new documentation-tool support promise. Every
+Node/npm/pnpm command is launched through mise:
 
 ```bash
 mise exec node@24.12.0 -- node tools/hia-docs/build.mjs

@@ -24,6 +24,7 @@ export const SOURCE_FILES = Object.freeze([
 export const ALLOWED_CHANGE_PATTERNS = Object.freeze([
   '.gitignore',
   '.github/workflows/hia-docs-pages.yml',
+  'mise.toml',
   'README.md',
   'UPSTREAM.md',
   ...SOURCE_FILES,

@@ -1,0 +1,5 @@
+# 中文：W-P111 文档流水线唯一允许的 Node/pnpm 工具版本。
+# English: Sole Node/pnpm tool versions allowed for the W-P111 documentation pipeline.
+[tools]
+node = "24.12.0"
+pnpm = "10.34.4"

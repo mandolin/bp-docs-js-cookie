@@ -38,6 +38,8 @@ const runtimeLockPath = path.join(
   topology.documentationRuntimeRoot,
   'package-lock.json'
 )
+/** @lang zh-CN repository-owned mise toolchain 配置。 @lang en Repository-owned mise toolchain configuration. */
+const miseConfigPath = path.join(repositoryRoot, 'mise.toml')
 
 /** @lang zh-CN W-P111 复核过的不可变 action pin。 @lang en Immutable action pins verified by W-P111. */
 const ACTION_PINS = Object.freeze({
@@ -282,6 +284,24 @@ function validateDocumentationRuntime() {
 }
 
 /**
+ * <lang><zh-CN>验证 repository-owned mise 配置冻结了 Pages runner 工具版本。</zh-CN><en>Validates that the repository-owned mise config pins the Pages runner tool versions.</en></lang>
+ *
+ * @returns {{node: string, pnpm: string}} <lang><zh-CN>精确工具版本。</zh-CN><en>Exact tool versions.</en></lang>
+ */
+function validateMiseToolchain() {
+  assert(fs.existsSync(miseConfigPath), 'Repository mise.toml is missing.')
+  /** @lang zh-CN 只接受当前最小闭集 TOML 的文本。 @lang en Text of the current minimal closed TOML set. */
+  const miseConfig = fs.readFileSync(miseConfigPath, 'utf8')
+  assert(
+    /^\s*(?:#[^\r\n]*\r?\n)*\[tools\]\r?\nnode = "24\.12\.0"\r?\npnpm = "10\.34\.4"\s*$/u.test(
+      miseConfig
+    ),
+    'mise.toml must contain only the frozen Node and pnpm tool versions.'
+  )
+  return { node: '24.12.0', pnpm: '10.34.4' }
+}
+
+/**
  * <lang><zh-CN>验证 Portal artifact 的 base-path 与公开隐私边界。</zh-CN><en>Validates the Portal artifact base-path and public privacy boundary.</en></lang>
  *
  * @param {Array<{path: string, bytes: number, sha256: string}>} files <lang><zh-CN>artifact 文件摘要。</zh-CN><en>Artifact file summary.</en></lang>
@@ -413,6 +433,8 @@ function main() {
   )
   /** @lang zh-CN workflow 静态门禁摘要。 @lang en Static workflow-gate summary. */
   const workflow = validateWorkflow()
+  /** @lang zh-CN repository-owned mise toolchain 摘要。 @lang en Repository-owned mise toolchain summary. */
+  const toolchain = validateMiseToolchain()
   /** @lang zh-CN 隔离 exact-lock JSDoc runtime 摘要。 @lang en Isolated exact-lock JSDoc runtime summary. */
   const documentationRuntime = validateDocumentationRuntime()
   /** @lang zh-CN 无 link 的 Portal artifact 文件摘要。 @lang en Link-free Portal artifact file summary. */
@@ -455,6 +477,10 @@ function main() {
       isolatedFromPluginOwner: true,
       registry: 'https://registry.npmjs.org/',
       ...documentationRuntime
+    },
+    toolchain: {
+      owner: 'mise.toml',
+      ...toolchain
     },
     privacy: {
       sourceContentPolicy: 'none',

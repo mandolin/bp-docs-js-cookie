@@ -1,99 +1,124 @@
-# HIA 本地文档工具 / HIA Local Documentation Tooling
+# HIA 文档工程展示工具 / HIA Documentation Showcase Tooling
 
-本目录在不修改 root `package.json`、`package-lock.json` 或上游 script 的前提下，生成并检查 js-cookie 的两类本地文档输出。
-工具只解析 `index.js` 与三个 `src/*.mjs`，不会递归吸入 tests、examples、dist 或 workflow。
+本目录在不修改 root `package.json`、`package-lock.json` 或上游 script 的前提下，为 js-cookie 生成并验收可复现的文档工程
+展示矩阵。源码输入严格限制为 `index.js` 与三个 `src/*.mjs`，不会递归吸入 tests、examples、dist 或 workflow。
 
-This directory generates and checks two local documentation outputs without modifying the root package manifest, lockfile, or upstream
-scripts. The source allowlist contains `index.js` and the three `src/*.mjs` files only.
+This directory builds and validates a reproducible documentation-engineering showcase for js-cookie without changing the root package
+manifest, lockfile, or upstream scripts. Its source allowlist contains `index.js` and the three `src/*.mjs` files only.
 
 ## Workspace topology
 
-The pipeline expects the repository layout used by HIA-Documentation-Sys:
+The local pipeline expects the sibling layout used by HIA-Documentation-Sys:
 
 ```text
 HIA-Documentation-Sys/
 ├─ BP/bp-docs-js-cookie/
 ├─ HIA/jsdoc-plugin-hia-sys/
 ├─ HIA/jsdoc-theme-hia/
+├─ HIA/hia-jsdoc/
 └─ main-repo/
 ```
 
-Sibling owners are accepted only at these exact, clean commits:
+Owner repositories must be clean and remain at these full commits:
 
 | Owner                            | Commit                                     | License           |
 | -------------------------------- | ------------------------------------------ | ----------------- |
-| `@mandolin/jsdoc-plugin-hia-sys` | `3cdd56469044bf40881cf88c4905110ad656ab13` | MIT               |
-| `@mandolin/jsdoc-theme-hia`      | `e2e85fb23ad9274b730c84c24af9e78f19fb8885` | MIT               |
-| HIA main Portal/CLI              | `07b4235ab9f251ef65d6863903cf097042918596` | MIT package train |
+| `@mandolin/jsdoc-plugin-hia-sys` | `ac1fa5831dd33c204dd2168eed812b654eab24e4` | MIT               |
+| `@mandolin/jsdoc-theme-hia`      | `9c78b017567c5c23a212ae572e72ad36376ed78d` | MIT               |
+| `hia-jsdoc` umbrella             | `8f246729a9bec72baafab0b7699a14536ae23d29` | MIT               |
+| HIA main Portal/CLI              | `1bbb072585303c875093f5dd3555aeb3353e5efd` | MIT package train |
 
-JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. This private tool runtime is not part of the js-cookie
-package, does not change the root manifest/lockfile or JPHS dependency tree, and does not consume the private `hia-jsdoc` umbrella.
+JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. hia-jsdoc uses its own workspace lock. Neither runtime is
+added to the js-cookie root package, and the pipeline does not copy owner theme implementations into this repository.
 
-## Run
+## Matrix and defaults
 
-Node `24.12.0` and pnpm `10.34.4` are frozen in the repository `mise.toml`; Node `22.23.0` is the compatibility runtime used by the
-explicit cross-version gate. Node 20 remains an upstream-reproduction slot and is not a new documentation-tool support promise. Every
-Node/npm/pnpm command is launched through mise:
+The generated site combines three closed dimensions:
+
+| Dimension         | Values                                     |
+| ----------------- | ------------------------------------------ |
+| Output pipeline   | direct JPHS/JTH, hia-jsdoc, unified Portal |
+| Source reading    | `fetch`, `embed`, `link`                   |
+| Skin              | `classic`, `graphite`, `lumen`             |
+| Page partitioning | `multi-page` for every profile             |
+
+The Cartesian product contains 27 configuration profiles. Each hia-jsdoc profile proves both a standalone surface and a Portal bridge,
+so the hub exposes 36 browsable surfaces. `unified-portal.fetch.classic` is the default. The `none` source mode remains a separate
+fail-closed privacy regression and is intentionally excluded from the public matrix.
+
+## Install and run
+
+Node `24.12.0` and pnpm `10.34.4` are the default tools in `mise.toml`; Node `22.23.0` is the second required documentation runtime.
+Node 20 remains an upstream-reproduction slot and is not a documentation-tool support promise.
+
+Install the two isolated npm workspaces once. Install the Portal owner through its own frozen pnpm lock when that workspace is not
+already ready:
+
+```bash
+mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund --prefix tools/hia-docs/runtime
+mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund --prefix ../../HIA/hia-jsdoc
+mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir ../../main-repo install --frozen-lockfile
+```
+
+Build and run the local gates:
 
 ```bash
 mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
+mise exec node@24.12.0 -- node --test tools/hia-docs/showcase.test.mjs
 mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
-```
-
-Install the private documentation runtime once, then repeat both commands with `node@22.23.0` to verify compatibility. The build invokes
-the main owner's own mise/pnpm lock before running its CLI:
-
-```bash
-mise exec node@24.12.0 -- npm ci --ignore-scripts --prefix tools/hia-docs/runtime
-```
-
-## Outputs and privacy
-
-Generated files are ignored under `build/hia-docs/`:
-
-- `jsdoc-native/`: independent JTH output;
-- `portal/`: unified HIA CLI/renderer output;
-- `cache/hia-integration.public.json`: sanitized handoff consumed by the Portal;
-- `evidence/`: counts, relative filenames, hashes, policy, and status only.
-
-## GitHub Pages showcase
-
-W-P111 publishes only `build/hia-docs/portal/` to
-`https://mandolin.github.io/bp-docs-js-cookie/`. The independent JSDoc output remains a separate local/build artifact and is never
-folded into the Pages upload. The workflow checks out each HIA owner at the full commit recorded in `config.mjs`, installs the exact
-Node/pnpm toolchain through mise, and uses GitHub's official artifact deployment path without committing a generated branch.
-
-Run the local Pages readiness gate after the normal build and check:
-
-```bash
 mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
 ```
 
-After a deployment, the anonymous online check reads only the canonical root, theme assets, manifest, and navigation root under the
-project-site origin:
+The Pages workflow builds once with Node `22.23.0`, stages the body-free aggregate fingerprint, rebuilds with Node `24.12.0`, and runs
+`check-determinism.mjs`. Only a byte-identical Node 24 result becomes the upload artifact.
+
+## Outputs and privacy
+
+All generated files remain ignored under `build/hia-docs/`:
+
+- `showcase/index.html`: no-script-capable profile hub;
+- `showcase/showcase-matrix.json`: public-safe 27-profile manifest;
+- `showcase/profiles/`: all 36 owner-rendered surfaces;
+- `evidence/`: counts, booleans, versions, aggregate hashes and statuses without source bodies;
+- `cache/`: execution-only configs and raw handoffs, deleted after every successful or failed build.
+
+The source presentation modes have distinct carriers:
+
+- `fetch` is the default: topic HTML contains only same-origin asset metadata; source text is content-addressed, size-bounded,
+  SHA-384-described, credential-free, and loaded when the reader expands;
+- `embed` places approved source text only in topic HTML, never in the hub, index JSON, navigation JSON or search JSON;
+- `link` emits a same-origin content-addressed text asset and a normal link, avoiding repeated navigation to a floating branch;
+- `none` disables source presentation, preview and public assets in the separate privacy test.
+
+Public JSON is sanitized for raw comments, source-body carriers and host absolute paths. Temporary hia-jsdoc configs, raw integrations,
+credentials, analytics, telemetry and target-project data are excluded. Source/skin variants must preserve topic, page, fragment,
+navigation and relation identities.
+
+## GitHub Pages and browser review
+
+The workflow uploads only `build/hia-docs/showcase/` to
+[`https://mandolin.github.io/bp-docs-js-cookie/`](https://mandolin.github.io/bp-docs-js-cookie/). Owner checkouts and GitHub actions are
+pinned by full commit, checkout credentials are discarded, no generated branch is committed, and the deploy job alone receives
+`pages: write` plus `id-token: write`.
+
+Serve the ignored showcase locally on loopback:
+
+```bash
+mise exec node@24.12.0 -- node tools/hia-docs/serve.mjs 4179
+```
+
+Open `http://127.0.0.1:4179/bp-docs-js-cookie/`. The server maps directory routes only to their own `index.html` and rejects traversal,
+symbolic links, directory listings, writes, and non-loopback binding. After a deployment, run the anonymous same-origin online gate:
 
 ```bash
 mise exec node@24.12.0 -- node tools/hia-docs/check-pages-online.mjs
 ```
 
-For local browser review, serve the ignored Portal root on loopback with
-`mise exec node@24.12.0 -- node tools/hia-docs/serve.mjs 4179`. The server rejects traversal, links, non-file entries, and non-loopback
-binding.
-
-中文：Pages artifact 只含已清洗 Portal，不含独立 JSDoc、源码正文、raw comment、绝对路径或 credential；所有源码链接继续 pin
-到实际 BP build commit，并以 `/bp-docs-js-cookie/` project base 验证相对 asset/data route。
-
-The source presentation policy is `none/link`: source links are pinned to the exact BP build commit, preview/embed is disabled, and the
-generated site performs no source fetch. The build removes temporary config and raw integration files even on failure. The checker
-refuses absolute paths, source-body fingerprints, raw comments/locale tags, credential markers, unpinned source links, or source-content
-keys in public JSON.
-
 ## Scope and rollback
 
-The tool refuses changes outside the frozen documentation paths and refuses any root package/lock drift. It rebuilds only the exact
-ignored `build/hia-docs/` directory after resolving that boundary under the BP repository. Removing that ignored directory rolls back
-local generated output; reverting the focused HIA documentation commit rolls back the authored overlay without rewriting upstream
-history.
+The tooling refuses changes outside the frozen documentation paths and refuses root package/lock drift. It recursively rebuilds only the
+exact ignored `build/hia-docs/` boundary after resolving that path inside the BP repository. Removing the ignored directory rolls back
+local generated output; reverting the focused documentation commit removes the authored tooling without rewriting upstream history.
 
-The local build/check tooling does not enable Pages, publish a package, use BrowserStack, read credentials, or access a target project.
-Only the separately reviewed `hia-docs-pages.yml` workflow may deploy the already-sanitized Portal artifact.
+The local commands do not enable Pages, publish packages, use BrowserStack, read credentials, or access target projects. Only the
+reviewed Pages workflow deploys the already-validated showcase artifact.

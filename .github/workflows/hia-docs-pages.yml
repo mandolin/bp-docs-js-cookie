@@ -15,9 +15,9 @@ permissions:
 
 jobs:
   build:
-    name: Build public Portal artifact
+    name: Build public showcase artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
       pages: read
@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/jsdoc-plugin-hia-sys
-          ref: 3cdd56469044bf40881cf88c4905110ad656ab13
+          ref: ac1fa5831dd33c204dd2168eed812b654eab24e4
           path: .hia-docs-owners/HIA/jsdoc-plugin-hia-sys
           persist-credentials: false
 
@@ -42,15 +42,23 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/jsdoc-theme-hia
-          ref: e2e85fb23ad9274b730c84c24af9e78f19fb8885
+          ref: 9c78b017567c5c23a212ae572e72ad36376ed78d
           path: .hia-docs-owners/HIA/jsdoc-theme-hia
+          persist-credentials: false
+
+      - name: Check out hia-jsdoc owner
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: mandolin/hia-jsdoc
+          ref: 8f246729a9bec72baafab0b7699a14536ae23d29
+          path: .hia-docs-owners/HIA/hia-jsdoc
           persist-credentials: false
 
       - name: Check out HIA Portal owner
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/HIA-Documentation
-          ref: 07b4235ab9f251ef65d6863903cf097042918596
+          ref: 1bbb072585303c875093f5dd3555aeb3353e5efd
           path: .hia-docs-owners/main-repo
           persist-credentials: false
 
@@ -65,24 +73,39 @@ jobs:
         working-directory: tools/hia-docs/runtime
         run: mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Install hia-jsdoc owner dependencies
+        working-directory: .hia-docs-owners/HIA/hia-jsdoc
+        run: mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Install HIA Portal owner dependencies
         run: mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
 
-      - name: Build and verify public Portal
+      # 中文：先由 Node 22 构建并暂存 body-free 指纹，再由 Node 24 重建与验收；最终上传 Node 24 artifact。
+      # English: Build under Node 22 and stage its body-free fingerprint, then rebuild and verify under Node 24; upload the final Node 24 artifact.
+      - name: Build Node 22 determinism baseline
+        env:
+          HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
+        run: |
+          mise exec node@22.23.0 -- node tools/hia-docs/build.mjs
+          cp build/hia-docs/evidence/showcase-fingerprint.json "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json"
+
+      - name: Build and verify public showcase
         env:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
           mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
+          mise exec node@24.12.0 -- node --test tools/hia-docs/showcase.test.mjs
           mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
+          mise exec node@24.12.0 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json"
           mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
-      - name: Upload Portal-only Pages artifact
+      - name: Upload showcase-only Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: ./build/hia-docs/portal
+          path: ./build/hia-docs/showcase
 
   deploy:
     name: Deploy public Portal

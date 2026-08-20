@@ -1,5 +1,5 @@
-# 中文：W-P111 文档流水线唯一允许的 Node/pnpm 工具版本。
-# English: Sole Node/pnpm tool versions allowed for the W-P111 documentation pipeline.
+# 中文：W-P118 展示矩阵流水线的默认 Node 与 Portal owner pnpm；Node 22.23.0 由 workflow 显式用于确定性基线。
+# English: Default Node and Portal-owner pnpm for the W-P118 showcase pipeline; the workflow explicitly selects Node 22.23.0 for the determinism baseline.
 [tools]
 node = "24.12.0"
 pnpm = "10.34.4"

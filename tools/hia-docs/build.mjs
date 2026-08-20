@@ -1,9 +1,9 @@
 /**
- * <lang><zh-CN>构建 bp-docs-js-cookie 的独立 JSDoc 与统一 HIA Portal 本地输出。</zh-CN><en>Builds the independent JSDoc and unified HIA Portal local outputs for bp-docs-js-cookie.</en></lang>
+ * <lang><zh-CN>构建 bp-docs-js-cookie 的 27-profile、36-surface 文档工程展示矩阵。</zh-CN><en>Builds the 27-profile, 36-surface documentation-engineering showcase matrix for bp-docs-js-cookie.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-build
- * @lang zh-CN 顶层脚本必须由 mise 管理的 Node 22.23.0 或 24.12.0 调用；子级 Node/pnpm 同样通过 mise。
- * @lang en The top-level script must run under mise-managed Node 22.23.0 or 24.12.0; child Node/pnpm commands also go through mise.
+ * @lang zh-CN 顶层与子级 JavaScript 命令都使用 mise 管理的 Node 22.23.0 或 24.12.0；输出只进入 ignored build/hia-docs。
+ * @lang en Top-level and child JavaScript commands use mise-managed Node 22.23.0 or 24.12.0; output is confined to ignored build/hia-docs.
  */
 
 import crypto from 'node:crypto'
@@ -11,7 +11,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import {
   ALLOWED_CHANGE_PATTERNS,
@@ -20,30 +20,38 @@ import {
   OWNER_COMMITS,
   PRIVACY_POLICY,
   SOURCE_FILES,
-  createPortalConfig,
   createJsdocConfig,
+  createPortalConfig,
   createPortalProjectManifest,
+  createShowcaseProfiles,
   resolveTopology
 } from './config.mjs'
+import {
+  SHOWCASE_HUB_CSS,
+  SHOWCASE_HUB_JS,
+  createShowcaseManifest,
+  renderShowcaseHub
+} from './hub.mjs'
 import { sanitizeJsonFile } from './sanitize.mjs'
 
-/** @lang zh-CN 当前模块目录只用于推导 BP repository root，不写入 evidence。 @lang en Current module directory is used only to derive the BP repository root and is not written to evidence. */
+/** @lang zh-CN 当前模块目录只用于推导 BP repository root，不进入公开产物。 @lang en Current module directory is used only to derive the BP repository root and never enters public artifacts. */
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url))
-/** @lang zh-CN 文档工具位于 `<repo>/tools/hia-docs`，因此向上两级得到仓库根。 @lang en Documentation tooling lives at `<repo>/tools/hia-docs`, so two parent traversals yield the repository root. */
+/** @lang zh-CN 文档工具位于 `<repo>/tools/hia-docs`，向上两级得到 BP 根。 @lang en Documentation tooling lives at `<repo>/tools/hia-docs`, so two parent traversals yield the BP root. */
 const repositoryRoot = path.resolve(moduleDirectory, '..', '..')
-/** @lang zh-CN 当前进程使用的绝对 topology；公开 evidence 只投射其中的相对语义。 @lang en Absolute topology for the current process; public evidence projects only its relative semantics. */
+/** @lang zh-CN 当前进程的绝对 topology；只在内存和 ignored cache 使用。 @lang en Absolute topology for the current process; used only in memory and the ignored cache. */
 const topology = resolveTopology(repositoryRoot)
 
 /**
- * <lang><zh-CN>执行命令并在非零退出时携带有界 stdout/stderr fail closed。</zh-CN><en>Runs a command and fails closed with bounded stdout/stderr on a nonzero exit.</en></lang>
+ * <lang><zh-CN>执行无 shell 插值的子进程，并用有界诊断 fail closed。</zh-CN><en>Runs a child process without shell interpolation and fails closed with bounded diagnostics.</en></lang>
  *
- * @param {string} command <lang><zh-CN>可执行程序名。</zh-CN><en>Executable name.</en></lang>
- * @param {string[]} args <lang><zh-CN>不经 shell 插值的参数。</zh-CN><en>Arguments passed without shell interpolation.</en></lang>
- * @param {string} cwd <lang><zh-CN>已验证的执行目录。</zh-CN><en>Validated execution directory.</en></lang>
- * @returns {string} <lang><zh-CN>成功命令的 stdout。</zh-CN><en>Stdout from the successful command.</en></lang>
+ * @param {string} command <lang><zh-CN>可执行程序。</zh-CN><en>Executable.</en></lang>
+ * @param {string[]} args <lang><zh-CN>原样参数数组。</zh-CN><en>Literal argument array.</en></lang>
+ * @param {string} cwd <lang><zh-CN>已验证的工作目录。</zh-CN><en>Validated working directory.</en></lang>
+ * @returns {string} <lang><zh-CN>trim 后的 stdout。</zh-CN><en>Trimmed stdout.</en></lang>
+ * @throws {Error} <lang><zh-CN>进程无法启动或非零退出时抛出。</zh-CN><en>Thrown when the process cannot start or exits nonzero.</en></lang>
  */
 function runCommand(command, args, cwd) {
-  // <lang><zh-CN>shell=false 保证参数不被 PowerShell/cmd 二次解释；UTF-8 文本仅用于诊断。</zh-CN><en>shell=false prevents PowerShell/cmd reinterpretation of arguments; UTF-8 text is used only for diagnostics.</en></lang>
+  // <lang><zh-CN>shell=false 防止路径、profile id 或 commit 被 PowerShell/cmd 二次解释。</zh-CN><en>shell=false prevents PowerShell/cmd from reinterpreting paths, profile IDs, or commits.</en></lang>
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
@@ -53,7 +61,7 @@ function runCommand(command, args, cwd) {
 
   if (result.error) throw result.error
   if (result.status !== 0) {
-    // <lang><zh-CN>限制错误文本长度，避免第三方命令把大日志或敏感环境反射进终端。</zh-CN><en>Bound error text so a third-party command cannot reflect a large log or sensitive environment into the terminal.</en></lang>
+    // <lang><zh-CN>错误文本限制为末尾 6000 字符，避免第三方命令反射大日志或环境内容。</zh-CN><en>Error text is limited to the last 6,000 characters so third-party commands cannot reflect large logs or environment content.</en></lang>
     const diagnostic = `${result.stdout || ''}\n${result.stderr || ''}`
       .trim()
       .slice(-6000)
@@ -62,18 +70,23 @@ function runCommand(command, args, cwd) {
   return (result.stdout || '').trim()
 }
 
-/** @lang zh-CN 运行只读 Git 命令并返回 trim 后文本。 @lang en Runs a read-only Git command and returns trimmed text. */
+/**
+ * <lang><zh-CN>运行只读 Git 命令。</zh-CN><en>Runs a read-only Git command.</en></lang>
+ *
+ * @param {string[]} args <lang><zh-CN>Git 参数。</zh-CN><en>Git arguments.</en></lang>
+ * @param {string} [cwd] <lang><zh-CN>目标仓库，缺省为 BP。</zh-CN><en>Target repository, defaulting to the BP.</en></lang>
+ * @returns {string} <lang><zh-CN>trim 后文本。</zh-CN><en>Trimmed text.</en></lang>
+ */
 function runGit(args, cwd = repositoryRoot) {
   return runCommand('git', args, cwd)
 }
 
 /**
- * <lang><zh-CN>验证当前 Node 属于文档工具支持窗口。</zh-CN><en>Validates that the current Node belongs to the documentation-tool support window.</en></lang>
+ * <lang><zh-CN>验证当前 Node 属于冻结的文档工具支持窗口。</zh-CN><en>Validates that the current Node belongs to the frozen documentation-tool support window.</en></lang>
  *
  * @returns {void}
  */
 function validateNodeVersion() {
-  // <lang><zh-CN>process.versions.node 是 mise 已解析的精确 runtime；不接受仅 major 匹配。</zh-CN><en>process.versions.node is the exact runtime resolved by mise; a major-only match is not accepted.</en></lang>
   if (!DOCUMENTATION_NODE_VERSIONS.includes(process.versions.node)) {
     throw new Error(
       `Documentation build requires Node ${DOCUMENTATION_NODE_VERSIONS.join(' or ')}, received ${process.versions.node}.`
@@ -82,10 +95,10 @@ function validateNodeVersion() {
 }
 
 /**
- * <lang><zh-CN>判断一个相对 Git path 是否位于 W-P109 frozen change scope。</zh-CN><en>Determines whether a relative Git path belongs to the frozen W-P109 change scope.</en></lang>
+ * <lang><zh-CN>判断 BP 相对路径是否位于冻结变更范围。</zh-CN><en>Determines whether a BP-relative path belongs to the frozen change boundary.</en></lang>
  *
- * @param {string} relativePath <lang><zh-CN>Git 使用正斜杠的仓库相对路径。</zh-CN><en>Repository-relative path using Git forward slashes.</en></lang>
- * @returns {boolean} <lang><zh-CN>是否在 exact/prefix allowlist 中。</zh-CN><en>Whether the path is in the exact/prefix allowlist.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>使用正斜杠的 Git 路径。</zh-CN><en>Git path using forward slashes.</en></lang>
+ * @returns {boolean} <lang><zh-CN>是否通过 exact/prefix allowlist。</zh-CN><en>Whether it passes the exact/prefix allowlist.</en></lang>
  */
 function isAllowedChange(relativePath) {
   return ALLOWED_CHANGE_PATTERNS.some((pattern) =>
@@ -96,13 +109,12 @@ function isAllowedChange(relativePath) {
 }
 
 /**
- * <lang><zh-CN>验证 BP lineage、package/lock 不变与当前 changed-path boundary。</zh-CN><en>Validates BP lineage, package/lock stability, and the current changed-path boundary.</en></lang>
+ * <lang><zh-CN>验证 upstream lineage、root package/lock 稳定性与当前 changed-path boundary。</zh-CN><en>Validates upstream lineage, root package/lock stability, and the current changed-path boundary.</en></lang>
  *
- * @returns {string} <lang><zh-CN>用于源码链接的当前 BP HEAD commit。</zh-CN><en>Current BP HEAD commit used for source links.</en></lang>
+ * @returns {string} <lang><zh-CN>用于公开源码链接的 40 位 BP HEAD。</zh-CN><en>Forty-character BP HEAD used for public source links.</en></lang>
  */
 function validateRepositoryBoundary() {
   runGit(['merge-base', '--is-ancestor', BASELINE_COMMIT, 'HEAD'])
-  // <lang><zh-CN>root package/lock 相对 baseline、HEAD 和 working tree 都必须无差异。</zh-CN><en>Root package/lock must have no differences against the baseline, HEAD, or working tree.</en></lang>
   runGit([
     'diff',
     '--quiet',
@@ -113,7 +125,7 @@ function validateRepositoryBoundary() {
   ])
   runGit(['diff', '--quiet', '--', 'package.json', 'package-lock.json'])
 
-  // <lang><zh-CN>tracked、staged 与 untracked 三类 path 合并后统一执行 closed allowlist。</zh-CN><en>Tracked, staged, and untracked paths are combined under one closed allowlist.</en></lang>
+  // <lang><zh-CN>tracked、staged 与 untracked 路径合并后接受同一个 closed allowlist。</zh-CN><en>Tracked, staged, and untracked paths are combined under one closed allowlist.</en></lang>
   const changedPaths = new Set([
     ...runGit(['diff', '--name-only', BASELINE_COMMIT, '--']).split(/\r?\n/u),
     ...runGit(['diff', '--name-only', '--cached', '--']).split(/\r?\n/u),
@@ -121,11 +133,11 @@ function validateRepositoryBoundary() {
   ])
   for (const relativePath of changedPaths) {
     if (relativePath && !isAllowedChange(relativePath)) {
-      throw new Error(`W-P109 change boundary refused path: ${relativePath}`)
+      throw new Error(`W-P118 change boundary refused path: ${relativePath}`)
     }
   }
 
-  // <lang><zh-CN>40 位 lowercase SHA 是公开 source link 唯一允许的 revision identity。</zh-CN><en>A 40-character lowercase SHA is the only revision identity allowed in public source links.</en></lang>
+  // <lang><zh-CN>公开 source link 只允许不可漂移的完整 lowercase commit。</zh-CN><en>Public source links accept only a non-floating full lowercase commit.</en></lang>
   const buildCommit = runGit(['rev-parse', 'HEAD'])
   if (!/^[0-9a-f]{40}$/u.test(buildCommit)) {
     throw new Error('BP HEAD is not a full lowercase Git commit identity.')
@@ -134,11 +146,11 @@ function validateRepositoryBoundary() {
 }
 
 /**
- * <lang><zh-CN>验证一个 sibling owner 的 exact commit 与 clean boundary。</zh-CN><en>Validates exact commit and clean boundary for one sibling owner.</en></lang>
+ * <lang><zh-CN>验证一个 owner 仓库的 exact commit 与 clean boundary。</zh-CN><en>Validates one owner repository's exact commit and clean boundary.</en></lang>
  *
- * @param {string} ownerRoot <lang><zh-CN>owner repository 绝对根。</zh-CN><en>Absolute owner repository root.</en></lang>
+ * @param {string} ownerRoot <lang><zh-CN>owner 仓库绝对根。</zh-CN><en>Absolute owner repository root.</en></lang>
  * @param {string} expectedCommit <lang><zh-CN>冻结的完整 commit。</zh-CN><en>Frozen full commit.</en></lang>
- * @param {string} label <lang><zh-CN>仅用于错误消息的中性 owner label。</zh-CN><en>Neutral owner label used only in errors.</en></lang>
+ * @param {string} label <lang><zh-CN>公开安全的诊断标签。</zh-CN><en>Public-safe diagnostic label.</en></lang>
  * @returns {void}
  */
 function validateOwner(ownerRoot, expectedCommit, label) {
@@ -154,7 +166,68 @@ function validateOwner(ownerRoot, expectedCommit, label) {
 }
 
 /**
- * <lang><zh-CN>验证 generated root 是 BP 内唯一允许递归重建的精确目录。</zh-CN><en>Validates that the generated root is the exact BP-local directory allowed for recursive rebuild.</en></lang>
+ * <lang><zh-CN>一次性验证四个输出 owner，避免部分矩阵由漂移实现生成。</zh-CN><en>Validates all four output owners together so no partial matrix is generated by drifted implementations.</en></lang>
+ *
+ * @returns {void}
+ */
+function validateOwners() {
+  validateOwner(topology.pluginRoot, OWNER_COMMITS.plugin, 'JPHS')
+  validateOwner(topology.themeRoot, OWNER_COMMITS.theme, 'JTH')
+  validateOwner(topology.hiaJsdocRoot, OWNER_COMMITS.hiaJsdoc, 'hia-jsdoc')
+  validateOwner(topology.portalRoot, OWNER_COMMITS.portal, 'HIA Portal')
+}
+
+/**
+ * <lang><zh-CN>验证两个 JSDoc runtime 与 Portal CLI 都由显式安装/构建提供。</zh-CN><en>Validates that both JSDoc runtimes and the Portal CLI are supplied by explicit install/build steps.</en></lang>
+ *
+ * @returns {{directJsdocEntry: string, hiaJsdocRunnerEntry: string, portalCliEntry: string}} <lang><zh-CN>已验证入口。</zh-CN><en>Validated entries.</en></lang>
+ */
+function resolveRuntimeEntries() {
+  // <lang><zh-CN>直接 JPHS/JTH 链复用 BP 工具专属 exact-lock runtime。</zh-CN><en>The direct JPHS/JTH chain uses the BP tool-specific exact-lock runtime.</en></lang>
+  const directJsdocEntry = path.join(
+    topology.documentationRuntimeRoot,
+    'node_modules',
+    'jsdoc',
+    'jsdoc.js'
+  )
+  // <lang><zh-CN>hia-jsdoc 必须从自身 workspace 与 lock 安装，不借用 BP root dependency。</zh-CN><en>hia-jsdoc must be installed from its own workspace and lock, without borrowing a BP-root dependency.</en></lang>
+  const hiaJsdocRuntime = path.join(
+    topology.hiaJsdocRoot,
+    'node_modules',
+    'jsdoc',
+    'jsdoc.js'
+  )
+  const hiaJsdocRunnerEntry = path.join(
+    topology.hiaJsdocRoot,
+    'packages',
+    'jsdoc-runner',
+    'src',
+    'index.mjs'
+  )
+  // <lang><zh-CN>Portal CLI 在 main owner 的一次性 build 后出现。</zh-CN><en>The Portal CLI appears after the one-time main-owner build.</en></lang>
+  const portalCliEntry = path.join(
+    topology.portalRoot,
+    'apps',
+    'cli',
+    'dist',
+    'index.js'
+  )
+
+  if (!fs.existsSync(directJsdocEntry)) {
+    throw new Error(
+      'Pinned BP documentation runtime is missing; run its npm ci through mise.'
+    )
+  }
+  if (!fs.existsSync(hiaJsdocRuntime) || !fs.existsSync(hiaJsdocRunnerEntry)) {
+    throw new Error(
+      'Pinned hia-jsdoc workspace runtime is missing; run its npm ci through mise.'
+    )
+  }
+  return { directJsdocEntry, hiaJsdocRunnerEntry, portalCliEntry }
+}
+
+/**
+ * <lang><zh-CN>安全重建唯一允许的 BP-local generated root。</zh-CN><en>Safely rebuilds the only permitted BP-local generated root.</en></lang>
  *
  * @returns {void}
  */
@@ -170,16 +243,29 @@ function resetGeneratedRoot() {
       'Generated output boundary is not the exact build/hia-docs directory.'
     )
   }
-  // <lang><zh-CN>只删除已验证的 ignored generated root；源码、dist、其他 build 目录和 sibling owner 不受影响。</zh-CN><en>Delete only the validated ignored generated root; source, dist, other build directories, and sibling owners are unaffected.</en></lang>
+  // <lang><zh-CN>删除目标已精确解析为 ignored build/hia-docs；不使用 glob 或环境变量。</zh-CN><en>The deletion target is resolved exactly to ignored build/hia-docs; no glob or environment variable is used.</en></lang>
   fs.rmSync(topology.generatedRoot, { recursive: true, force: true })
+  fs.mkdirSync(topology.showcaseRoot, { recursive: true })
   fs.mkdirSync(topology.cacheRoot, { recursive: true })
   fs.mkdirSync(topology.evidenceRoot, { recursive: true })
 }
 
 /**
- * <lang><zh-CN>递归查找输出树中的 JSON 文件并原地应用 privacy sanitizer。</zh-CN><en>Recursively finds JSON files in an output tree and applies the privacy sanitizer in place.</en></lang>
+ * <lang><zh-CN>确定性写出 UTF-8 JSON。</zh-CN><en>Deterministically writes UTF-8 JSON.</en></lang>
  *
- * @param {string} root <lang><zh-CN>已生成的独立或 Portal output root。</zh-CN><en>Generated independent or Portal output root.</en></lang>
+ * @param {string} filePath <lang><zh-CN>目标绝对路径。</zh-CN><en>Absolute destination path.</en></lang>
+ * @param {unknown} value <lang><zh-CN>JSON-compatible 值。</zh-CN><en>JSON-compatible value.</en></lang>
+ * @returns {void}
+ */
+function writeJson(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
+}
+
+/**
+ * <lang><zh-CN>递归清洗 output tree 内的 JSON，正文型源码只允许留在选定 HTML 或 `.txt` carrier。</zh-CN><en>Recursively sanitizes JSON in an output tree; source bodies may remain only in selected HTML or `.txt` carriers.</en></lang>
+ *
+ * @param {string} root <lang><zh-CN>公开 output root。</zh-CN><en>Public output root.</en></lang>
  * @returns {void}
  */
 function sanitizeJsonTree(root) {
@@ -194,18 +280,305 @@ function sanitizeJsonTree(root) {
 }
 
 /**
- * <lang><zh-CN>收集输出树的相对文件、byte size 与 SHA-256，不复制正文。</zh-CN><en>Collects relative files, byte sizes, and SHA-256 for an output tree without copying bodies.</en></lang>
+ * <lang><zh-CN>把公开相对 route 解析到 showcase root 内，并拒绝 traversal。</zh-CN><en>Resolves a public relative route inside the showcase root and rejects traversal.</en></lang>
  *
- * @param {string} root <lang><zh-CN>输出树绝对根。</zh-CN><en>Absolute output-tree root.</en></lang>
- * @returns {Array<{path: string, bytes: number, sha256: string}>} <lang><zh-CN>按相对路径排序的摘要。</zh-CN><en>Summary sorted by relative path.</en></lang>
+ * @param {string} relativeRoute <lang><zh-CN>由闭集 profile 生成的 route。</zh-CN><en>Route generated by a closed-set profile.</en></lang>
+ * @returns {string} <lang><zh-CN>showcase root 内绝对路径。</zh-CN><en>Absolute path inside the showcase root.</en></lang>
+ */
+function resolveShowcaseRoute(relativeRoute) {
+  const destination = path.resolve(topology.showcaseRoot, relativeRoute)
+  const boundary = path.relative(topology.showcaseRoot, destination)
+  if (!boundary || boundary.startsWith('..') || path.isAbsolute(boundary)) {
+    throw new Error(`Unsafe showcase route: ${relativeRoute}`)
+  }
+  return destination
+}
+
+/**
+ * <lang><zh-CN>构建一个直接 JPHS/JTH profile，并返回清洗后的 Portal handoff。</zh-CN><en>Builds one direct JPHS/JTH profile and returns its sanitized Portal handoff.</en></lang>
+ *
+ * @param {Object} profile <lang><zh-CN>jphs-jth-native profile。</zh-CN><en>jphs-jth-native profile.</en></lang>
+ * @param {string} buildCommit <lang><zh-CN>精确 BP revision。</zh-CN><en>Exact BP revision.</en></lang>
+ * @param {string} jsdocEntry <lang><zh-CN>BP 专属 JSDoc CLI。</zh-CN><en>BP-specific JSDoc CLI.</en></lang>
+ * @returns {string} <lang><zh-CN>ignored cache 中的 public-safe integration。</zh-CN><en>Public-safe integration in the ignored cache.</en></lang>
+ */
+function buildDirectProfile(profile, buildCommit, jsdocEntry) {
+  const destination = resolveShowcaseRoute(profile.route)
+  const configPath = path.join(
+    topology.cacheRoot,
+    'direct-config',
+    `${profile.id}.json`
+  )
+  const rawIntegrationPath = path.join(
+    topology.cacheRoot,
+    'direct-integration',
+    `${profile.id}.raw.json`
+  )
+  const publicIntegrationPath = path.join(
+    topology.cacheRoot,
+    'direct-integration',
+    `${profile.id}.public.json`
+  )
+  const config = createJsdocConfig(topology, buildCommit, {
+    destination,
+    integrationOutputFile: rawIntegrationPath,
+    hiaMode: 'standalone',
+    sourceMode: profile.sourceMode,
+    skin: profile.skin,
+    scheme: profile.scheme
+  })
+  writeJson(configPath, config)
+
+  runCommand(
+    'mise',
+    [
+      'exec',
+      `node@${process.versions.node}`,
+      '--',
+      'node',
+      jsdocEntry,
+      '-c',
+      configPath
+    ],
+    repositoryRoot
+  )
+  if (!fs.existsSync(path.join(destination, 'index.html'))) {
+    throw new Error(`${profile.id} did not create a standalone index.`)
+  }
+  if (!fs.existsSync(rawIntegrationPath)) {
+    throw new Error(`${profile.id} did not create a JPHS integration.`)
+  }
+
+  // <lang><zh-CN>raw handoff 永不进入公开树；独立站 JSON 也执行相同 body/path 清洗。</zh-CN><en>The raw handoff never enters the public tree; standalone-site JSON receives the same body/path sanitization.</en></lang>
+  sanitizeJsonFile(rawIntegrationPath, publicIntegrationPath)
+  sanitizeJsonTree(destination)
+  process.stdout.write(`Built ${profile.id}.\n`)
+  return publicIntegrationPath
+}
+
+/**
+ * <lang><zh-CN>通过 hia-jsdoc project runner 构建一个 both-mode standalone surface。</zh-CN><en>Builds one both-mode standalone surface through the hia-jsdoc project runner.</en></lang>
+ *
+ * @param {Object} profile <lang><zh-CN>hia-jsdoc profile。</zh-CN><en>hia-jsdoc profile.</en></lang>
+ * @param {string} buildCommit <lang><zh-CN>精确 BP revision。</zh-CN><en>Exact BP revision.</en></lang>
+ * @param {(request: Object) => Object} runHiaJsdocProject <lang><zh-CN>owner 导出的 runner。</zh-CN><en>Runner exported by the owner.</en></lang>
+ * @returns {string} <lang><zh-CN>公开 standalone 内已清洗的 integration 路径。</zh-CN><en>Path to the sanitized integration in the public standalone surface.</en></lang>
+ */
+function buildHiaJsdocProfile(profile, buildCommit, runHiaJsdocProject) {
+  const standaloneSurface = profile.surfaces.find(
+    (surface) => surface.kind === 'standalone'
+  )
+  if (!standaloneSurface) {
+    throw new Error(`${profile.id} lacks its standalone surface.`)
+  }
+  const destination = resolveShowcaseRoute(standaloneSurface.path)
+  const sourceRootUrl = `https://github.com/mandolin/bp-docs-js-cookie/blob/${buildCommit}`
+  const result = runHiaJsdocProject({
+    workspaceRoot: repositoryRoot,
+    outputDirectory: destination,
+    inputs: SOURCE_FILES.map((relativePath) => ({
+      kind: relativePath.endsWith('.mjs')
+        ? 'javascript-module'
+        : 'javascript-source',
+      path: relativePath
+    })),
+    profileIds: [profile.id],
+    options: {
+      mode: 'both',
+      recurse: false,
+      includePattern: '.+\\.(?:js|mjs)$',
+      writeResultManifest: true,
+      sourcesContentPolicy:
+        profile.sourceMode === 'embed' ? 'embed' : 'reference',
+      plugin: {
+        pluginPath: path.join(topology.pluginRoot, 'src', 'index.cjs')
+      },
+      theme: {
+        template: topology.themeRoot
+      },
+      hia: {
+        source: {
+          basePath: repositoryRoot,
+          mode: 'all',
+          link: {
+            enabled: true,
+            rootUrl: sourceRootUrl,
+            openMode: 'new-tab'
+          },
+          preview: {
+            enabled: true,
+            defaultExpanded: false
+          },
+          references: {
+            enabled: false,
+            defaultExpanded: false
+          }
+        },
+        i18n: {
+          enabled: true,
+          defaultLocale: 'zh-CN',
+          fallbackLocale: 'en',
+          locales: ['zh-CN', 'en'],
+          mode: 'runtimeSwitch',
+          resources: []
+        },
+        presentation: {
+          pageMode: 'multi-page',
+          sourceMode: profile.sourceMode
+        },
+        theme: {
+          skin: profile.skin,
+          scheme: profile.scheme,
+          collapse: {
+            docletsDefaultExpanded: true,
+            sectionsDefaultExpanded: true,
+            metadataDefaultExpanded: false
+          },
+          languageControls: {
+            mode: 'auto',
+            dropdownThreshold: 4
+          },
+          code: {
+            controls: true,
+            fontFamily: 'system',
+            fontSize: 13,
+            lineHeight: 1.6,
+            tabSize: 2,
+            wrap: true
+          }
+        }
+      }
+    }
+  })
+  if (result.status !== 'success') {
+    const codes = result.diagnostics
+      .map((diagnostic) => diagnostic.code)
+      .join(', ')
+    throw new Error(`${profile.id} hia-jsdoc runner failed: ${codes}`)
+  }
+
+  const integrationPath = path.join(destination, 'hia-integration.json')
+  if (!fs.existsSync(path.join(destination, 'index.html'))) {
+    throw new Error(`${profile.id} did not create a hia-jsdoc index.`)
+  }
+  if (!fs.existsSync(integrationPath)) {
+    throw new Error(`${profile.id} did not create a hia-jsdoc integration.`)
+  }
+  // <lang><zh-CN>runner 的 `.hia-jsdoc` config 包含宿主绝对路径，只用于执行，绝不部署。</zh-CN><en>The runner's `.hia-jsdoc` config contains host absolute paths, is execution-only, and is never deployed.</en></lang>
+  fs.rmSync(path.join(destination, '.hia-jsdoc'), {
+    recursive: true,
+    force: true
+  })
+  sanitizeJsonTree(destination)
+  process.stdout.write(`Built ${profile.id} standalone.\n`)
+  return integrationPath
+}
+
+/**
+ * <lang><zh-CN>从 public-safe integration 构建一个 split-site Portal surface。</zh-CN><en>Builds one split-site Portal surface from a public-safe integration.</en></lang>
+ *
+ * @param {Object} profile <lang><zh-CN>当前矩阵 profile。</zh-CN><en>Current matrix profile.</en></lang>
+ * @param {string} surfaceKind <lang><zh-CN>portal 或 portal-bridge。</zh-CN><en>portal or portal-bridge.</en></lang>
+ * @param {string} integrationPath <lang><zh-CN>清洗后的 integration。</zh-CN><en>Sanitized integration.</en></lang>
+ * @param {string} cliEntry <lang><zh-CN>已构建的 Portal CLI。</zh-CN><en>Built Portal CLI.</en></lang>
+ * @returns {void}
+ */
+function buildPortalSurface(profile, surfaceKind, integrationPath, cliEntry) {
+  const surface = profile.surfaces.find(
+    (candidate) => candidate.kind === surfaceKind
+  )
+  if (!surface) {
+    throw new Error(`${profile.id} lacks ${surfaceKind} surface.`)
+  }
+  const destination = resolveShowcaseRoute(surface.path)
+  const temporaryRoot = path.join(
+    topology.cacheRoot,
+    'portal',
+    `${profile.id}.${surfaceKind}`
+  )
+  const stagedIntegration = path.join(
+    temporaryRoot,
+    'hia-integration.public.json'
+  )
+  const manifestPath = path.join(
+    temporaryRoot,
+    'portal-project.hia-project.json'
+  )
+  const configPath = path.join(temporaryRoot, 'portal.hia.config.json')
+
+  fs.mkdirSync(temporaryRoot, { recursive: true })
+  fs.copyFileSync(integrationPath, stagedIntegration)
+  writeJson(manifestPath, createPortalProjectManifest())
+  writeJson(
+    configPath,
+    createPortalConfig({
+      sourceMode: profile.sourceMode,
+      skin: profile.portalSkin,
+      scheme: profile.scheme,
+      localRoot: repositoryRoot
+    })
+  )
+
+  runCommand(
+    'mise',
+    [
+      'exec',
+      `node@${process.versions.node}`,
+      '--',
+      'node',
+      cliEntry,
+      'docs',
+      'build',
+      '--config',
+      configPath,
+      '--project-manifest',
+      manifestPath,
+      '--out',
+      destination,
+      '--locale',
+      'zh-CN'
+    ],
+    repositoryRoot
+  )
+  if (!fs.existsSync(path.join(destination, 'index.html'))) {
+    throw new Error(`${profile.id} did not create ${surfaceKind} index.`)
+  }
+  sanitizeJsonTree(destination)
+  fs.rmSync(temporaryRoot, { recursive: true, force: true })
+  process.stdout.write(`Built ${profile.id} ${surfaceKind}.\n`)
+}
+
+/**
+ * <lang><zh-CN>按字节收集普通文件并拒绝 symbolic link。</zh-CN><en>Collects regular files by bytes and rejects symbolic links.</en></lang>
+ *
+ * @param {string} root <lang><zh-CN>待摘要的公开树。</zh-CN><en>Public tree to summarize.</en></lang>
+ * @returns {Array<{path: string, bytes: number, sha256: string}>} <lang><zh-CN>按 code-point path 排序的文件摘要。</zh-CN><en>File summaries sorted by code-point path.</en></lang>
  */
 function summarizeTree(root) {
   const files = []
+  /**
+   * <lang><zh-CN>深度优先访问一个已验证目录。</zh-CN><en>Depth-first visits one validated directory.</en></lang>
+   *
+   * @param {string} current <lang><zh-CN>当前目录。</zh-CN><en>Current directory.</en></lang>
+   * @returns {void}
+   */
   const visit = (current) => {
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+    // <lang><zh-CN>目录项先按 name code point 排序，避免 filesystem 枚举顺序影响 evidence。</zh-CN><en>Directory entries are sorted by name code point so filesystem enumeration order cannot affect evidence.</en></lang>
+    const entries = fs
+      .readdirSync(current, { withFileTypes: true })
+      .sort((left, right) =>
+        left.name < right.name ? -1 : left.name > right.name ? 1 : 0
+      )
+    for (const entry of entries) {
       const entryPath = path.join(current, entry.name)
-      if (entry.isDirectory()) visit(entryPath)
-      else if (entry.isFile()) {
+      const status = fs.lstatSync(entryPath)
+      if (status.isSymbolicLink()) {
+        throw new Error(
+          `Showcase output contains a symbolic link: ${entry.name}`
+        )
+      }
+      if (status.isDirectory()) visit(entryPath)
+      else if (status.isFile()) {
         const body = fs.readFileSync(entryPath)
         files.push({
           path: path.relative(root, entryPath).replaceAll('\\', '/'),
@@ -216,200 +589,210 @@ function summarizeTree(root) {
     }
   }
   visit(root)
-  return files.sort((left, right) => left.path.localeCompare(right.path))
+  return files.sort((left, right) =>
+    left.path < right.path ? -1 : left.path > right.path ? 1 : 0
+  )
 }
 
 /**
- * <lang><zh-CN>执行完整本地双输出构建并写 count/hash/status-only evidence。</zh-CN><en>Runs the complete local dual-output build and writes count/hash/status-only evidence.</en></lang>
+ * <lang><zh-CN>从文件摘要计算跨 Node 可比较的聚合指纹。</zh-CN><en>Computes an aggregate fingerprint comparable across Node versions from file summaries.</en></lang>
  *
+ * @param {Array<{path: string, bytes: number, sha256: string}>} files <lang><zh-CN>确定性文件摘要。</zh-CN><en>Deterministic file summaries.</en></lang>
+ * @returns {{fileCount: number, totalBytes: number, sha256: string}} <lang><zh-CN>无正文聚合摘要。</zh-CN><en>Body-free aggregate summary.</en></lang>
+ */
+function fingerprintFiles(files) {
+  const digest = crypto.createHash('sha256')
+  let totalBytes = 0
+  for (const file of files) {
+    totalBytes += file.bytes
+    digest.update(`${file.path}\0${file.bytes}\0${file.sha256}\n`, 'utf8')
+  }
+  return {
+    fileCount: files.length,
+    totalBytes,
+    sha256: digest.digest('hex')
+  }
+}
+
+/**
+ * <lang><zh-CN>写出公开 hub、矩阵 manifest 与同源静态资产。</zh-CN><en>Writes the public hub, matrix manifest, and same-origin static assets.</en></lang>
+ *
+ * @param {Object} manifest <lang><zh-CN>public-safe 展示 manifest。</zh-CN><en>Public-safe showcase manifest.</en></lang>
  * @returns {void}
  */
-function main() {
+function writeShowcaseHub(manifest) {
+  const assetRoot = path.join(topology.showcaseRoot, 'assets')
+  fs.mkdirSync(assetRoot, { recursive: true })
+  fs.writeFileSync(
+    path.join(topology.showcaseRoot, 'index.html'),
+    renderShowcaseHub(manifest),
+    'utf8'
+  )
+  writeJson(path.join(topology.showcaseRoot, 'showcase-matrix.json'), manifest)
+  fs.writeFileSync(
+    path.join(assetRoot, 'showcase.css'),
+    SHOWCASE_HUB_CSS,
+    'utf8'
+  )
+  fs.writeFileSync(path.join(assetRoot, 'showcase.js'), SHOWCASE_HUB_JS, 'utf8')
+}
+
+/**
+ * <lang><zh-CN>执行完整 W-P118 矩阵构建与 evidence 写入。</zh-CN><en>Runs the complete W-P118 matrix build and evidence write.</en></lang>
+ *
+ * @returns {Promise<void>}
+ */
+async function main() {
   validateNodeVersion()
   const buildCommit = validateRepositoryBoundary()
-  validateOwner(topology.pluginRoot, OWNER_COMMITS.plugin, 'JPHS')
-  validateOwner(topology.themeRoot, OWNER_COMMITS.theme, 'JTH')
-  validateOwner(topology.portalRoot, OWNER_COMMITS.portal, 'HIA Portal')
+  validateOwners()
+  const runtimeEntries = resolveRuntimeEntries()
   resetGeneratedRoot()
-
-  // <lang><zh-CN>JSDoc runtime 由 BP 工具专属 exact lock 安装；缺失时拒绝隐式下载或改变 BP root/JPHS dependency tree。</zh-CN><en>The JSDoc runtime is installed by the BP tool-specific exact lock; when absent, refuse implicit downloads or changes to the BP root or JPHS dependency trees.</en></lang>
-  const jsdocEntry = path.join(
-    topology.documentationRuntimeRoot,
-    'node_modules',
-    'jsdoc',
-    'jsdoc.js'
-  )
-  if (!fs.existsSync(jsdocEntry)) {
-    throw new Error(
-      'Pinned documentation runtime is missing; run its npm ci through mise before rebuilding documentation.'
-    )
-  }
-
-  // <lang><zh-CN>临时 config/raw integration 可含本机路径或 source body，只允许存在于 ignored cache 且必须在 finally 删除。</zh-CN><en>The temporary config/raw integration may contain host paths or source bodies, so it may exist only in ignored cache and must be deleted in finally.</en></lang>
-  const temporaryConfigPath = path.join(topology.cacheRoot, 'jsdoc.config.json')
-  const rawIntegrationPath = path.join(
-    topology.cacheRoot,
-    'hia-integration.raw.json'
-  )
-  const publicIntegrationPath = path.join(
-    topology.cacheRoot,
-    'hia-integration.public.json'
-  )
-  /** @lang zh-CN 临时 project manifest 只承载公开标题、locale 与同目录 integration 引用。 @lang en Temporary project manifest carries only the public title, locales, and same-directory integration reference. */
-  const portalProjectManifestPath = path.join(
-    topology.cacheRoot,
-    'portal-project.hia-project.json'
-  )
-  /** @lang zh-CN 单页 Portal 配置只改变公开小站布局，不改变 owner contract。 @lang en Single-page Portal config changes only the small public-site layout, not owner contracts. */
-  const portalConfigPath = path.join(
-    topology.cacheRoot,
-    'portal.hia.config.json'
-  )
+  const profiles = createShowcaseProfiles()
+  // <lang><zh-CN>direct integration 以 sourceMode/skin 为键，供对应 unified Portal profile 复用；不复制 semantic IR 到 hub。</zh-CN><en>Direct integrations are keyed by sourceMode/skin for matching unified Portal profiles; semantic IR is not copied into the hub.</en></lang>
+  const directIntegrations = new Map()
+  // <lang><zh-CN>hia-jsdoc integration 由同一 profile 的 Portal bridge 消费。</zh-CN><en>Each hia-jsdoc integration is consumed by the Portal bridge of the same profile.</en></lang>
+  const hiaJsdocIntegrations = new Map()
 
   try {
-    const jsdocConfig = createJsdocConfig(topology, buildCommit)
-    fs.writeFileSync(
-      temporaryConfigPath,
-      `${JSON.stringify(jsdocConfig, null, 2)}\n`,
-      'utf8'
-    )
-
-    // <lang><zh-CN>真实 JSDoc parse/theme 执行使用当前精确 Node，并由外层 mise identity 继续传递。</zh-CN><en>The real JSDoc parse/theme execution uses the current exact Node and carries forward the outer mise identity.</en></lang>
-    runCommand(
-      'mise',
-      [
-        'exec',
-        `node@${process.versions.node}`,
-        '--',
-        'node',
-        jsdocEntry,
-        '-c',
-        temporaryConfigPath
-      ],
-      repositoryRoot
-    )
-    if (!fs.existsSync(rawIntegrationPath)) {
-      throw new Error('JPHS did not create the required integration artifact.')
+    for (const profile of profiles.filter(
+      (candidate) => candidate.pipeline === 'jphs-jth-native'
+    )) {
+      const integrationPath = buildDirectProfile(
+        profile,
+        buildCommit,
+        runtimeEntries.directJsdocEntry
+      )
+      directIntegrations.set(
+        `${profile.sourceMode}.${profile.skin}`,
+        integrationPath
+      )
     }
 
-    // <lang><zh-CN>Portal 只消费清洗后的 integration；raw artifact 绝不跨过此 handoff。</zh-CN><en>The Portal consumes only the sanitized integration; the raw artifact never crosses this handoff.</en></lang>
-    sanitizeJsonFile(rawIntegrationPath, publicIntegrationPath)
-    sanitizeJsonTree(topology.jsdocNativeRoot)
-    fs.writeFileSync(
-      portalProjectManifestPath,
-      `${JSON.stringify(createPortalProjectManifest(), null, 2)}\n`,
-      'utf8'
+    // <lang><zh-CN>runner 从冻结 owner commit 动态导入；模块路径不会写入其公开 producer result。</zh-CN><en>The runner is dynamically imported from the pinned owner commit; its module path is not written to the public producer result.</en></lang>
+    const runnerModule = await import(
+      pathToFileURL(runtimeEntries.hiaJsdocRunnerEntry).href
     )
-    fs.writeFileSync(
-      portalConfigPath,
-      `${JSON.stringify(createPortalConfig(), null, 2)}\n`,
-      'utf8'
-    )
+    if (typeof runnerModule.runHiaJsdocProject !== 'function') {
+      throw new Error('hia-jsdoc owner lacks runHiaJsdocProject().')
+    }
+    for (const profile of profiles.filter(
+      (candidate) => candidate.pipeline === 'hia-jsdoc'
+    )) {
+      const integrationPath = buildHiaJsdocProfile(
+        profile,
+        buildCommit,
+        runnerModule.runHiaJsdocProject
+      )
+      hiaJsdocIntegrations.set(profile.id, integrationPath)
+    }
 
-    // <lang><zh-CN>main owner 先按自身 mise/pnpm lock 构建，BP 不建立跨仓依赖或修改其 dist。</zh-CN><en>The main owner builds first under its own mise/pnpm lock; the BP creates no cross-repository dependency and does not modify its dist.</en></lang>
+    // <lang><zh-CN>main owner 只构建一次；随后 18 个 Portal surface 复用同一受版本约束的 CLI。</zh-CN><en>The main owner is built once; all 18 Portal surfaces then reuse the same version-constrained CLI.</en></lang>
     runCommand(
       'mise',
       ['exec', '--', 'pnpm', 'run', 'build'],
       topology.portalRoot
     )
-    const cliEntry = path.join(
-      topology.portalRoot,
-      'apps',
-      'cli',
-      'dist',
-      'index.js'
-    )
-    runCommand(
-      'mise',
-      [
-        'exec',
-        `node@${process.versions.node}`,
-        '--',
-        'node',
-        cliEntry,
-        'docs',
-        'build',
-        '--config',
-        portalConfigPath,
-        '--project-manifest',
-        portalProjectManifestPath,
-        '--out',
-        topology.portalOutputRoot,
-        '--locale',
-        'zh-CN'
-      ],
-      repositoryRoot
-    )
-    sanitizeJsonTree(topology.portalOutputRoot)
-  } finally {
-    // <lang><zh-CN>无论 build 成功或失败都移除带绝对路径的 config 与带正文的 raw integration。</zh-CN><en>Remove the absolute-path config and source-bearing raw integration whether the build succeeds or fails.</en></lang>
-    fs.rmSync(temporaryConfigPath, { force: true })
-    fs.rmSync(rawIntegrationPath, { force: true })
-    fs.rmSync(portalProjectManifestPath, { force: true })
-    fs.rmSync(portalConfigPath, { force: true })
-  }
-
-  // <lang><zh-CN>public integration 经过 JSON parse 后只读取计数/diagnostic summary，不向 evidence 复制节点正文。</zh-CN><en>After JSON parsing, only counts and diagnostic summaries are read from the public integration; node bodies are not copied into evidence.</en></lang>
-  const integration = JSON.parse(fs.readFileSync(publicIntegrationPath, 'utf8'))
-  const independentFiles = summarizeTree(topology.jsdocNativeRoot)
-  const portalFiles = summarizeTree(topology.portalOutputRoot)
-  const buildEvidence = {
-    contract: 'bp-js-cookie-local-documentation-build',
-    contractVersion: '0.1.0-draft',
-    status: 'ready-for-wp111-pages-check',
-    buildCommit,
-    runtime: {
-      node: process.versions.node,
-      supported: DOCUMENTATION_NODE_VERSIONS
-    },
-    owners: OWNER_COMMITS,
-    inputs: {
-      sourceFiles: SOURCE_FILES,
-      sourceFileCount: SOURCE_FILES.length,
-      packageInputsStable: true
-    },
-    integration: {
-      contract: integration.contract,
-      contractVersion: integration.contractVersion,
-      nodeCount: Array.isArray(integration.ir?.nodes)
-        ? integration.ir.nodes.length
-        : 0,
-      diagnosticCounts: integration.diagnosticCounts || {}
-    },
-    outputs: {
-      generatedTracked: false,
-      independent: {
-        root: 'build/hia-docs/jsdoc-native',
-        fileCount: independentFiles.length,
-        files: independentFiles
-      },
-      portal: {
-        root: 'build/hia-docs/portal',
-        fileCount: portalFiles.length,
-        files: portalFiles
-      }
-    },
-    privacy: PRIVACY_POLICY,
-    permissions: {
-      browserStack: false,
-      credentialRead: false,
-      networkFetchByGeneratedSite: false,
-      packagePublish: false,
-      pagesEnablement: false,
-      targetRepositoryAccess: false,
-      targetRepositoryWrite: false,
-      workflowMutation: false
+    if (!fs.existsSync(runtimeEntries.portalCliEntry)) {
+      throw new Error('HIA Portal build did not create the CLI entry.')
     }
+
+    for (const profile of profiles.filter(
+      (candidate) => candidate.pipeline === 'hia-jsdoc'
+    )) {
+      const integrationPath = hiaJsdocIntegrations.get(profile.id)
+      if (!integrationPath) {
+        throw new Error(`${profile.id} lacks its hia-jsdoc integration.`)
+      }
+      buildPortalSurface(
+        profile,
+        'portal-bridge',
+        integrationPath,
+        runtimeEntries.portalCliEntry
+      )
+    }
+    for (const profile of profiles.filter(
+      (candidate) => candidate.pipeline === 'unified-portal'
+    )) {
+      const integrationPath = directIntegrations.get(
+        `${profile.sourceMode}.${profile.skin}`
+      )
+      if (!integrationPath) {
+        throw new Error(`${profile.id} lacks its direct integration.`)
+      }
+      buildPortalSurface(
+        profile,
+        'portal',
+        integrationPath,
+        runtimeEntries.portalCliEntry
+      )
+    }
+
+    const manifest = createShowcaseManifest({ buildCommit, profiles })
+    writeShowcaseHub(manifest)
+    const files = summarizeTree(topology.showcaseRoot)
+    const fingerprint = fingerprintFiles(files)
+    const evidence = {
+      contract: 'bp-js-cookie-documentation-showcase-build',
+      contractVersion: '0.1.0-draft',
+      status: 'ready-for-wp118-check',
+      buildCommit,
+      runtime: {
+        node: process.versions.node,
+        supported: DOCUMENTATION_NODE_VERSIONS
+      },
+      owners: OWNER_COMMITS,
+      inputs: {
+        sourceFiles: SOURCE_FILES,
+        sourceFileCount: SOURCE_FILES.length,
+        packageInputsStable: true
+      },
+      matrix: {
+        profileCount: manifest.profileCount,
+        surfaceCount: manifest.surfaceCount,
+        defaultProfileId: manifest.defaultProfileId,
+        pipelineCount: manifest.dimensions.pipelines.length,
+        sourceModeCount: manifest.dimensions.sourceModes.length,
+        skinCount: manifest.dimensions.skins.length,
+        pageMode: manifest.dimensions.pageMode
+      },
+      output: {
+        root: 'build/hia-docs/showcase',
+        generatedTracked: false,
+        ...fingerprint
+      },
+      privacy: PRIVACY_POLICY,
+      permissions: {
+        browserStack: false,
+        credentialRead: false,
+        networkFetchByGeneratedSite: false,
+        packagePublish: false,
+        targetRepositoryAccess: false,
+        targetRepositoryWrite: false
+      }
+    }
+    writeJson(path.join(topology.evidenceRoot, 'build.json'), evidence)
+    writeJson(path.join(topology.evidenceRoot, 'showcase-fingerprint.json'), {
+      contract: 'bp-documentation-showcase-fingerprint',
+      contractVersion: '0.1.0-draft',
+      buildCommit,
+      node: process.versions.node,
+      output: fingerprint
+    })
+    // <lang><zh-CN>owner build 不得产生 tracked 变化；结束前重新核对 clean boundary。</zh-CN><en>Owner builds must not create tracked changes; recheck their clean boundary before completion.</en></lang>
+    validateOwners()
+    process.stdout.write(
+      `HIA showcase built: ${manifest.profileCount} profiles, ${manifest.surfaceCount} surfaces, ${fingerprint.fileCount} files, ${fingerprint.sha256}.\n`
+    )
+  } finally {
+    // <lang><zh-CN>cache 可能含绝对路径、raw integration 或源码正文，无论成功失败都必须删除。</zh-CN><en>The cache may contain absolute paths, raw integrations, or source bodies and must be removed on success or failure.</en></lang>
+    fs.rmSync(topology.cacheRoot, { recursive: true, force: true })
   }
-  const evidencePath = path.join(topology.evidenceRoot, 'build.json')
-  fs.writeFileSync(
-    evidencePath,
-    `${JSON.stringify(buildEvidence, null, 2)}\n`,
-    'utf8'
-  )
-  process.stdout.write(
-    `HIA docs built: ${integration.ir?.nodes?.length || 0} nodes, ${independentFiles.length} independent files, ${portalFiles.length} portal files.\n`
-  )
 }
 
-main()
+main().catch((error) => {
+  process.stderr.write(
+    `${error instanceof Error ? error.message : String(error)}\n`
+  )
+  process.exitCode = 1
+})

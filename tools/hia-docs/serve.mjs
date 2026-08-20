@@ -1,9 +1,9 @@
 /**
- * <lang><zh-CN>在 loopback 上提供 ignored Portal artifact，供 W-P111 真实浏览器验收。</zh-CN><en>Serves the ignored Portal artifact on loopback for W-P111 real-browser acceptance.</en></lang>
+ * <lang><zh-CN>在 loopback 上提供 ignored showcase artifact，供 W-P118 真实浏览器验收。</zh-CN><en>Serves the ignored showcase artifact on loopback for W-P118 real-browser acceptance.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-serve
- * @lang zh-CN server 只绑定 127.0.0.1、只读取 Portal root，并拒绝 traversal、link 与目录列表。
- * @lang en The server binds only to 127.0.0.1, reads only the Portal root, and rejects traversal, links, and directory listings.
+ * @lang zh-CN server 只绑定 127.0.0.1、只读取 showcase root，并拒绝 traversal、link 与目录列表；目录 route 只解析自身 index.html。
+ * @lang en The server binds only to 127.0.0.1, reads only the showcase root, and rejects traversal, links, and directory listings; a directory route resolves only its own index.html.
  */
 
 import fs from 'node:fs'
@@ -20,17 +20,17 @@ const repositoryRoot = path.resolve(
   '..',
   '..'
 )
-/** @lang zh-CN 固定 Portal document root。 @lang en Fixed Portal document root. */
-const portalRoot = resolveTopology(repositoryRoot).portalOutputRoot
+/** @lang zh-CN 固定 showcase document root。 @lang en Fixed showcase document root. */
+const showcaseRoot = resolveTopology(repositoryRoot).showcaseRoot
 /** @lang zh-CN 用户可选的 loopback port。 @lang en Optional caller-selected loopback port. */
 const port = Number(process.argv[2] || 4179)
 
 if (!Number.isInteger(port) || port < 1024 || port > 65535) {
   throw new Error('Port must be an integer between 1024 and 65535.')
 }
-if (!fs.existsSync(path.join(portalRoot, 'index.html'))) {
+if (!fs.existsSync(path.join(showcaseRoot, 'index.html'))) {
   throw new Error(
-    'Portal output is missing; run the documentation build first.'
+    'Showcase output is missing; run the documentation build first.'
   )
 }
 
@@ -39,11 +39,12 @@ const CONTENT_TYPES = Object.freeze({
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8'
+  '.json': 'application/json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8'
 })
 
 /**
- * <lang><zh-CN>把 URL path 解析为 Portal root 内的普通文件。</zh-CN><en>Resolves a URL path to a regular file inside the Portal root.</en></lang>
+ * <lang><zh-CN>把 URL path 解析为 showcase root 内的普通文件。</zh-CN><en>Resolves a URL path to a regular file inside the showcase root.</en></lang>
  *
  * @param {string} requestUrl <lang><zh-CN>HTTP request URL。</zh-CN><en>HTTP request URL.</en></lang>
  * @returns {string | undefined} <lang><zh-CN>安全绝对文件路径，拒绝时为 undefined。</zh-CN><en>Safe absolute file path, or undefined when refused.</en></lang>
@@ -60,13 +61,15 @@ function resolveRequestPath(requestUrl) {
       ? ''
       : undefined
   if (sitePath === undefined) return undefined
-  /** @lang zh-CN 站点根请求固定映射到 index.html。 @lang en Site-root requests map to index.html. */
+  /** @lang zh-CN 站点根与目录 route 固定映射到其 index.html。 @lang en Site-root and directory routes map to their index.html. */
   const relativePath =
-    sitePath === '' ? 'index.html' : sitePath.replace(/^\/+/, '')
+    sitePath === '' || sitePath.endsWith('/')
+      ? `${sitePath.replace(/^\/+/, '')}index.html`
+      : sitePath.replace(/^\/+/, '')
   /** @lang zh-CN 规范化后的 candidate 绝对路径。 @lang en Normalized absolute candidate path. */
-  const candidate = path.resolve(portalRoot, relativePath)
+  const candidate = path.resolve(showcaseRoot, relativePath)
   /** @lang zh-CN 用于边界验证的相对路径。 @lang en Relative path used for boundary validation. */
-  const boundary = path.relative(portalRoot, candidate)
+  const boundary = path.relative(showcaseRoot, candidate)
   if (boundary.startsWith('..') || path.isAbsolute(boundary)) return undefined
   if (!fs.existsSync(candidate)) return undefined
   /** @lang zh-CN lstat 防止生成目录中的 link 被跟随。 @lang en lstat prevents following a link in generated output. */
@@ -105,6 +108,6 @@ const server = http.createServer((request, response) => {
 
 server.listen(port, '127.0.0.1', () => {
   process.stdout.write(
-    `W-P111 Portal server: http://127.0.0.1:${port}${PAGES_SITE.projectBasePath}\n`
+    `W-P118 showcase server: http://127.0.0.1:${port}${PAGES_SITE.projectBasePath}\n`
   )
 })

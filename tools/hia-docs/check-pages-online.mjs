@@ -1,36 +1,40 @@
 /**
- * <lang><zh-CN>匿名验证已部署的 bp-docs-js-cookie GitHub Pages。</zh-CN><en>Anonymously verifies the deployed bp-docs-js-cookie GitHub Pages site.</en></lang>
+ * <lang><zh-CN>匿名验证已部署的 bp-docs-js-cookie 展示 hub 与代表性 owner surfaces。</zh-CN><en>Anonymously verifies the deployed bp-docs-js-cookie showcase hub and representative owner surfaces.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-pages-online-check
- * @lang zh-CN 只允许 canonical Pages origin 下五个固定 GET，不携带 cookie、credential 或 source-link 请求。
- * @lang en Only five fixed GET requests under the canonical Pages origin are allowed; no cookies, credentials, or source-link requests are sent.
+ * @lang zh-CN 只允许 canonical project Pages origin 下的有界 GET，不发送 cookie、credential、referrer 或跨源源码请求。
+ * @lang en Only bounded GET requests under the canonical project Pages origin are allowed; no cookies, credentials, referrer, or cross-origin source requests are sent.
  */
 
-import { execFileSync } from 'node:child_process'
+import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
-import { PAGES_SITE } from './config.mjs'
+import { PAGES_SITE, resolveTopology } from './config.mjs'
 
-/** @lang zh-CN 单个公开响应最大 4 MiB。 @lang en Maximum public response size is 4 MiB. */
-const MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+/** @lang zh-CN BP repository root。 @lang en BP repository root. */
+const repositoryRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..'
+)
+/** @lang zh-CN 可选本地 online evidence 位置。 @lang en Optional local online-evidence location. */
+const topology = resolveTopology(repositoryRoot)
+/** @lang zh-CN 单个公开响应最大 6 MiB。 @lang en Maximum public response size is 6 MiB. */
+const MAX_RESPONSE_BYTES = 6 * 1024 * 1024
 /** @lang zh-CN Pages 传播期的最多尝试次数。 @lang en Maximum attempts during Pages propagation. */
 const MAX_ATTEMPTS = 12
 /** @lang zh-CN 两次传播检查之间的毫秒数。 @lang en Milliseconds between propagation checks. */
 const RETRY_DELAY_MS = 5000
-/** @lang zh-CN 公开站固定检查路径。 @lang en Fixed public-site paths to check. */
-const REQUIRED_PATHS = Object.freeze([
-  '',
-  'assets/hia-default.css',
-  'assets/hia-default.js',
-  'hia-manifest.json',
-  'project-index.json'
-])
 
 /**
- * <lang><zh-CN>失败时停止线上验收。</zh-CN><en>Stops online acceptance on failure.</en></lang>
+ * <lang><zh-CN>断言线上验收条件。</zh-CN><en>Asserts an online-acceptance condition.</en></lang>
  *
  * @param {unknown} condition <lang><zh-CN>必须为真的条件。</zh-CN><en>Condition that must be truthy.</en></lang>
- * @param {string} message <lang><zh-CN>公开安全的诊断。</zh-CN><en>Public-safe diagnostic.</en></lang>
+ * @param {string} message <lang><zh-CN>公开安全诊断。</zh-CN><en>Public-safe diagnostic.</en></lang>
  * @returns {asserts condition}
  */
 function assert(condition, message) {
@@ -48,50 +52,66 @@ function delay(milliseconds) {
 }
 
 /**
- * <lang><zh-CN>读取同源、无凭据且有大小限制的公开资源。</zh-CN><en>Reads a same-origin, credential-free public resource with a size limit.</en></lang>
+ * <lang><zh-CN>验证相对 path 是 canonical project origin 下的安全 Pages route。</zh-CN><en>Validates that a relative path is a safe Pages route under the canonical project origin.</en></lang>
  *
- * @param {string} relativePath <lang><zh-CN>canonical root 下的固定相对路径。</zh-CN><en>Fixed relative path under the canonical root.</en></lang>
- * @returns {Promise<{url: string, contentType: string, body: string, bytes: number}>} <lang><zh-CN>有界响应。</zh-CN><en>Bounded response.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>canonical root 相对路径。</zh-CN><en>Path relative to the canonical root.</en></lang>
+ * @returns {URL} <lang><zh-CN>已验证 URL。</zh-CN><en>Validated URL.</en></lang>
  */
-async function readPublicResource(relativePath) {
-  /** @lang zh-CN 由固定 canonical root 解析的 URL。 @lang en URL resolved from the fixed canonical root. */
-  const url = new URL(relativePath, PAGES_SITE.canonicalUrl)
+function resolvePublicUrl(relativePath) {
   assert(
-    url.origin === new URL(PAGES_SITE.canonicalUrl).origin,
+    typeof relativePath === 'string' &&
+      !relativePath.startsWith('/') &&
+      !relativePath.split('/').includes('..'),
+    'Online check refused an unsafe relative path.'
+  )
+  const url = new URL(relativePath, PAGES_SITE.canonicalUrl)
+  const canonical = new URL(PAGES_SITE.canonicalUrl)
+  assert(
+    url.origin === canonical.origin,
     'Online check refused a cross-origin URL.'
   )
+  assert(!url.username && !url.password, 'Online check refused URL userinfo.')
   assert(
     url.pathname.startsWith(PAGES_SITE.projectBasePath),
     'Online check refused a URL outside the project base path.'
   )
-  /** @lang zh-CN 单请求 15 秒 abort 控制器。 @lang en Fifteen-second abort controller for one request. */
-  const controller = new AbortController()
-  /** @lang zh-CN 仅用于取消当前 GET 的 timer。 @lang en Timer used only to cancel the current GET. */
-  const timeout = setTimeout(() => controller.abort(), 15000)
+  return url
+}
 
+/**
+ * <lang><zh-CN>读取同源、无凭据且有大小限制的公开资源。</zh-CN><en>Reads a same-origin, credential-free public resource with a size limit.</en></lang>
+ *
+ * @param {string} relativePath <lang><zh-CN>canonical root 下的相对路径。</zh-CN><en>Relative path under the canonical root.</en></lang>
+ * @returns {Promise<{path:string,url:string,contentType:string,bytes:Uint8Array,text:string}>} <lang><zh-CN>有界响应。</zh-CN><en>Bounded response.</en></lang>
+ */
+async function readPublicResource(relativePath) {
+  const url = resolvePublicUrl(relativePath)
+  // <lang><zh-CN>单请求 15 秒 abort controller。</zh-CN><en>Fifteen-second abort controller for one request.</en></lang>
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
   try {
-    /** @lang zh-CN 匿名、无缓存、无 credential 的公开响应。 @lang en Anonymous, no-cache, credential-free public response. */
     const response = await fetch(url, {
       cache: 'no-store',
       credentials: 'omit',
       redirect: 'error',
+      referrerPolicy: 'no-referrer',
       signal: controller.signal
     })
     assert(
       response.status === 200,
       `${relativePath || '/'} returned HTTP ${response.status}.`
     )
-    /** @lang zh-CN 响应字节先计数再解码。 @lang en Response bytes counted before decoding. */
     const bytes = new Uint8Array(await response.arrayBuffer())
     assert(
       bytes.byteLength <= MAX_RESPONSE_BYTES,
       `${relativePath || '/'} exceeded the response limit.`
     )
     return {
+      path: relativePath || '/',
       url: url.href,
       contentType: response.headers.get('content-type') || '',
-      body: new TextDecoder().decode(bytes),
-      bytes: bytes.byteLength
+      bytes,
+      text: new TextDecoder('utf-8', { fatal: true }).decode(bytes)
     }
   } finally {
     clearTimeout(timeout)
@@ -99,65 +119,220 @@ async function readPublicResource(relativePath) {
 }
 
 /**
- * <lang><zh-CN>执行一次完整公开站检查。</zh-CN><en>Runs one complete public-site check.</en></lang>
+ * <lang><zh-CN>解析公开 JSON 并保留响应元数据。</zh-CN><en>Parses public JSON while retaining response metadata.</en></lang>
  *
- * @param {string} expectedCommit <lang><zh-CN>应出现在 source link 中的 exact BP commit。</zh-CN><en>Exact BP commit expected in source links.</en></lang>
- * @returns {Promise<{responses: Array<{path: string, bytes: number, contentType: string}>, sourceLinkCount: number}>} <lang><zh-CN>无正文验收摘要。</zh-CN><en>Body-free acceptance summary.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>公开 JSON route。</zh-CN><en>Public JSON route.</en></lang>
+ * @returns {Promise<{resource:Object,value:Object}>} <lang><zh-CN>响应与解析对象。</zh-CN><en>Response and parsed object.</en></lang>
+ */
+async function readPublicJson(relativePath) {
+  const resource = await readPublicResource(relativePath)
+  assert(
+    /application\/json/iu.test(resource.contentType),
+    `${relativePath} is not JSON.`
+  )
+  return { resource, value: JSON.parse(resource.text) }
+}
+
+/**
+ * <lang><zh-CN>执行一次完整公开站矩阵抽样检查。</zh-CN><en>Runs one complete representative check of the public matrix.</en></lang>
+ *
+ * @param {string} expectedCommit <lang><zh-CN>当前 BP exact commit。</zh-CN><en>Current exact BP commit.</en></lang>
+ * @returns {Promise<{responses:Array<Object>,verifiedProfiles:string[],verifiedSourceAsset:Object}>} <lang><zh-CN>无正文线上摘要。</zh-CN><en>Body-free online summary.</en></lang>
  */
 async function checkOnce(expectedCommit) {
-  /** @lang zh-CN 五个固定公开资源的响应。 @lang en Responses from the five fixed public resources. */
-  const resources = []
-  for (const relativePath of REQUIRED_PATHS) {
-    resources.push(await readPublicResource(relativePath))
+  const responses = []
+  /**
+   * <lang><zh-CN>读取资源并把 body-free 响应 facts 记入当前尝试。</zh-CN><en>Reads a resource and records body-free response facts for the current attempt.</en></lang>
+   *
+   * @param {string} relativePath <lang><zh-CN>公开相对 path。</zh-CN><en>Public relative path.</en></lang>
+   * @returns {Promise<Object>} <lang><zh-CN>完整响应，仅在内存断言。</zh-CN><en>Full response used only for in-memory assertions.</en></lang>
+   */
+  const read = async (relativePath) => {
+    const resource = await readPublicResource(relativePath)
+    responses.push({
+      path: resource.path,
+      bytes: resource.bytes.byteLength,
+      contentType: resource.contentType
+    })
+    return resource
   }
-  /** @lang zh-CN canonical root HTML。 @lang en Canonical root HTML. */
-  const rootHtml = resources[0].body
-  /** @lang zh-CN 已部署主题 CSS。 @lang en Deployed theme CSS. */
-  const themeCss = resources[1].body
-  /** @lang zh-CN HTML 与 manifest 中 exact source-link 次数。 @lang en Exact source-link count in HTML and manifest content. */
-  const sourceLinkCount = (
-    resources
-      .map((resource) => resource.body)
-      .join('\n')
-      .match(new RegExp(`/blob/${expectedCommit}/`, 'gu')) || []
-  ).length
+  /**
+   * <lang><zh-CN>读取 JSON 并记录 body-free 响应 facts。</zh-CN><en>Reads JSON and records body-free response facts.</en></lang>
+   *
+   * @param {string} relativePath <lang><zh-CN>公开 JSON path。</zh-CN><en>Public JSON path.</en></lang>
+   * @returns {Promise<{resource:Object,value:Object}>} <lang><zh-CN>内存 JSON response。</zh-CN><en>In-memory JSON response.</en></lang>
+   */
+  const readJson = async (relativePath) => {
+    const result = await readPublicJson(relativePath)
+    responses.push({
+      path: result.resource.path,
+      bytes: result.resource.bytes.byteLength,
+      contentType: result.resource.contentType
+    })
+    return result
+  }
 
+  const root = await read('')
+  const hubCss = await read('assets/showcase.css')
+  const hubJs = await read('assets/showcase.js')
+  const matrixResult = await readJson('showcase-matrix.json')
+  const matrix = matrixResult.value
   assert(
-    rootHtml.includes('bp-docs-js-cookie 文档工程'),
-    'Public root lacks the documentation-engineering title.'
+    root.text.includes('bp-docs-js-cookie 文档工程展示'),
+    'Hub title is missing.'
   )
   assert(
-    (rootHtml.match(/data-hia-project-entry=/gu) || []).length === 18,
-    'Public root lacks all 18 no-script single-page entries.'
+    (root.text.match(/data-showcase-profile=/gu) || []).length === 27,
+    'Hub lacks 27 static profile cards.'
   )
   assert(
-    rootHtml.includes('href="assets/hia-default.css"'),
-    'Public stylesheet path is not project-relative.'
+    (root.text.match(/data-showcase-surface=/gu) || []).length === 36,
+    'Hub lacks 36 static surface links.'
+  )
+  assert(root.text.includes('<noscript>'), 'Hub lacks no-script reachability.')
+  assert(
+    root.text.includes('href="profiles/unified-portal/fetch/classic/"'),
+    'Hub default route drifted.'
   )
   assert(
-    rootHtml.includes('src="assets/hia-default.js"'),
-    'Public script path is not project-relative.'
+    hubCss.text.includes('@media(max-width:680px)'),
+    'Hub lacks narrow layout.'
   )
   assert(
-    themeCss.includes('overflow-wrap: anywhere'),
-    'Public CSS lacks the long-field overflow fix.'
+    hubJs.text.includes("querySelectorAll('[data-filter]')"),
+    'Hub filter runtime is missing.'
   )
   assert(
-    themeCss.includes('grid-template-columns: minmax(0, 1fr)'),
-    'Public CSS lacks the narrow single-column rule.'
+    matrix.contract === 'bp-documentation-showcase-matrix',
+    'Matrix contract drifted.'
   )
   assert(
-    sourceLinkCount >= 18,
-    'Public site lacks exact-revision source links.'
+    matrix.buildCommit === expectedCommit,
+    'Deployed matrix commit is stale.'
+  )
+  assert(
+    matrix.profileCount === 27 && matrix.surfaceCount === 36,
+    'Matrix counts drifted.'
+  )
+
+  // <lang><zh-CN>默认 Portal/fetch/classic 证明 split-site、三皮肤 selector 与内容寻址 fetch asset。</zh-CN><en>The default Portal/fetch/classic profile proves split-site, the three-skin selector, and a content-addressed fetch asset.</en></lang>
+  const defaultBase = 'profiles/unified-portal/fetch/classic/'
+  const defaultRoot = await read(defaultBase)
+  const defaultPresentationResult = await readJson(
+    `${defaultBase}documentation-presentation-profile.json`
+  )
+  const defaultPresentation = defaultPresentationResult.value
+  assert(
+    defaultRoot.text.includes('hia-project-split-site'),
+    'Default Portal is not split-site.'
+  )
+  assert(
+    defaultRoot.text.includes('data-hia-skin-control'),
+    'Default Portal lacks skin switching.'
+  )
+  assert(
+    defaultPresentation.pagePartition?.mode === 'multi-page',
+    'Default Portal is not multi-page.'
+  )
+  assert(
+    defaultPresentation.source?.mode === 'fetch',
+    'Default Portal is not fetch mode.'
+  )
+  assert(
+    defaultPresentation.theme?.skinId === 'portal.classic',
+    'Default Portal skin drifted.'
+  )
+  const sourceAsset = defaultPresentation.source?.assets?.[0]
+  assert(
+    /^sources\/[a-f0-9]{64}\.txt$/u.test(sourceAsset?.relativeUrl),
+    'Default Portal lacks a safe fetch asset.'
+  )
+  const sourceResource = await read(`${defaultBase}${sourceAsset.relativeUrl}`)
+  assert(
+    sourceResource.bytes.byteLength === sourceAsset.byteLength,
+    'Online source asset byte length drifted.'
+  )
+  const sourceSha384 = crypto
+    .createHash('sha384')
+    .update(sourceResource.bytes)
+    .digest('base64')
+  assert(
+    sourceAsset.digest?.algorithm === 'sha384' &&
+      sourceAsset.digest?.value === sourceSha384,
+    'Online source asset digest drifted.'
+  )
+
+  // <lang><zh-CN>直接 JPHS/JTH embed 抽样证明正文只出现在 topic page，而非 hub/index。</zh-CN><en>The direct JPHS/JTH embed sample proves source text appears only on a topic page, not the hub/index.</en></lang>
+  const directEmbedBase = 'profiles/jphs-jth-native/embed/classic/'
+  const directRoot = await read(directEmbedBase)
+  const directPageMapResult = await readJson(
+    `${directEmbedBase}hia-page-map.json`
+  )
+  const directPage = directPageMapResult.value.pages?.[0]?.file
+  assert(
+    /^[a-z0-9][a-z0-9.-]*\.html$/u.test(directPage),
+    'Direct page map is unsafe.'
+  )
+  const directTopic = await read(`${directEmbedBase}${directPage}`)
+  assert(
+    directRoot.text.includes('data-hia-skin-select'),
+    'Direct output lacks skin switching.'
+  )
+  assert(
+    directTopic.text.includes('data-hia-source-mode="embed"'),
+    'Direct topic is not embed mode.'
+  )
+  assert(
+    directTopic.text.includes('class="code-line"'),
+    'Direct embed topic lacks source lines.'
+  )
+
+  // <lang><zh-CN>hia-jsdoc link 与 Portal bridge 各读取一个公开入口，证明 umbrella 的双 surface。</zh-CN><en>The hia-jsdoc link and Portal bridge each expose one public entry, proving the umbrella's two surfaces.</en></lang>
+  const hiaLinkBase = 'profiles/hia-jsdoc/link/graphite/standalone/'
+  const hiaRoot = await read(hiaLinkBase)
+  const hiaPageMapResult = await readJson(`${hiaLinkBase}hia-page-map.json`)
+  const hiaPage = hiaPageMapResult.value.pages?.[0]?.file
+  assert(
+    /^[a-z0-9][a-z0-9.-]*\.html$/u.test(hiaPage),
+    'hia-jsdoc page map is unsafe.'
+  )
+  const hiaTopic = await read(`${hiaLinkBase}${hiaPage}`)
+  assert(
+    hiaRoot.text.includes('data-hia-skin="graphite"'),
+    'hia-jsdoc selected skin drifted.'
+  )
+  assert(
+    hiaTopic.text.includes('data-hia-source-mode="link"'),
+    'hia-jsdoc topic is not link mode.'
+  )
+  assert(
+    hiaTopic.text.includes('href="sources/'),
+    'hia-jsdoc link topic lacks a same-origin source link.'
+  )
+  const bridgeRoot = await read('profiles/hia-jsdoc/fetch/lumen/portal-bridge/')
+  assert(
+    bridgeRoot.text.includes('hia-project-split-site'),
+    'Portal bridge is not split-site.'
+  )
+  assert(
+    bridgeRoot.text.includes('data-hia-skin="portal.lumen"'),
+    'Portal bridge selected skin drifted.'
   )
 
   return {
-    responses: REQUIRED_PATHS.map((relativePath, index) => ({
-      path: relativePath || '/',
-      bytes: resources[index].bytes,
-      contentType: resources[index].contentType
-    })),
-    sourceLinkCount
+    responses,
+    verifiedProfiles: [
+      'unified-portal.fetch.classic',
+      'jphs-jth-native.embed.classic',
+      'hia-jsdoc.link.graphite',
+      'hia-jsdoc.fetch.lumen'
+    ],
+    verifiedSourceAsset: {
+      path: sourceAsset.relativeUrl,
+      bytes: sourceResource.bytes.byteLength,
+      digestAlgorithm: sourceAsset.digest.algorithm,
+      digestMatched: true
+    }
   }
 }
 
@@ -167,9 +342,8 @@ async function checkOnce(expectedCommit) {
  * @returns {Promise<void>}
  */
 async function main() {
-  /** @lang zh-CN 当前 BP exact commit；命令不读取工作树正文。 @lang en Current exact BP commit; the command does not read working-tree source bodies. */
   const expectedCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
-    cwd: new URL('../..', import.meta.url),
+    cwd: repositoryRoot,
     encoding: 'utf8'
   }).trim()
   assert(
@@ -181,11 +355,31 @@ async function main() {
   let lastError
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
     try {
-      /** @lang zh-CN 当前尝试的无正文线上摘要。 @lang en Body-free online summary for the current attempt. */
       const result = await checkOnce(expectedCommit)
-      process.stdout.write(
-        `${JSON.stringify({ status: 'public-pages-verified', canonicalUrl: PAGES_SITE.canonicalUrl, attempt, expectedCommit, resourceCount: result.responses.length, responses: result.responses, sourceLinkCount: result.sourceLinkCount, privacyLeakCount: 0 })}\n`
+      const evidence = {
+        contract: 'bp-js-cookie-documentation-showcase-online-check',
+        contractVersion: '0.1.0-draft',
+        status: 'public-pages-verified',
+        canonicalUrl: PAGES_SITE.canonicalUrl,
+        attempt,
+        expectedCommit,
+        resourceCount: result.responses.length,
+        responses: result.responses,
+        verifiedProfiles: result.verifiedProfiles,
+        verifiedSourceAsset: result.verifiedSourceAsset,
+        privacy: {
+          credentialSent: false,
+          crossOriginRequestCount: 0,
+          responseBodyCopiedToEvidence: false
+        }
+      }
+      fs.mkdirSync(topology.evidenceRoot, { recursive: true })
+      fs.writeFileSync(
+        path.join(topology.evidenceRoot, 'online.json'),
+        `${JSON.stringify(evidence, null, 2)}\n`,
+        'utf8'
       )
+      process.stdout.write(`${JSON.stringify(evidence)}\n`)
       return
     } catch (error) {
       lastError = error

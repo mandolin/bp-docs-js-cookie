@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>清洗 JPHS/JTH 生成 JSON，使公开消费面严格保持 none/link 隐私边界。</zh-CN><en>Sanitizes JPHS/JTH-generated JSON so public consumption strictly retains the none/link privacy boundary.</en></lang>
+ * <lang><zh-CN>清洗 JPHS/JTH、hia-jsdoc 与 Portal 生成 JSON，使三种公开源码模式都保持 body-free index 边界。</zh-CN><en>Sanitizes JPHS/JTH-, hia-jsdoc-, and Portal-generated JSON so all three public source modes retain a body-free index boundary.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-sanitize
  * @lang zh-CN 清洗器删除 source body、raw comment 与绝对路径，不改写用户可见的双语 API 说明。
@@ -70,7 +70,7 @@ export function sanitizeJsonValue(value, propertyPath = []) {
       if (ALWAYS_BLOCKED_KEYS.has(key) || /filePath$/iu.test(key)) continue
       // <lang><zh-CN>`content` 只有位于 source carrier 时删除；普通 i18n/description 内容仍可公开呈现。</zh-CN><en>`content` is removed only inside a source carrier; ordinary i18n and description content remains publishable.</en></lang>
       if (key === 'content' && isSourceCarrier(propertyPath)) continue
-      // <lang><zh-CN>source preview 是正文 carrier；none/link policy 下必须整体省略，不能保留缺少 content 的无效半结构。</zh-CN><en>A source preview is a body carrier; under the none/link policy it must be omitted entirely rather than retained as an invalid structure without content.</en></lang>
+      // <lang><zh-CN>source preview 是正文 carrier；fetch/link 的正文属于 `.txt` asset，embed 的正文属于 topic HTML，JSON 中必须整体省略 preview。</zh-CN><en>A source preview is a body carrier; fetch/link bodies belong in `.txt` assets and embed bodies in topic HTML, so JSON must omit the preview entirely.</en></lang>
       if (key === 'preview' && isSourceCarrier(propertyPath)) continue
 
       // <lang><zh-CN>递归结果若是绝对路径则整字段省略，不用本机路径生成可逆替代值。</zh-CN><en>If the recursive result is an absolute path, omit the whole field instead of producing a reversible host-path substitute.</en></lang>

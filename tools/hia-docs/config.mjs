@@ -32,11 +32,28 @@ export const ALLOWED_CHANGE_PATTERNS = Object.freeze([
   'tools/hia-docs/'
 ])
 
+/** @lang zh-CN W-P118 展示矩阵的输出链闭集。 @lang en Closed output-pipeline set for the W-P118 showcase matrix. */
+export const OUTPUT_PIPELINES = Object.freeze([
+  'jphs-jth-native',
+  'hia-jsdoc',
+  'unified-portal'
+])
+
+/** @lang zh-CN 面向阅读的三种源码模式；none 是独立 privacy 回归，不进入 27-profile。 @lang en Three reader-facing source modes; none is a separate privacy regression and is excluded from the 27 profiles. */
+export const SOURCE_READING_MODES = Object.freeze(['fetch', 'embed', 'link'])
+
+/** @lang zh-CN JTH owner 提供的三套中性 skin identity。 @lang en Three neutral skin identities provided by the JTH owner. */
+export const SHOWCASE_SKINS = Object.freeze(['classic', 'graphite', 'lumen'])
+
+/** @lang zh-CN 公开 hub 的默认 profile。 @lang en Default profile selected by the public hub. */
+export const DEFAULT_SHOWCASE_PROFILE_ID = 'unified-portal.fetch.classic'
+
 /** @lang zh-CN sibling owner 必须保持的完整 Git identity。 @lang en Full Git identities that sibling owners must retain. */
 export const OWNER_COMMITS = Object.freeze({
-  plugin: '3cdd56469044bf40881cf88c4905110ad656ab13',
-  theme: 'e2e85fb23ad9274b730c84c24af9e78f19fb8885',
-  portal: '07b4235ab9f251ef65d6863903cf097042918596'
+  plugin: 'ac1fa5831dd33c204dd2168eed812b654eab24e4',
+  theme: '9c78b017567c5c23a212ae572e72ad36376ed78d',
+  hiaJsdoc: '8f246729a9bec72baafab0b7699a14536ae23d29',
+  portal: '1bbb072585303c875093f5dd3555aeb3353e5efd'
 })
 
 /** @lang zh-CN GitHub project Pages 的精确公开地址与 base path。 @lang en Exact public URL and base path for the GitHub project Pages site. */
@@ -50,9 +67,11 @@ export const DOCUMENTATION_NODE_VERSIONS = Object.freeze(['22.23.0', '24.12.0'])
 
 /** @lang zh-CN 公开输出强制采用的源码与隐私策略。 @lang en Source and privacy policy required for public outputs. */
 export const PRIVACY_POLICY = Object.freeze({
-  sourceContentPolicy: 'none',
-  sourceDisplayMode: 'link',
-  sourceFetchAllowed: false,
+  sourceContentPolicy: 'profile-explicit',
+  sourceDisplayModes: SOURCE_READING_MODES,
+  defaultSourceDisplayMode: 'fetch',
+  sourceFetchAllowed: true,
+  sourceBodyAllowedInTopicCarrier: true,
   absolutePathAllowed: false,
   rawCommentAllowedInIndex: false,
   sourceBodyAllowedInIndex: false,
@@ -92,8 +111,11 @@ export function resolveTopology(
     workspaceRoot,
     pluginRoot: path.join(workspaceRoot, 'HIA', 'jsdoc-plugin-hia-sys'),
     themeRoot: path.join(workspaceRoot, 'HIA', 'jsdoc-theme-hia'),
+    hiaJsdocRoot: path.join(workspaceRoot, 'HIA', 'hia-jsdoc'),
     portalRoot: path.join(workspaceRoot, 'main-repo'),
     generatedRoot,
+    showcaseRoot: path.join(generatedRoot, 'showcase'),
+    profileOutputRoot: path.join(generatedRoot, 'showcase', 'profiles'),
     jsdocNativeRoot: path.join(generatedRoot, 'jsdoc-native'),
     portalOutputRoot: path.join(generatedRoot, 'portal'),
     evidenceRoot: path.join(generatedRoot, 'evidence'),
@@ -148,21 +170,126 @@ export function createPortalProjectManifest() {
 }
 
 /**
- * <lang><zh-CN>创建首个小型 BP 公开站的单页 renderer 配置。</zh-CN><en>Creates the single-page renderer configuration for the first small BP public site.</en></lang>
+ * <lang><zh-CN>创建首个 BP 展示矩阵使用的 split-site Portal 配置。</zh-CN><en>Creates the split-site Portal configuration used by the first BP showcase matrix.</en></lang>
  *
+ * @param {Object} [options] <lang><zh-CN>profile 选择的源码模式、皮肤、scheme 与本地公开源码根。</zh-CN><en>Source mode, skin, scheme, and local public-source root selected by the profile.</en></lang>
  * @returns {Object} <lang><zh-CN>无路径、无 credential 的 HIA CLI 配置。</zh-CN><en>Path-free, credential-free HIA CLI configuration.</en></lang>
- * @lang zh-CN 18-node 站点使用单页是为了让关闭 JavaScript 时正文仍存在；大型项目的 split-site 默认不因此改变。
- * @lang en The 18-node site uses a single page so content remains present without JavaScript; the split-site default for large projects is unchanged.
+ * @throws {TypeError} <lang><zh-CN>未知源码模式、skin 或 scheme 会 fail closed。</zh-CN><en>An unknown source mode, skin, or scheme fails closed.</en></lang>
+ * @lang zh-CN 配置始终显式采用多页信息架构；fetch 是默认源码阅读方式，embed/link 只能由 profile 明示。
+ * @lang en The configuration always selects the multi-page information architecture; fetch is the default source-reading mode, while embed/link require an explicit profile.
  */
-export function createPortalConfig() {
+export function createPortalConfig(options = {}) {
+  // <lang><zh-CN>variant 必须显式落入闭集；未知值不能静默使用 owner 默认。</zh-CN><en>A variant must belong to the closed sets explicitly; unknown values must not silently inherit owner defaults.</en></lang>
+  const sourceMode = options.sourceMode ?? 'fetch'
+  const skin = options.skin ?? 'portal.classic'
+  const scheme = options.scheme ?? 'system'
+  if (!SOURCE_READING_MODES.includes(sourceMode) && sourceMode !== 'none') {
+    throw new TypeError(`Unsupported showcase source mode: ${sourceMode}`)
+  }
+  if (!Object.values(PORTAL_SKIN_BY_SHOWCASE_SKIN).includes(skin)) {
+    throw new TypeError(`Unsupported Portal showcase skin: ${skin}`)
+  }
+  if (!['system', 'light', 'dark'].includes(scheme)) {
+    throw new TypeError(`Unsupported Portal showcase scheme: ${scheme}`)
+  }
+
   return {
     schemaVersion: '0.1.0',
     docs: {
       renderer: {
-        projectLayout: 'single-page'
+        projectLayout: 'split-site',
+        uiLocale: 'zh-CN',
+        informationArchitecture: {
+          contract: 'documentation-portal-information-architecture',
+          contractVersion: '0.1.0-draft',
+          contentGrouping: 'semantic-container',
+          loadingStrategy: 'lazy',
+          memberPlacement: 'with-parent'
+        }
+      },
+      theme: {
+        name: 'default',
+        skin,
+        scheme
+      },
+      source: {
+        enabled: sourceMode !== 'none',
+        mode: sourceMode === 'none' ? 'none' : 'file',
+        presentation: sourceMode,
+        publicAssetPolicy: sourceMode === 'none' ? 'none' : 'explicit-public',
+        localRoot: options.localRoot ?? '.',
+        fetchTrigger: 'on-expand',
+        defaultExpanded: false,
+        maxLines: 400,
+        openMode: 'same-tab'
       }
     }
   }
+}
+
+/** @lang zh-CN JTH skin 到 Portal owner skin 的唯一中性 identity 映射。 @lang en Sole neutral identity mapping from JTH skins to Portal-owner skins. */
+const PORTAL_SKIN_BY_SHOWCASE_SKIN = Object.freeze({
+  classic: 'portal.classic',
+  graphite: 'portal.graphite',
+  lumen: 'portal.lumen'
+})
+
+/**
+ * <lang><zh-CN>把 JTH skin identity 映射为 capability 对等的 Portal skin identity。</zh-CN><en>Maps a JTH skin identity to its capability-equivalent Portal skin identity.</en></lang>
+ *
+ * @param {string} skin <lang><zh-CN>JTH owner 的 skin identity。</zh-CN><en>JTH-owner skin identity.</en></lang>
+ * @returns {string} <lang><zh-CN>Portal owner 的中性 skin identity。</zh-CN><en>Neutral Portal-owner skin identity.</en></lang>
+ * @throws {TypeError} <lang><zh-CN>未知 skin 会 fail closed。</zh-CN><en>An unknown skin fails closed.</en></lang>
+ */
+export function mapPortalSkin(skin) {
+  const portalSkin = PORTAL_SKIN_BY_SHOWCASE_SKIN[skin]
+  if (!portalSkin) throw new TypeError(`Unsupported showcase skin: ${skin}`)
+  return portalSkin
+}
+
+/**
+ * <lang><zh-CN>确定性创建 27 个展示 profile；surface 展开不改变 profile 数量。</zh-CN><en>Deterministically creates 27 showcase profiles; expanding surfaces does not change the profile count.</en></lang>
+ *
+ * @returns {Array<Object>} <lang><zh-CN>pipeline/source/skin 顺序稳定的 public-safe profile。</zh-CN><en>Public-safe profiles in stable pipeline/source/skin order.</en></lang>
+ */
+export function createShowcaseProfiles() {
+  const profiles = []
+  for (const pipeline of OUTPUT_PIPELINES) {
+    for (const sourceMode of SOURCE_READING_MODES) {
+      for (const skin of SHOWCASE_SKINS) {
+        // <lang><zh-CN>profile route 只由三个 closed identity 组成，避免标题或 owner 私有 route 进入 URL。</zh-CN><en>The profile route is composed only from three closed identities, keeping labels and owner-private routes out of URLs.</en></lang>
+        const id = `${pipeline}.${sourceMode}.${skin}`
+        const route = `profiles/${pipeline}/${sourceMode}/${skin}/`
+        // <lang><zh-CN>hia-jsdoc profile 同时证明 standalone 与 Portal bridge；其他 pipeline 只有自己的 owner surface。</zh-CN><en>An hia-jsdoc profile proves both standalone and Portal bridge surfaces; other pipelines expose only their owner surface.</en></lang>
+        const surfaces =
+          pipeline === 'hia-jsdoc'
+            ? [
+                { kind: 'standalone', path: `${route}standalone/` },
+                { kind: 'portal-bridge', path: `${route}portal-bridge/` }
+              ]
+            : [
+                {
+                  kind: pipeline === 'unified-portal' ? 'portal' : 'standalone',
+                  path: route
+                }
+              ]
+
+        profiles.push({
+          id,
+          pipeline,
+          pageMode: 'multi-page',
+          sourceMode,
+          skin,
+          portalSkin: mapPortalSkin(skin),
+          scheme: 'system',
+          route,
+          surfaces,
+          isDefault: id === DEFAULT_SHOWCASE_PROFILE_ID
+        })
+      }
+    }
+  }
+  return profiles
 }
 
 /**
@@ -170,18 +297,30 @@ export function createPortalConfig() {
  *
  * @param {ReturnType<typeof resolveTopology>} topology <lang><zh-CN>当前进程的已验证 topology。</zh-CN><en>Validated topology for the current process.</en></lang>
  * @param {string} buildCommit <lang><zh-CN>用于固定公开源码链接的 40 位 BP commit。</zh-CN><en>Forty-character BP commit used to pin public source links.</en></lang>
+ * @param {Object} [options] <lang><zh-CN>当前 profile 的 destination、integration、源码模式、skin 与 scheme。</zh-CN><en>Destination, integration, source mode, skin, and scheme for the current profile.</en></lang>
  * @returns {Object} <lang><zh-CN>可写为临时 JSON 的 JSDoc config。</zh-CN><en>JSDoc configuration that may be written as temporary JSON.</en></lang>
- * @lang zh-CN 配置只 allowlist 四个 source，关闭 preview/reference embed，并启用 zh-CN/en runtime locale。
- * @lang en The configuration allowlists only four sources, disables preview/reference embedding, and enables the zh-CN/en runtime locale.
+ * @throws {TypeError} <lang><zh-CN>未知源码模式或 skin 会 fail closed。</zh-CN><en>An unknown source mode or skin fails closed.</en></lang>
+ * @lang zh-CN 配置只 allowlist 四个 source，按 profile 开启源码能力、关闭 reference embed，并启用 zh-CN/en runtime locale。
+ * @lang en The configuration allowlists only four sources, enables source capabilities per profile, disables reference embedding, and enables the zh-CN/en runtime locale.
  */
-export function createJsdocConfig(topology, buildCommit) {
+export function createJsdocConfig(topology, buildCommit, options = {}) {
   // <lang><zh-CN>source root 固定到公开仓库与本次 build commit；不会生成 branch-floating 链接。</zh-CN><en>The source root is pinned to the public repository and current build commit; no branch-floating link is generated.</en></lang>
   const sourceRootUrl = `https://github.com/mandolin/bp-docs-js-cookie/blob/${buildCommit}`
   // <lang><zh-CN>raw integration 只在 ignored cache 中短暂存在，build 会清洗并立即删除。</zh-CN><en>The raw integration exists briefly in ignored cache; the build sanitizes and immediately deletes it.</en></lang>
-  const rawIntegrationPath = path.join(
-    topology.cacheRoot,
-    'hia-integration.raw.json'
-  )
+  const rawIntegrationPath =
+    options.integrationOutputFile ??
+    path.join(topology.cacheRoot, 'hia-integration.raw.json')
+  // <lang><zh-CN>destination、source mode 与 skin 由矩阵 profile 决定；默认值保持 W-P118 规范默认。</zh-CN><en>Destination, source mode, and skin are selected by the matrix profile; defaults retain the W-P118 normative choices.</en></lang>
+  const destination = options.destination ?? topology.jsdocNativeRoot
+  const sourceMode = options.sourceMode ?? 'fetch'
+  const skin = options.skin ?? 'classic'
+  const scheme = options.scheme ?? 'system'
+  if (!SOURCE_READING_MODES.includes(sourceMode) && sourceMode !== 'none') {
+    throw new TypeError(`Unsupported showcase source mode: ${sourceMode}`)
+  }
+  if (!SHOWCASE_SKINS.includes(skin)) {
+    throw new TypeError(`Unsupported showcase skin: ${skin}`)
+  }
 
   return {
     plugins: [path.join(topology.pluginRoot, 'src', 'index.cjs')],
@@ -193,23 +332,23 @@ export function createJsdocConfig(topology, buildCommit) {
       includePattern: '.+\\.(?:js|mjs)$'
     },
     opts: {
-      destination: topology.jsdocNativeRoot,
+      destination,
       template: topology.themeRoot,
       encoding: 'utf8',
       private: true,
       recurse: false,
       hia: {
-        mode: 'hiaIntegration',
+        mode: options.hiaMode ?? 'standalone',
         source: {
           basePath: topology.repositoryRoot,
-          mode: 'link',
+          mode: sourceMode === 'none' ? 'metadata' : 'all',
           link: {
             enabled: true,
             rootUrl: sourceRootUrl,
             openMode: 'new-tab'
           },
           preview: {
-            enabled: false,
+            enabled: sourceMode !== 'none',
             defaultExpanded: false,
             rangeStrategy: 'parser-js'
           },
@@ -226,12 +365,17 @@ export function createJsdocConfig(topology, buildCommit) {
           mode: 'runtimeSwitch',
           resources: []
         },
+        presentation: {
+          pageMode: 'multi-page',
+          sourceMode
+        },
         integration: {
           enabled: true,
           outputFile: rawIntegrationPath
         },
         theme: {
-          skin: 'lumen',
+          skin,
+          scheme,
           collapse: {
             docletsDefaultExpanded: true,
             sectionsDefaultExpanded: true,

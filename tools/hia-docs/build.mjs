@@ -154,14 +154,18 @@ function validateRepositoryBoundary() {
  * @returns {void}
  */
 function validateOwner(ownerRoot, expectedCommit, label) {
+  // <lang><zh-CN>实际提交必须与公开配置中的完整 SHA 一致，防止 owner 漂移被矩阵构建静默吸收。</zh-CN><en>The actual commit must equal the full SHA in public configuration so owner drift cannot be silently absorbed by the matrix build.</en></lang>
   const actualCommit = runGit(['rev-parse', 'HEAD'], ownerRoot)
   if (actualCommit !== expectedCommit) {
     throw new Error(
       `${label} commit drifted: expected ${expectedCommit}, received ${actualCommit}.`
     )
   }
-  if (runGit(['status', '--short'], ownerRoot) !== '') {
-    throw new Error(`${label} repository must be clean.`)
+
+  // <lang><zh-CN>保留精确脏路径供 CI 诊断；输出只含 Git 状态，不读取或回显文件正文。</zh-CN><en>Preserve exact dirty paths for CI diagnosis; the output contains Git status only and never reads or echoes file bodies.</en></lang>
+  const ownerStatus = runGit(['status', '--short'], ownerRoot)
+  if (ownerStatus !== '') {
+    throw new Error(`${label} repository must be clean:\n${ownerStatus}`)
   }
 }
 

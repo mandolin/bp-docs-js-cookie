@@ -162,8 +162,11 @@ function validateOwner(ownerRoot, expectedCommit, label) {
     )
   }
 
-  // <lang><zh-CN>保留精确脏路径供 CI 诊断；输出只含 Git 状态，不读取或回显文件正文。</zh-CN><en>Preserve exact dirty paths for CI diagnosis; the output contains Git status only and never reads or echoes file bodies.</en></lang>
-  const ownerStatus = runGit(['status', '--short'], ownerRoot)
+  // <lang><zh-CN>npm 会在 Linux 安装 workspace CLI 时校正入口的可执行位；清洁度校验忽略这种平台元数据，但仍拒绝正文差异和未跟踪文件。</zh-CN><en>npm normalizes a workspace CLI entry's executable bit during Linux installation; cleanliness ignores that platform metadata while still rejecting content changes and untracked files.</en></lang>
+  const ownerStatus = runGit(
+    ['-c', 'core.fileMode=false', 'status', '--short'],
+    ownerRoot
+  )
   if (ownerStatus !== '') {
     throw new Error(`${label} repository must be clean:\n${ownerStatus}`)
   }

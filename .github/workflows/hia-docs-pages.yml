@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    name: Build public showcase artifact
+    name: Build matrix and public default Portal
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/HIA-Documentation
-          ref: 1bbb072585303c875093f5dd3555aeb3353e5efd
+          ref: 52c0b70607dfb06638e3f5ccfd49e91f2d1f578f
           path: .hia-docs-owners/main-repo
           persist-credentials: false
 
@@ -80,32 +80,33 @@ jobs:
       - name: Install HIA Portal owner dependencies
         run: mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
 
-      # 中文：先由 Node 22 构建并暂存 body-free 指纹，再由 Node 24 重建与验收；最终上传 Node 24 artifact。
-      # English: Build under Node 22 and stage its body-free fingerprint, then rebuild and verify under Node 24; upload the final Node 24 artifact.
+      # 中文：先由 Node 22 构建并暂存矩阵与公开产品的 body-free 指纹，再由 Node 24 重建与验收；最终只上传 Node 24 public artifact。
+      # English: Build under Node 22 and stage body-free fingerprints for both the matrix and public product, then rebuild and verify under Node 24; upload only the final Node 24 public artifact.
       - name: Build Node 22 determinism baseline
         env:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
           mise exec node@22.23.0 -- node tools/hia-docs/build.mjs
           cp build/hia-docs/evidence/showcase-fingerprint.json "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json"
+          cp build/hia-docs/evidence/public-fingerprint.json "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
 
-      - name: Build and verify public showcase
+      - name: Build and verify matrix and public product
         env:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
           mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
-          mise exec node@24.12.0 -- node --test tools/hia-docs/showcase.test.mjs
+          mise exec node@24.12.0 -- node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs
           mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
-          mise exec node@24.12.0 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json"
+          mise exec node@24.12.0 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json" "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
           mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
-      - name: Upload showcase-only Pages artifact
+      - name: Upload default-Portal-only Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: ./build/hia-docs/showcase
+          path: ./build/hia-docs/public
 
   deploy:
     name: Deploy public Portal

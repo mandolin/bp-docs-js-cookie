@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>匿名验证已部署的 bp-docs-js-cookie 展示 hub 与代表性 owner surfaces。</zh-CN><en>Anonymously verifies the deployed bp-docs-js-cookie showcase hub and representative owner surfaces.</en></lang>
+ * <lang><zh-CN>匿名验证已部署的 bp-docs-js-cookie 单一默认 Portal 产品。</zh-CN><en>Anonymously verifies the deployed single default Portal product for bp-docs-js-cookie.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-pages-online-check
  * @lang zh-CN 只允许 canonical project Pages origin 下的有界 GET，不发送 cookie、credential、referrer 或跨源源码请求。
@@ -134,10 +134,29 @@ async function readPublicJson(relativePath) {
 }
 
 /**
- * <lang><zh-CN>执行一次完整公开站矩阵抽样检查。</zh-CN><en>Runs one complete representative check of the public matrix.</en></lang>
+ * <lang><zh-CN>证明旧 chooser/matrix route 不再公开；不读取或保存 404 body。</zh-CN><en>Proves that an old chooser/matrix route is no longer public without reading or retaining the 404 body.</en></lang>
+ *
+ * @param {string} relativePath <lang><zh-CN>预期不存在的公开相对路径。</zh-CN><en>Public relative path expected to be absent.</en></lang>
+ * @returns {Promise<{path:string,status:number}>} <lang><zh-CN>无正文缺失证据。</zh-CN><en>Body-free absence evidence.</en></lang>
+ */
+async function assertPubliclyAbsent(relativePath) {
+  const url = resolvePublicUrl(relativePath)
+  const response = await fetch(url, {
+    cache: 'no-store',
+    credentials: 'omit',
+    redirect: 'error',
+    referrerPolicy: 'no-referrer'
+  })
+  assert(response.status === 404, `${relativePath} is unexpectedly public.`)
+  response.body?.cancel()
+  return { path: relativePath, status: response.status }
+}
+
+/**
+ * <lang><zh-CN>执行一次完整的默认 Portal 产品与旧 route 缺失检查。</zh-CN><en>Runs one complete check of the default Portal product and absence of legacy routes.</en></lang>
  *
  * @param {string} expectedCommit <lang><zh-CN>当前 BP exact commit。</zh-CN><en>Current exact BP commit.</en></lang>
- * @returns {Promise<{responses:Array<Object>,verifiedProfiles:string[],verifiedSourceAsset:Object}>} <lang><zh-CN>无正文线上摘要。</zh-CN><en>Body-free online summary.</en></lang>
+ * @returns {Promise<{responses:Array<Object>,absentPaths:Array<Object>,verifiedProfile:string,verifiedSourceAsset:Object}>} <lang><zh-CN>无正文线上摘要。</zh-CN><en>Body-free online summary.</en></lang>
  */
 async function checkOnce(expectedCommit) {
   const responses = []
@@ -173,81 +192,76 @@ async function checkOnce(expectedCommit) {
   }
 
   const root = await read('')
-  const hubCss = await read('assets/showcase.css')
-  const hubJs = await read('assets/showcase.js')
-  const matrixResult = await readJson('showcase-matrix.json')
-  const matrix = matrixResult.value
+  const portalCss = await read('assets/hia-default.css')
+  const portalJs = await read('assets/hia-default.js')
+  const publicationResult = await readJson(
+    'documentation-publication-profile.json'
+  )
+  const publication = publicationResult.value
+  const presentationResult = await readJson(
+    'documentation-presentation-profile.json'
+  )
+  const presentation = presentationResult.value
   assert(
-    root.text.includes('bp-docs-js-cookie 文档工程展示'),
-    'Hub title is missing.'
+    root.text.includes('hia-project-split-site'),
+    'Public root is not the default Portal product.'
   )
   assert(
-    (root.text.match(/data-showcase-profile=/gu) || []).length === 27,
-    'Hub lacks 27 static profile cards.'
+    root.text.includes('data-hia-skin-control') &&
+      root.text.includes('data-hia-scheme-control'),
+    'Default Portal theme controls are missing.'
   )
   assert(
-    (root.text.match(/data-showcase-surface=/gu) || []).length === 36,
-    'Hub lacks 36 static surface links.'
+    !root.text.includes('data-showcase-profile=') &&
+      !root.text.includes('bp-docs-js-cookie 文档工程展示'),
+    'Legacy profile chooser remains at the public root.'
   )
   assert(root.text.includes('<noscript>'), 'Hub lacks no-script reachability.')
   assert(
-    root.text.includes('href="profiles/unified-portal/fetch/classic/"'),
-    'Hub default route drifted.'
+    portalCss.text.includes('hia-project-split-site'),
+    'Portal stylesheet lacks the split-site layout.'
   )
   assert(
-    hubCss.text.includes('@media(max-width:680px)'),
-    'Hub lacks narrow layout.'
+    portalJs.text.includes('credentials: \'omit\''),
+    'Portal runtime lacks credential-free source reads.'
   )
   assert(
-    hubJs.text.includes("querySelectorAll('[data-filter]')"),
-    'Hub filter runtime is missing.'
+    publication.contract ===
+      'bp-documentation-publication-profile@0.1.0-draft',
+    'Publication-profile contract drifted.'
   )
   assert(
-    matrix.contract === 'bp-documentation-showcase-matrix',
-    'Matrix contract drifted.'
+    publication.buildCommit === expectedCommit,
+    'Deployed publication commit is stale.'
   )
   assert(
-    matrix.buildCommit === expectedCommit,
-    'Deployed matrix commit is stale.'
+    publication.publicProfileCount === 1 &&
+      publication.localCiCoverageProfileCount === 27 &&
+      publication.rootIsProfileChooser === false,
+    'Deployed profile separation drifted.'
   )
   assert(
-    matrix.profileCount === 27 && matrix.surfaceCount === 36,
-    'Matrix counts drifted.'
-  )
-
-  // <lang><zh-CN>默认 Portal/fetch/classic 证明 split-site、三皮肤 selector 与内容寻址 fetch asset。</zh-CN><en>The default Portal/fetch/classic profile proves split-site, the three-skin selector, and a content-addressed fetch asset.</en></lang>
-  const defaultBase = 'profiles/unified-portal/fetch/classic/'
-  const defaultRoot = await read(defaultBase)
-  const defaultPresentationResult = await readJson(
-    `${defaultBase}documentation-presentation-profile.json`
-  )
-  const defaultPresentation = defaultPresentationResult.value
-  assert(
-    defaultRoot.text.includes('hia-project-split-site'),
-    'Default Portal is not split-site.'
+    publication.defaultProfile?.id === 'unified-portal.fetch.classic',
+    'Deployed default profile drifted.'
   )
   assert(
-    defaultRoot.text.includes('data-hia-skin-control'),
-    'Default Portal lacks skin switching.'
-  )
-  assert(
-    defaultPresentation.pagePartition?.mode === 'multi-page',
+    presentation.pagePartition?.mode === 'multi-page',
     'Default Portal is not multi-page.'
   )
   assert(
-    defaultPresentation.source?.mode === 'fetch',
+    presentation.source?.mode === 'fetch',
     'Default Portal is not fetch mode.'
   )
   assert(
-    defaultPresentation.theme?.skinId === 'portal.classic',
+    presentation.theme?.skinId === 'portal.classic',
     'Default Portal skin drifted.'
   )
-  const sourceAsset = defaultPresentation.source?.assets?.[0]
+  const sourceAsset = presentation.source?.assets?.[0]
   assert(
     /^sources\/[a-f0-9]{64}\.txt$/u.test(sourceAsset?.relativeUrl),
     'Default Portal lacks a safe fetch asset.'
   )
-  const sourceResource = await read(`${defaultBase}${sourceAsset.relativeUrl}`)
+  const sourceResource = await read(sourceAsset.relativeUrl)
   assert(
     sourceResource.bytes.byteLength === sourceAsset.byteLength,
     'Online source asset byte length drifted.'
@@ -262,71 +276,29 @@ async function checkOnce(expectedCommit) {
     'Online source asset digest drifted.'
   )
 
-  // <lang><zh-CN>直接 JPHS/JTH embed 抽样证明正文只出现在 topic page，而非 hub/index。</zh-CN><en>The direct JPHS/JTH embed sample proves source text appears only on a topic page, not the hub/index.</en></lang>
-  const directEmbedBase = 'profiles/jphs-jth-native/embed/classic/'
-  const directRoot = await read(directEmbedBase)
-  const directPageMapResult = await readJson(
-    `${directEmbedBase}hia-page-map.json`
-  )
-  const directPage = directPageMapResult.value.pages?.[0]?.file
+  // <lang><zh-CN>no-script 页面索引与一个深层 topic 证明多页 route 在 project base path 下可达。</zh-CN><en>The no-script page index and one deep topic prove multi-page routes are reachable under the project base path.</en></lang>
+  const pageIndex = await read('pages/index.html')
+  const pageMatch = pageIndex.text.match(/href="\.\/([^"/]+\.html)"/u)
   assert(
-    /^[a-z0-9][a-z0-9.-]*\.html$/u.test(directPage),
-    'Direct page map is unsafe.'
+    /^[a-z0-9][a-z0-9.-]*\.html$/u.test(pageMatch?.[1]),
+    'No-script page index lacks a safe topic route.'
   )
-  const directTopic = await read(`${directEmbedBase}${directPage}`)
+  const topic = await read(`pages/${pageMatch[1]}`)
   assert(
-    directRoot.text.includes('data-hia-skin-select'),
-    'Direct output lacks skin switching.'
-  )
-  assert(
-    directTopic.text.includes('data-hia-source-mode="embed"'),
-    'Direct topic is not embed mode.'
-  )
-  assert(
-    directTopic.text.includes('class="code-line"'),
-    'Direct embed topic lacks source lines.'
+    topic.text.includes('hia-project-topic'),
+    'Deep topic route lacks Portal content.'
   )
 
-  // <lang><zh-CN>hia-jsdoc link 与 Portal bridge 各读取一个公开入口，证明 umbrella 的双 surface。</zh-CN><en>The hia-jsdoc link and Portal bridge each expose one public entry, proving the umbrella's two surfaces.</en></lang>
-  const hiaLinkBase = 'profiles/hia-jsdoc/link/graphite/standalone/'
-  const hiaRoot = await read(hiaLinkBase)
-  const hiaPageMapResult = await readJson(`${hiaLinkBase}hia-page-map.json`)
-  const hiaPage = hiaPageMapResult.value.pages?.[0]?.file
-  assert(
-    /^[a-z0-9][a-z0-9.-]*\.html$/u.test(hiaPage),
-    'hia-jsdoc page map is unsafe.'
-  )
-  const hiaTopic = await read(`${hiaLinkBase}${hiaPage}`)
-  assert(
-    hiaRoot.text.includes('data-hia-skin="graphite"'),
-    'hia-jsdoc selected skin drifted.'
-  )
-  assert(
-    hiaTopic.text.includes('data-hia-source-mode="link"'),
-    'hia-jsdoc topic is not link mode.'
-  )
-  assert(
-    hiaTopic.text.includes('href="sources/'),
-    'hia-jsdoc link topic lacks a same-origin source link.'
-  )
-  const bridgeRoot = await read('profiles/hia-jsdoc/fetch/lumen/portal-bridge/')
-  assert(
-    bridgeRoot.text.includes('hia-project-split-site'),
-    'Portal bridge is not split-site.'
-  )
-  assert(
-    bridgeRoot.text.includes('data-hia-skin="portal.lumen"'),
-    'Portal bridge selected skin drifted.'
-  )
+  // <lang><zh-CN>旧矩阵 manifest 与一个旧 profile route 都必须在线返回 404。</zh-CN><en>Both the old matrix manifest and a representative old profile route must return 404 online.</en></lang>
+  const absentPaths = await Promise.all([
+    assertPubliclyAbsent('showcase-matrix.json'),
+    assertPubliclyAbsent('profiles/jphs-jth-native/embed/classic/')
+  ])
 
   return {
     responses,
-    verifiedProfiles: [
-      'unified-portal.fetch.classic',
-      'jphs-jth-native.embed.classic',
-      'hia-jsdoc.link.graphite',
-      'hia-jsdoc.fetch.lumen'
-    ],
+    absentPaths,
+    verifiedProfile: publication.defaultProfile.id,
     verifiedSourceAsset: {
       path: sourceAsset.relativeUrl,
       bytes: sourceResource.bytes.byteLength,
@@ -357,7 +329,7 @@ async function main() {
     try {
       const result = await checkOnce(expectedCommit)
       const evidence = {
-        contract: 'bp-js-cookie-documentation-showcase-online-check',
+        contract: 'bp-js-cookie-documentation-public-online-check',
         contractVersion: '0.1.0-draft',
         status: 'public-pages-verified',
         canonicalUrl: PAGES_SITE.canonicalUrl,
@@ -365,7 +337,8 @@ async function main() {
         expectedCommit,
         resourceCount: result.responses.length,
         responses: result.responses,
-        verifiedProfiles: result.verifiedProfiles,
+        verifiedProfile: result.verifiedProfile,
+        absentPaths: result.absentPaths,
         verifiedSourceAsset: result.verifiedSourceAsset,
         privacy: {
           credentialSent: false,

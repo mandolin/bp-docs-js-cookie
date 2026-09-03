@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>比较 Node 22 与 Node 24 生成的公开展示聚合指纹。</zh-CN><en>Compares aggregate public-showcase fingerprints produced by Node 22 and Node 24.</en></lang>
+ * <lang><zh-CN>比较 Node 22 与 Node 24 生成的本地矩阵及公开默认 Portal 聚合指纹。</zh-CN><en>Compares aggregate fingerprints of the local matrix and public default Portal produced by Node 22 and Node 24.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-determinism-check
  * @lang zh-CN baseline 文件必须由调用方在第二次 build 清理范围外暂存；checker 不复制正文或文件列表。
@@ -49,57 +49,89 @@ function readFingerprint(filePath) {
  * @returns {void}
  */
 function main() {
-  const baselineArgument = process.argv[2]
-  assert(baselineArgument, 'A staged Node 22 fingerprint path is required.')
-  const baselinePath = path.resolve(repositoryRoot, baselineArgument)
-  const currentPath = path.join(
+  // <lang><zh-CN>两个 baseline 必须来自同一次 Node 22 build，缺一不可。</zh-CN><en>Both baselines must come from the same Node 22 build; neither is optional.</en></lang>
+  const baselineShowcaseArgument = process.argv[2]
+  const baselinePublicArgument = process.argv[3]
+  assert(
+    baselineShowcaseArgument && baselinePublicArgument,
+    'Staged Node 22 showcase and public fingerprint paths are required.'
+  )
+  const baselineShowcasePath = path.resolve(
+    repositoryRoot,
+    baselineShowcaseArgument
+  )
+  const baselinePublicPath = path.resolve(repositoryRoot, baselinePublicArgument)
+  const currentShowcasePath = path.join(
     topology.evidenceRoot,
     'showcase-fingerprint.json'
   )
-  assert(
-    fs.existsSync(baselinePath),
-    'The staged Node 22 fingerprint is missing.'
+  const currentPublicPath = path.join(
+    topology.evidenceRoot,
+    'public-fingerprint.json'
   )
   assert(
-    fs.existsSync(currentPath),
-    'The current Node 24 fingerprint is missing.'
+    fs.existsSync(baselineShowcasePath) && fs.existsSync(baselinePublicPath),
+    'A staged Node 22 fingerprint is missing.'
+  )
+  assert(
+    fs.existsSync(currentShowcasePath) && fs.existsSync(currentPublicPath),
+    'A current Node 24 fingerprint is missing.'
   )
 
-  const baseline = readFingerprint(baselinePath)
-  const current = readFingerprint(currentPath)
+  const baselineShowcase = readFingerprint(baselineShowcasePath)
+  const baselinePublic = readFingerprint(baselinePublicPath)
+  const currentShowcase = readFingerprint(currentShowcasePath)
+  const currentPublic = readFingerprint(currentPublicPath)
   assert(
-    baseline.contract === 'bp-documentation-showcase-fingerprint' &&
-      current.contract === baseline.contract,
-    'Fingerprint contract drifted.'
+    baselineShowcase.contract === 'bp-documentation-showcase-fingerprint' &&
+      currentShowcase.contract === baselineShowcase.contract &&
+      baselinePublic.contract ===
+        'bp-documentation-public-artifact-fingerprint' &&
+      currentPublic.contract === baselinePublic.contract,
+    'A fingerprint contract drifted.'
   )
   assert(
-    baseline.node === '22.23.0',
-    'Baseline was not produced by Node 22.23.0.'
+    baselineShowcase.node === '22.23.0' &&
+      baselinePublic.node === baselineShowcase.node,
+    'Baselines were not produced together by Node 22.23.0.'
   )
   assert(
-    current.node === '24.12.0',
-    'Current result was not produced by Node 24.12.0.'
+    currentShowcase.node === '24.12.0' &&
+      currentPublic.node === currentShowcase.node,
+    'Current results were not produced together by Node 24.12.0.'
   )
   assert(
-    baseline.buildCommit === current.buildCommit,
-    'Node variants used different BP commits.'
+    baselineShowcase.buildCommit === baselinePublic.buildCommit &&
+      currentShowcase.buildCommit === currentPublic.buildCommit &&
+      baselineShowcase.buildCommit === currentShowcase.buildCommit,
+    'Node variants or artifact families used different BP commits.'
   )
   assert(
-    JSON.stringify(baseline.output) === JSON.stringify(current.output),
+    JSON.stringify(baselineShowcase.output) ===
+      JSON.stringify(currentShowcase.output),
     'Node 22.23.0 and Node 24.12.0 produced different showcase fingerprints.'
+  )
+  assert(
+    JSON.stringify(baselinePublic.output) ===
+      JSON.stringify(currentPublic.output),
+    'Node 22.23.0 and Node 24.12.0 produced different public-artifact fingerprints.'
   )
 
   const evidence = {
     contract: 'bp-documentation-showcase-determinism-check',
     contractVersion: '0.1.0-draft',
     status: 'node-22-24-identical',
-    buildCommit: current.buildCommit,
-    runtimes: [baseline.node, current.node],
-    output: current.output,
+    buildCommit: currentShowcase.buildCommit,
+    runtimes: [baselineShowcase.node, currentShowcase.node],
+    output: {
+      localCiShowcase: currentShowcase.output,
+      publicDefaultPortal: currentPublic.output
+    },
     compared: {
       fileCount: true,
       totalBytes: true,
       aggregateSha256: true,
+      artifactFamilies: ['local-ci-showcase', 'public-default-portal'],
       sourceBodiesCopiedToEvidence: false
     }
   }

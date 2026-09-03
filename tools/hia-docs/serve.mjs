@@ -1,9 +1,9 @@
 /**
- * <lang><zh-CN>在 loopback 上提供 ignored showcase artifact，供 W-P118 真实浏览器验收。</zh-CN><en>Serves the ignored showcase artifact on loopback for W-P118 real-browser acceptance.</en></lang>
+ * <lang><zh-CN>在 loopback 上提供 ignored public 或 showcase artifact，供真实浏览器验收。</zh-CN><en>Serves the ignored public or showcase artifact on loopback for real-browser acceptance.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-serve
- * @lang zh-CN server 只绑定 127.0.0.1、只读取 showcase root，并拒绝 traversal、link 与目录列表；目录 route 只解析自身 index.html。
- * @lang en The server binds only to 127.0.0.1, reads only the showcase root, and rejects traversal, links, and directory listings; a directory route resolves only its own index.html.
+ * @lang zh-CN server 只绑定 127.0.0.1、只读取所选 generated root，并拒绝 traversal、link 与目录列表；W-P121 缺省提供 public，显式 showcase 仅供本地矩阵调试。
+ * @lang en The server binds only to 127.0.0.1, reads only the selected generated root, and rejects traversal, links, and directory listings; W-P121 serves public by default, while explicit showcase is only for local matrix debugging.
  */
 
 import fs from 'node:fs'
@@ -20,17 +20,25 @@ const repositoryRoot = path.resolve(
   '..',
   '..'
 )
-/** @lang zh-CN 固定 showcase document root。 @lang en Fixed showcase document root. */
-const showcaseRoot = resolveTopology(repositoryRoot).showcaseRoot
+/** @lang zh-CN 调用方可显式选择 public 或 showcase；缺省严格贴近 Pages 上传边界。 @lang en The caller may explicitly choose public or showcase; the default strictly mirrors the Pages upload boundary. */
+const artifactKind = process.argv[3] || 'public'
+if (!['public', 'showcase'].includes(artifactKind)) {
+  throw new Error('Artifact kind must be public or showcase.')
+}
+/** @lang zh-CN 已选择且边界固定的 document root。 @lang en Selected document root with a fixed boundary. */
+const topology = resolveTopology(repositoryRoot)
+/** @lang zh-CN public 是默认；showcase 不会被工作流上传。 @lang en Public is the default; showcase is never uploaded by the workflow. */
+const documentRoot =
+  artifactKind === 'public' ? topology.publicArtifactRoot : topology.showcaseRoot
 /** @lang zh-CN 用户可选的 loopback port。 @lang en Optional caller-selected loopback port. */
 const port = Number(process.argv[2] || 4179)
 
 if (!Number.isInteger(port) || port < 1024 || port > 65535) {
   throw new Error('Port must be an integer between 1024 and 65535.')
 }
-if (!fs.existsSync(path.join(showcaseRoot, 'index.html'))) {
+if (!fs.existsSync(path.join(documentRoot, 'index.html'))) {
   throw new Error(
-    'Showcase output is missing; run the documentation build first.'
+    'Selected documentation output is missing; run the documentation build first.'
   )
 }
 
@@ -44,7 +52,7 @@ const CONTENT_TYPES = Object.freeze({
 })
 
 /**
- * <lang><zh-CN>把 URL path 解析为 showcase root 内的普通文件。</zh-CN><en>Resolves a URL path to a regular file inside the showcase root.</en></lang>
+ * <lang><zh-CN>把 URL path 解析为所选 artifact root 内的普通文件。</zh-CN><en>Resolves a URL path to a regular file inside the selected artifact root.</en></lang>
  *
  * @param {string} requestUrl <lang><zh-CN>HTTP request URL。</zh-CN><en>HTTP request URL.</en></lang>
  * @returns {string | undefined} <lang><zh-CN>安全绝对文件路径，拒绝时为 undefined。</zh-CN><en>Safe absolute file path, or undefined when refused.</en></lang>
@@ -67,9 +75,9 @@ function resolveRequestPath(requestUrl) {
       ? `${sitePath.replace(/^\/+/, '')}index.html`
       : sitePath.replace(/^\/+/, '')
   /** @lang zh-CN 规范化后的 candidate 绝对路径。 @lang en Normalized absolute candidate path. */
-  const candidate = path.resolve(showcaseRoot, relativePath)
+  const candidate = path.resolve(documentRoot, relativePath)
   /** @lang zh-CN 用于边界验证的相对路径。 @lang en Relative path used for boundary validation. */
-  const boundary = path.relative(showcaseRoot, candidate)
+  const boundary = path.relative(documentRoot, candidate)
   if (boundary.startsWith('..') || path.isAbsolute(boundary)) return undefined
   if (!fs.existsSync(candidate)) return undefined
   /** @lang zh-CN lstat 防止生成目录中的 link 被跟随。 @lang en lstat prevents following a link in generated output. */
@@ -108,6 +116,6 @@ const server = http.createServer((request, response) => {
 
 server.listen(port, '127.0.0.1', () => {
   process.stdout.write(
-    `W-P118 showcase server: http://127.0.0.1:${port}${PAGES_SITE.projectBasePath}\n`
+    `HIA ${artifactKind} server: http://127.0.0.1:${port}${PAGES_SITE.projectBasePath}\n`
   )
 })

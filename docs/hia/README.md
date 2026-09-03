@@ -15,9 +15,9 @@ dependencies, tests, or build configuration.
 3. 源码中的 `@lang` / `<lang>` 节点注释和流程注释：把文档主题对应到实际语句；
 4. [本地文档工具](../../tools/hia-docs/README.md)：生成并比较三条输出链、三种源码模式和三套皮肤。
 
-## 展示矩阵
+## 本地矩阵与公开默认入口
 
-公开入口位于 `build/hia-docs/showcase/index.html`，按以下三个维度展开：
+本地/CI 测试入口位于 `build/hia-docs/showcase/index.html`，按以下三个维度展开：
 
 - 输出链：直接 JPHS/JTH、hia-jsdoc（独立输出 + Portal bridge）、统一 Portal；
 - 源码阅读：`fetch`、`embed`、`link`；
@@ -28,10 +28,14 @@ multi-page，默认入口是 `unified-portal.fetch.classic`。fetch 使用同源
 源码卡片时才加载；embed 把正文放在 topic HTML；link 提供同源文本链接。`none` 不进入展示矩阵，只作为独立隐私回归。
 生成目录被 Git 忽略，不是上游分发文件的一部分。
 
-The public entry is `build/hia-docs/showcase/index.html`. Three pipelines, three source-reading modes, and three skins form 27
-configuration profiles. hia-jsdoc exposes both standalone and Portal-bridge surfaces, producing 36 browsable surfaces in total. Every
-profile is multi-page; unified Portal with fetch and classic skin is the default. Fetch uses same-origin, content-addressed,
-SHA-384-described text assets and loads on expansion; embed carries source only in topic HTML; link exposes a same-origin text link.
+公开 Pages 只上传 `build/hia-docs/public/`：它没有 profile 选择器，只提供默认的 multi-page
+`unified-portal.fetch.classic` 产品入口。27 profiles / 36 surfaces 仍完整保留在本地和 CI，用于三条输出链、三种源码模式与三套
+皮肤的兼容性回归，不作为公开站点信息架构。
+
+The local/CI entry is `build/hia-docs/showcase/index.html`. Three pipelines, three source-reading modes, and three skins form 27
+configuration profiles and 36 browsable surfaces. Pages uploads only `build/hia-docs/public/`: a chooser-free, multi-page
+`unified-portal.fetch.classic` product. Fetch uses same-origin, content-addressed, SHA-384-described text assets and loads on expansion;
+embed carries source only in topic HTML; link exposes a same-origin text link.
 
 ## 阅读时应保留的边界
 

@@ -53,7 +53,7 @@ export const OWNER_COMMITS = Object.freeze({
   plugin: 'ac1fa5831dd33c204dd2168eed812b654eab24e4',
   theme: '9c78b017567c5c23a212ae572e72ad36376ed78d',
   hiaJsdoc: '8f246729a9bec72baafab0b7699a14536ae23d29',
-  portal: '1bbb072585303c875093f5dd3555aeb3353e5efd'
+  portal: '52c0b70607dfb06638e3f5ccfd49e91f2d1f578f'
 })
 
 /** @lang zh-CN GitHub project Pages 的精确公开地址与 base path。 @lang en Exact public URL and base path for the GitHub project Pages site. */
@@ -116,6 +116,8 @@ export function resolveTopology(
     generatedRoot,
     showcaseRoot: path.join(generatedRoot, 'showcase'),
     profileOutputRoot: path.join(generatedRoot, 'showcase', 'profiles'),
+    // <lang><zh-CN>public 与 showcase 分离：前者是唯一可上传的默认 Portal 产品，后者只供本地/CI 矩阵验收。</zh-CN><en>Public is separated from showcase: the former is the sole uploadable default Portal product, while the latter is only for local/CI matrix acceptance.</en></lang>
+    publicArtifactRoot: path.join(generatedRoot, 'public'),
     jsdocNativeRoot: path.join(generatedRoot, 'jsdoc-native'),
     portalOutputRoot: path.join(generatedRoot, 'portal'),
     evidenceRoot: path.join(generatedRoot, 'evidence'),

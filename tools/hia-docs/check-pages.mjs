@@ -1,9 +1,9 @@
 /**
- * <lang><zh-CN>验证 bp-docs-js-cookie 展示矩阵的 GitHub Pages artifact 与 workflow 边界。</zh-CN><en>Validates the GitHub Pages artifact and workflow boundary for the bp-docs-js-cookie showcase matrix.</en></lang>
+ * <lang><zh-CN>验证 bp-docs-js-cookie 默认 Portal 产品的 GitHub Pages artifact 与 workflow 边界。</zh-CN><en>Validates the GitHub Pages artifact and workflow boundary for the bp-docs-js-cookie default Portal product.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-pages-check
- * @lang zh-CN 本检查不启用 Pages、不访问网络、不读取 credential，只验证待上传 showcase tree 与仓库内 workflow。
- * @lang en This check does not enable Pages, access the network, or read credentials; it validates only the pending showcase tree and repository workflow.
+ * @lang zh-CN 本检查不启用 Pages、不访问网络、不读取 credential，只验证待上传 public tree 与仓库内 workflow；完整矩阵由 check.mjs 独立验收。
+ * @lang en This check does not enable Pages, access the network, or read credentials; it validates only the pending public tree and repository workflow, while check.mjs independently accepts the full matrix.
  */
 
 import crypto from 'node:crypto'
@@ -13,12 +13,16 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import {
+  DEFAULT_SHOWCASE_PROFILE_ID,
   DOCUMENTATION_NODE_VERSIONS,
   OWNER_COMMITS,
   PAGES_SITE,
-  createShowcaseProfiles,
   resolveTopology
 } from './config.mjs'
+import {
+  PUBLICATION_BASELINE_ID,
+  PUBLICATION_PROFILE_CONTRACT
+} from './public-artifact.mjs'
 
 /** @lang zh-CN BP repository root。 @lang en BP repository root. */
 const repositoryRoot = path.resolve(
@@ -68,7 +72,7 @@ function readJson(filePath) {
 /**
  * <lang><zh-CN>枚举 Pages artifact 中的普通文件并验证 link boundary。</zh-CN><en>Enumerates regular files in the Pages artifact and validates the link boundary.</en></lang>
  *
- * @param {string} root <lang><zh-CN>showcase artifact root。</zh-CN><en>Showcase artifact root.</en></lang>
+ * @param {string} root <lang><zh-CN>public artifact root。</zh-CN><en>Public artifact root.</en></lang>
  * @returns {{files:string[],symbolicLinkCount:number,hardLinkCount:number,totalBytes:number}} <lang><zh-CN>无正文 artifact 摘要。</zh-CN><en>Body-free artifact summary.</en></lang>
  */
 function inspectArtifact(root) {
@@ -142,39 +146,82 @@ function checkSourceAsset(surfaceRoot, asset) {
 }
 
 /**
- * <lang><zh-CN>验证所有 surface 的 Pages route 与源码资产可部署性。</zh-CN><en>Validates Pages-route and source-asset deployability for all surfaces.</en></lang>
+ * <lang><zh-CN>验证唯一默认 Portal surface、发布 manifest 与源码资产可部署性。</zh-CN><en>Validates the sole default Portal surface, publication manifest, and source-asset deployability.</en></lang>
  *
- * @param {Object[]} profiles <lang><zh-CN>冻结矩阵 profiles。</zh-CN><en>Frozen matrix profiles.</en></lang>
- * @returns {{surfaceCount:number,sourceAssetCount:number}} <lang><zh-CN>Pages surface 摘要。</zh-CN><en>Pages surface summary.</en></lang>
+ * @returns {{profileCount:number,surfaceCount:number,sourceAssetCount:number,manifest:Object}} <lang><zh-CN>Pages 产品摘要。</zh-CN><en>Pages product summary.</en></lang>
  */
-function checkSurfaceRoutes(profiles) {
-  let surfaceCount = 0
+function checkPublicSurface() {
+  const manifest = readJson(
+    path.join(topology.publicArtifactRoot, 'documentation-publication-profile.json')
+  )
+  assert(
+    manifest.contract === PUBLICATION_PROFILE_CONTRACT,
+    'Publication-profile contract drifted.'
+  )
+  assert(
+    manifest.designBaseline?.id === PUBLICATION_BASELINE_ID &&
+      manifest.designBaseline?.status === 'maintainer-confirmed',
+    'Publication design baseline drifted.'
+  )
+  assert(
+    manifest.publicProfileCount === 1 &&
+      manifest.localCiCoverageProfileCount === 27 &&
+      manifest.rootIsProfileChooser === false,
+    'Publication profile separation drifted.'
+  )
+  assert(
+    manifest.defaultProfile?.id === DEFAULT_SHOWCASE_PROFILE_ID,
+    'Public default profile drifted.'
+  )
+  assert(
+    JSON.stringify(manifest.informationArchitecture) ===
+      JSON.stringify([
+        'global-header',
+        'primary-sidebar',
+        'breadcrumb',
+        'main-topic',
+        'local-outline',
+        'footer-relations'
+      ]),
+    'Public information architecture drifted from the design baseline.'
+  )
+  assert(
+    JSON.stringify(manifest.displaySettings?.siteThemes) ===
+      JSON.stringify(['system', 'light', 'dark']) &&
+      manifest.displaySettings?.siteThemeDefault === 'light' &&
+      manifest.displaySettings?.codeThemes?.length === 6 &&
+      manifest.displaySettings?.codeRuntime ===
+        'native-pre-code-no-editor-runtime',
+    'Public display-settings contract drifted.'
+  )
+
+  const presentation = readJson(
+    path.join(
+      topology.publicArtifactRoot,
+      'documentation-presentation-profile.json'
+    )
+  )
+  assert(
+    presentation.pagePartition?.mode === 'multi-page',
+    'Public Portal is not multi-page.'
+  )
+  assert(
+    presentation.source?.mode === 'fetch',
+    'Public Portal is not fetch mode.'
+  )
+  assert(
+    presentation.theme?.skinId === 'portal.classic',
+    'Public Portal default skin drifted.'
+  )
+
   let sourceAssetCount = 0
-  for (const profile of profiles) {
-    for (const surface of profile.surfaces) {
-      assert(
-        /^[a-z0-9][a-z0-9./_-]*\/$/u.test(surface.path) &&
-          !surface.path.includes('..'),
-        `${profile.id} has an unsafe Pages route.`
-      )
-      const surfaceRoot = path.resolve(topology.showcaseRoot, surface.path)
-      assert(
-        fs.existsSync(path.join(surfaceRoot, 'index.html')),
-        `${profile.id}/${surface.kind} lacks a Pages entry.`
-      )
-      const presentation = readJson(
-        path.join(surfaceRoot, 'documentation-presentation-profile.json')
-      )
-      for (const asset of presentation.source?.assets ?? []) {
-        if (asset.relativeUrl !== undefined) {
-          checkSourceAsset(surfaceRoot, asset)
-          sourceAssetCount += 1
-        }
-      }
-      surfaceCount += 1
+  for (const asset of presentation.source?.assets ?? []) {
+    if (asset.relativeUrl !== undefined) {
+      checkSourceAsset(topology.publicArtifactRoot, asset)
+      sourceAssetCount += 1
     }
   }
-  return { surfaceCount, sourceAssetCount }
+  return { profileCount: 1, surfaceCount: 1, sourceAssetCount, manifest }
 }
 
 /**
@@ -241,16 +288,19 @@ function checkWorkflow(workflow) {
     'Workflow lacks both deterministic Node builds.'
   )
   assert(
-    workflow.includes('node --test tools/hia-docs/showcase.test.mjs') &&
+    workflow.includes(
+      'node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs'
+    ) &&
       workflow.includes('node tools/hia-docs/check.mjs') &&
       workflow.includes('node tools/hia-docs/check-determinism.mjs') &&
       workflow.includes('node tools/hia-docs/check-pages.mjs'),
     'Workflow lacks one or more showcase gates.'
   )
   assert(
-    workflow.includes('path: ./build/hia-docs/showcase') &&
+    workflow.includes('path: ./build/hia-docs/public') &&
+      !workflow.includes('path: ./build/hia-docs/showcase') &&
       !workflow.includes('path: ./build/hia-docs/portal'),
-    'Workflow does not upload the showcase-only root.'
+    'Workflow does not upload only the public default-Portal root.'
   )
   assert(
     workflow.includes('contents: read') &&
@@ -309,51 +359,125 @@ function main() {
   )
   assert(fs.existsSync(workflowPath), 'Pages workflow is missing.')
   assert(
-    fs.existsSync(path.join(topology.showcaseRoot, 'index.html')),
-    'Showcase Pages artifact is missing.'
+    fs.existsSync(path.join(topology.publicArtifactRoot, 'index.html')),
+    'Public default-Portal artifact is missing.'
   )
-  const artifact = inspectArtifact(topology.showcaseRoot)
+  const artifact = inspectArtifact(topology.publicArtifactRoot)
   assert(
     artifact.symbolicLinkCount === 0,
     'Pages artifact contains symbolic links.'
   )
   assert(artifact.hardLinkCount === 0, 'Pages artifact contains hard links.')
-  assert(artifact.files.length > 36, 'Pages artifact is unexpectedly small.')
+  assert(artifact.files.length > 20, 'Pages artifact is unexpectedly small.')
   assert(
     artifact.totalBytes < 1024 * 1024 * 1024,
     'Pages artifact exceeds 1 GiB.'
   )
 
-  const profiles = createShowcaseProfiles()
-  const surfaces = checkSurfaceRoutes(profiles)
-  assert(surfaces.surfaceCount === 36, 'Pages surface count drifted.')
-  assert(surfaces.sourceAssetCount > 0, 'Pages artifact lacks source assets.')
+  const publicSurface = checkPublicSurface()
+  assert(publicSurface.surfaceCount === 1, 'Pages surface count drifted.')
+  assert(publicSurface.sourceAssetCount > 0, 'Pages artifact lacks source assets.')
+  assert(
+    !fs.existsSync(path.join(topology.publicArtifactRoot, 'profiles')) &&
+      !fs.existsSync(
+        path.join(topology.publicArtifactRoot, 'showcase-matrix.json')
+      ) &&
+      !fs.existsSync(path.join(topology.publicArtifactRoot, 'assets', 'showcase.js')),
+    'Public artifact contains the local/CI chooser or unused profiles.'
+  )
+  const rootHtml = fs.readFileSync(
+    path.join(topology.publicArtifactRoot, 'index.html'),
+    'utf8'
+  )
+  assert(
+    rootHtml.includes('hia-project-split-site') &&
+      rootHtml.includes('data-hia-skin-control') &&
+      rootHtml.includes('data-hia-public-product') &&
+      rootHtml.includes('data-hia-settings-dialog') &&
+      rootHtml.includes('data-hia-public-outline') &&
+      rootHtml.includes('data-hia-public-footer') &&
+      rootHtml.includes('代码区域 / 编辑器设置') &&
+      !rootHtml.includes('data-showcase-profile=') &&
+      !rootHtml.includes('candidate-status-strip'),
+    'Public root is not the direct default Portal product.'
+  )
+  const productCss = fs.readFileSync(
+    path.join(topology.publicArtifactRoot, 'assets', 'hia-public-product.css'),
+    'utf8'
+  )
+  const productJs = fs.readFileSync(
+    path.join(topology.publicArtifactRoot, 'assets', 'hia-public-product.js'),
+    'utf8'
+  )
+  assert(
+    productCss.includes('@media (max-width: 760px)') &&
+      productCss.includes('@media print') &&
+      productCss.includes('@media (forced-colors: active)'),
+    'Public product CSS lacks responsive, print, or forced-colors handling.'
+  )
+  assert(
+    productJs.includes("'hia.bp-docs-js-cookie.display.v1'") &&
+      productJs.includes('localStorage.setItem') &&
+      !/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\s*\(/u.test(
+        productJs
+      ),
+    'Public product runtime drifted from the device-local, no-network boundary.'
+  )
+  for (const filePath of artifact.files.filter((candidate) =>
+    /\.(?:html|json|js|css)$/u.test(candidate)
+  )) {
+    const contents = fs.readFileSync(filePath, 'utf8')
+    assert(
+      !/[A-Za-z]:\\|\/home\/runner\/|\/Users\//u.test(contents),
+      'Public artifact contains a host-absolute path.'
+    )
+    assert(
+      !/(?:NODE_AUTH_TOKEN|NPM_TOKEN|BEGIN (?:RSA |OPENSSH )?PRIVATE KEY)/u.test(
+        contents
+      ),
+      'Public artifact contains a credential marker.'
+    )
+  }
   const workflow = checkWorkflow(fs.readFileSync(workflowPath, 'utf8'))
   const documentationRuntime = checkDocumentationRuntime()
   const offlineEvidence = readJson(
     path.join(topology.evidenceRoot, 'check.json')
   )
   assert(
-    offlineEvidence.status === 'offline-verified',
-    'Offline evidence is not ready.'
+    offlineEvidence.status === 'offline-verified' &&
+      offlineEvidence.matrix?.profileCount === 27 &&
+      offlineEvidence.matrix?.surfaceCount === 36,
+    'Local/CI matrix evidence is not ready.'
+  )
+  const publicBuildEvidence = readJson(
+    path.join(topology.evidenceRoot, 'public-build.json')
+  )
+  assert(
+    publicBuildEvidence.status === 'ready-for-wp121-check' &&
+      publicBuildEvidence.publication?.buildCommit ===
+        publicSurface.manifest.buildCommit,
+    'Public build evidence is not ready.'
   )
 
   const evidence = {
-    contract: 'bp-js-cookie-documentation-showcase-pages-check',
+    contract: 'bp-js-cookie-documentation-public-pages-check',
     contractVersion: '0.1.0-draft',
     status: 'pages-artifact-verified',
     pages: PAGES_SITE,
     artifact: {
-      root: 'build/hia-docs/showcase',
-      showcaseOnly: true,
+      root: 'build/hia-docs/public',
+      defaultPortalOnly: true,
       generatedTracked: false,
       fileCount: artifact.files.length,
       totalBytes: artifact.totalBytes,
       symbolicLinkCount: artifact.symbolicLinkCount,
       hardLinkCount: artifact.hardLinkCount,
-      profileCount: profiles.length,
-      surfaceCount: surfaces.surfaceCount,
-      verifiedSourceAssetCount: surfaces.sourceAssetCount
+      profileCount: publicSurface.profileCount,
+      localCiCoverageProfileCount: offlineEvidence.matrix.profileCount,
+      surfaceCount: publicSurface.surfaceCount,
+      verifiedSourceAssetCount: publicSurface.sourceAssetCount,
+      chooserIncluded: false,
+      unusedProfilesIncluded: false
     },
     workflow: {
       path: '.github/workflows/hia-docs-pages.yml',
@@ -384,7 +508,7 @@ function main() {
     'utf8'
   )
   process.stdout.write(
-    `${JSON.stringify({ status: evidence.status, fileCount: artifact.files.length, profileCount: profiles.length, surfaceCount: surfaces.surfaceCount, verifiedSourceAssetCount: surfaces.sourceAssetCount, privacyLeakCount: 0 })}\n`
+    `${JSON.stringify({ status: evidence.status, fileCount: artifact.files.length, profileCount: publicSurface.profileCount, localCiCoverageProfileCount: offlineEvidence.matrix.profileCount, surfaceCount: publicSurface.surfaceCount, verifiedSourceAssetCount: publicSurface.sourceAssetCount, privacyLeakCount: 0 })}\n`
   )
 }
 

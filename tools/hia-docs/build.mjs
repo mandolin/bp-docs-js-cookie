@@ -32,6 +32,7 @@ import {
   createShowcaseManifest,
   renderShowcaseHub
 } from './hub.mjs'
+import { materializePublicArtifact } from './public-artifact.mjs'
 import { sanitizeJsonFile } from './sanitize.mjs'
 
 /** @lang zh-CN 当前模块目录只用于推导 BP repository root，不进入公开产物。 @lang en Current module directory is used only to derive the BP repository root and never enters public artifacts. */
@@ -737,8 +738,24 @@ async function main() {
 
     const manifest = createShowcaseManifest({ buildCommit, profiles })
     writeShowcaseHub(manifest)
+    // <lang><zh-CN>默认 profile 必须由同一 closed matrix 选出；禁止另写一个可能漂移的公开 renderer 配置。</zh-CN><en>The default profile must be selected from the same closed matrix; a separate public renderer configuration that could drift is forbidden.</en></lang>
+    const defaultProfile = profiles.find(({ isDefault }) => isDefault)
+    if (!defaultProfile || defaultProfile.surfaces.length !== 1) {
+      throw new Error('The showcase matrix lacks one default Portal surface.')
+    }
+    // <lang><zh-CN>公开根只从默认 Portal surface 物化，绝不从 showcase hub 或 profiles 父目录复制。</zh-CN><en>The public root is materialized only from the default Portal surface, never from the showcase hub or profiles parent.</en></lang>
+    const publication = materializePublicArtifact({
+      buildCommit,
+      defaultRoot: path.resolve(
+        topology.showcaseRoot,
+        defaultProfile.surfaces[0].path
+      ),
+      publicRoot: topology.publicArtifactRoot
+    })
     const files = summarizeTree(topology.showcaseRoot)
     const fingerprint = fingerprintFiles(files)
+    const publicFiles = summarizeTree(topology.publicArtifactRoot)
+    const publicFingerprint = fingerprintFiles(publicFiles)
     const evidence = {
       contract: 'bp-js-cookie-documentation-showcase-build',
       contractVersion: '0.1.0-draft',
@@ -786,10 +803,42 @@ async function main() {
       node: process.versions.node,
       output: fingerprint
     })
+    writeJson(path.join(topology.evidenceRoot, 'public-build.json'), {
+      contract: 'bp-js-cookie-documentation-public-artifact-build',
+      contractVersion: '0.1.0-draft',
+      status: 'ready-for-wp121-check',
+      buildCommit,
+      runtime: {
+        node: process.versions.node,
+        supported: DOCUMENTATION_NODE_VERSIONS
+      },
+      publication: publication.manifest,
+      output: {
+        root: 'build/hia-docs/public',
+        generatedTracked: false,
+        ...publicFingerprint
+      },
+      isolation: {
+        localCiProfileCount: manifest.profileCount,
+        localCiSurfaceCount: manifest.surfaceCount,
+        publicProfileCount: publication.manifest.publicProfileCount,
+        copiedDefaultSurfaceFileCount: publication.copiedFileCount,
+        chooserIncluded: false,
+        unusedProfilesIncluded: false
+      },
+      privacy: PRIVACY_POLICY
+    })
+    writeJson(path.join(topology.evidenceRoot, 'public-fingerprint.json'), {
+      contract: 'bp-documentation-public-artifact-fingerprint',
+      contractVersion: '0.1.0-draft',
+      buildCommit,
+      node: process.versions.node,
+      output: publicFingerprint
+    })
     // <lang><zh-CN>owner build 不得产生 tracked 变化；结束前重新核对 clean boundary。</zh-CN><en>Owner builds must not create tracked changes; recheck their clean boundary before completion.</en></lang>
     validateOwners()
     process.stdout.write(
-      `HIA showcase built: ${manifest.profileCount} profiles, ${manifest.surfaceCount} surfaces, ${fingerprint.fileCount} files, ${fingerprint.sha256}.\n`
+      `HIA showcase built: ${manifest.profileCount} profiles, ${manifest.surfaceCount} surfaces, ${fingerprint.fileCount} local files; public default Portal: ${publicFingerprint.fileCount} files, ${publicFingerprint.sha256}.\n`
     )
   } finally {
     // <lang><zh-CN>cache 可能含绝对路径、raw integration 或源码正文，无论成功失败都必须删除。</zh-CN><en>The cache may contain absolute paths, raw integrations, or source bodies and must be removed on success or failure.</en></lang>

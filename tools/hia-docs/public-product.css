@@ -1,0 +1,517 @@
+/* <lang><zh-CN>W-P121 的 BP 专属产品壳；通用 Portal owner 的结构主题留给后续周期。</zh-CN><en>BP-specific product shell for W-P121; structural themes in the shared Portal owner remain deferred.</en></lang> */
+:root {
+  --hia-public-header-height: 4rem;
+  --hia-public-content-width: 52rem;
+  --hia-public-code-size: 0.875rem;
+  --hia-public-code-bg: var(--hia-color-code-background);
+  --hia-public-code-fg: var(--hia-color-code-text);
+}
+
+:root[data-hia-content-width="wide"] {
+  --hia-public-content-width: 68rem;
+}
+
+:root[data-hia-code-font-size="small"] {
+  --hia-public-code-size: 0.78rem;
+}
+
+:root[data-hia-code-font-size="large"] {
+  --hia-public-code-size: 1rem;
+}
+
+/* <lang><zh-CN>代码主题和站点主题分离；site 仅复用当前站点最终配色。</zh-CN><en>Code themes are independent from site themes; site alone reuses the resolved site palette.</en></lang> */
+:root[data-hia-code-theme="paper-light"] {
+  --hia-public-code-bg: #f7f3e8;
+  --hia-public-code-fg: #292524;
+}
+
+:root[data-hia-code-theme="midnight"] {
+  --hia-public-code-bg: #0b1020;
+  --hia-public-code-fg: #d9e6ff;
+}
+
+:root[data-hia-code-theme="solarized-light"] {
+  --hia-public-code-bg: #fdf6e3;
+  --hia-public-code-fg: #586e75;
+}
+
+:root[data-hia-code-theme="solarized-dark"] {
+  --hia-public-code-bg: #002b36;
+  --hia-public-code-fg: #93a1a1;
+}
+
+:root[data-hia-code-theme="high-contrast"] {
+  --hia-public-code-bg: #000;
+  --hia-public-code-fg: #fff;
+}
+
+html[data-hia-code-theme]:not([data-hia-code-theme="site"]) pre,
+html[data-hia-code-theme]:not([data-hia-code-theme="site"]) pre code {
+  background: var(--hia-public-code-bg);
+  color: var(--hia-public-code-fg);
+}
+
+pre,
+pre code {
+  font-size: var(--hia-public-code-size);
+}
+
+:root[data-hia-code-wrap="wrap"] pre,
+:root[data-hia-code-wrap="wrap"] pre code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+:root[data-hia-code-lines="show"] pre code {
+  counter-reset: hia-public-line;
+}
+
+:root[data-hia-code-lines="show"] pre code > .code-line::before {
+  color: var(--hia-muted);
+  content: counter(hia-public-line);
+  counter-increment: hia-public-line;
+  display: inline-block;
+  margin-inline-end: 1rem;
+  min-width: 2.4ch;
+  text-align: end;
+}
+
+/* <lang><zh-CN>全局 header 只承担品牌、搜索、版本、locale 和显示设置。</zh-CN><en>The global header owns only brand, search, version, locale, and display settings.</en></lang> */
+.hia-public-skip {
+  background: var(--hia-surface);
+  color: var(--hia-text);
+  inset-block-start: 0.5rem;
+  inset-inline-start: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  position: fixed;
+  transform: translateY(-180%);
+  z-index: 100;
+}
+
+.hia-public-skip:focus {
+  transform: translateY(0);
+}
+
+.hia-public-header {
+  align-items: center;
+  background: color-mix(in srgb, var(--hia-surface) 94%, transparent);
+  border-block-end: 1px solid var(--hia-border);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(12rem, 18rem) minmax(14rem, 38rem) auto;
+  min-height: var(--hia-public-header-height);
+  padding: 0.55rem clamp(0.8rem, 2vw, 1.6rem);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.hia-public-brand {
+  align-items: center;
+  color: var(--hia-text);
+  display: inline-flex;
+  gap: 0.7rem;
+  text-decoration: none;
+}
+
+.hia-public-brand-mark {
+  align-items: center;
+  background: var(--hia-accent);
+  border-radius: 0.55rem;
+  color: var(--hia-color-accent-contrast);
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 800;
+  height: 2rem;
+  justify-content: center;
+  letter-spacing: 0.04em;
+  width: 2rem;
+}
+
+.hia-public-brand-copy {
+  display: grid;
+  line-height: 1.15;
+}
+
+.hia-public-brand-copy small {
+  color: var(--hia-muted);
+  font-size: 0.68rem;
+}
+
+.hia-public-search-trigger,
+.hia-public-quiet-button,
+.hia-public-settings-trigger,
+.hia-public-secondary-button {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.55rem;
+  color: var(--hia-text);
+  cursor: pointer;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.hia-public-search-trigger {
+  color: var(--hia-muted);
+  text-align: start;
+  width: 100%;
+}
+
+.hia-public-header-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: end;
+}
+
+.hia-public-version {
+  background: var(--hia-accent-soft);
+  border-radius: 999px;
+  color: var(--hia-text);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
+}
+
+/* <lang><zh-CN>桌面保持主导航、阅读列、本页 outline 三栏职责分离。</zh-CN><en>Desktop keeps primary navigation, reading column, and local outline as three separate responsibilities.</en></lang> */
+.hia-shell.hia-project-split-site {
+  align-items: start;
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) minmax(11rem, 14rem);
+  margin: 0 auto;
+  max-width: 112rem;
+  min-height: calc(100vh - var(--hia-public-header-height));
+}
+
+.hia-shell.hia-project-split-site > .hia-sidebar,
+.hia-public-outline {
+  max-height: calc(100vh - var(--hia-public-header-height));
+  overflow: auto;
+  position: sticky;
+  top: var(--hia-public-header-height);
+}
+
+/* <lang><zh-CN>品牌、locale 与配色入口已由全局 header/设置接管，侧栏只保留导航职责。</zh-CN><en>Brand, locale, and color controls are owned by the global header and settings, leaving navigation as the sidebar's sole responsibility.</en></lang> */
+.hia-shell.hia-project-split-site > .hia-sidebar > h1,
+.hia-shell.hia-project-split-site > .hia-sidebar > .hia-language-switch,
+.hia-shell.hia-project-split-site > .hia-sidebar > .hia-theme-switch {
+  display: none;
+}
+
+.hia-public-content-column {
+  min-width: 0;
+  padding: clamp(1rem, 2.7vw, 2.5rem);
+}
+
+.hia-public-content-column > .hia-main {
+  margin-inline: auto;
+  max-width: var(--hia-public-content-width);
+  min-height: 56vh;
+  padding: 0;
+}
+
+.hia-public-breadcrumb {
+  color: var(--hia-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  gap: 0.45rem;
+  margin: 0 auto 1.4rem;
+  max-width: var(--hia-public-content-width);
+}
+
+.hia-public-breadcrumb a {
+  color: var(--hia-accent);
+}
+
+.hia-public-outline {
+  align-self: stretch;
+  border-inline-start: 1px solid var(--hia-border);
+  padding: 1.4rem 1rem;
+}
+
+.hia-public-outline-label {
+  color: var(--hia-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hia-public-outline-list {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+  padding: 0;
+}
+
+.hia-public-outline-list a {
+  color: var(--hia-muted);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.hia-public-footer {
+  border-block-start: 1px solid var(--hia-border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 2.5rem auto 0;
+  max-width: var(--hia-public-content-width);
+  padding-block-start: 1rem;
+}
+
+.hia-public-footer a {
+  color: var(--hia-accent);
+}
+
+/* <lang><zh-CN>公开 landing 是直接入口，不要求读者先理解 renderer/profile 组合。</zh-CN><en>The public landing is a direct entry and does not require readers to understand renderer/profile combinations.</en></lang> */
+.hia-public-landing h1 {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  margin-block: 0.35rem 1rem;
+}
+
+.hia-public-eyebrow {
+  color: var(--hia-accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hia-public-lede {
+  color: var(--hia-muted);
+  font-size: 1.08rem;
+  line-height: 1.7;
+  max-width: 48rem;
+}
+
+.hia-public-card-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-block: 1rem 2rem;
+}
+
+.hia-public-card {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.7rem;
+  color: var(--hia-text);
+  display: block;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.hia-public-card p {
+  color: var(--hia-muted);
+  margin-block-end: 0;
+}
+
+.hia-public-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.hia-public-meta dt,
+.hia-public-meta dd {
+  border-block-end: 1px solid var(--hia-border);
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.hia-public-mobile-navigation,
+.hia-public-mobile-outline {
+  display: none;
+}
+
+/* <lang><zh-CN>原生 dialog 保存非个人显示偏好，并保留浏览器的焦点与 Escape 行为。</zh-CN><en>The native dialog stores non-personal display preferences while preserving browser focus and Escape behavior.</en></lang> */
+.hia-public-settings-dialog {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.8rem;
+  color: var(--hia-text);
+  max-height: min(46rem, calc(100vh - 2rem));
+  max-width: min(44rem, calc(100vw - 2rem));
+  overflow: auto;
+  padding: 0;
+  width: 100%;
+}
+
+.hia-public-settings-dialog::backdrop {
+  background: rgb(5 12 24 / 62%);
+}
+
+.hia-public-settings-header,
+.hia-public-settings-footer {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem 1.2rem;
+}
+
+.hia-public-settings-header {
+  border-block-end: 1px solid var(--hia-border);
+}
+
+.hia-public-settings-footer {
+  border-block-start: 1px solid var(--hia-border);
+}
+
+.hia-public-settings-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem;
+}
+
+.hia-public-settings-body fieldset {
+  border: 1px solid var(--hia-border);
+  border-radius: 0.6rem;
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.hia-public-settings-body legend {
+  font-weight: 750;
+  padding-inline: 0.35rem;
+}
+
+.hia-public-theme-choices,
+.hia-public-settings-grid,
+.hia-public-toggle-row {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+}
+
+.hia-public-settings-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hia-public-settings-field select {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.45rem;
+  color: var(--hia-text);
+  min-height: 2.4rem;
+  padding-inline: 0.55rem;
+}
+
+.hia-public-settings-preview {
+  margin: 0;
+}
+
+.hia-public-settings-privacy {
+  color: var(--hia-muted);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .hia-public-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hia-public-search-trigger,
+  .hia-public-version,
+  .hia-public-settings-trigger span:last-child,
+  .hia-public-brand-copy small {
+    display: none;
+  }
+
+  .hia-shell.hia-project-split-site {
+    display: block;
+  }
+
+  .hia-shell.hia-project-split-site > .hia-sidebar,
+  .hia-public-outline {
+    display: none;
+  }
+
+  .hia-public-content-column {
+    padding: 1rem;
+  }
+
+  .hia-public-mobile-navigation,
+  .hia-public-mobile-outline {
+    border: 1px solid var(--hia-border);
+    border-radius: 0.55rem;
+    display: block;
+    margin-block-end: 0.8rem;
+    padding: 0.65rem 0.8rem;
+  }
+
+  .hia-public-mobile-navigation summary,
+  .hia-public-mobile-outline summary {
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  .hia-public-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hia-public-theme-choices,
+  .hia-public-settings-grid,
+  .hia-public-toggle-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .hia-public-header {
+    padding-inline: 0.55rem;
+  }
+
+  .hia-public-brand-copy strong {
+    font-size: 0.9rem;
+  }
+
+  .hia-public-content-column {
+    padding-inline: 0.7rem;
+  }
+}
+
+@media print {
+  .hia-public-header,
+  .hia-sidebar,
+  .hia-public-outline,
+  .hia-public-mobile-navigation,
+  .hia-public-mobile-outline,
+  .hia-public-footer,
+  .hia-public-settings-dialog {
+    display: none !important;
+  }
+
+  .hia-shell.hia-project-split-site,
+  .hia-public-content-column {
+    display: block;
+    max-width: none;
+    padding: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .hia-public-brand-mark,
+  .hia-public-card,
+  .hia-public-settings-dialog,
+  .hia-public-search-trigger,
+  .hia-public-quiet-button,
+  .hia-public-settings-trigger {
+    border: 1px solid CanvasText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -46,6 +46,7 @@ test('creates one default-Portal publication profile without a chooser', () => {
   assert.equal(manifest.apiScope.default, 'public')
   assert.equal(manifest.apiScope.publicEntryCount, 7)
   assert.equal(manifest.apiScope.allEntryCount, 18)
+  assert.equal(manifest.displaySettings.codeLineNumbersDefault, 'show')
   assert.deepEqual(manifest.displaySettings.contentVisibilityDefaults, {
     metadata: 'hide',
     contract: 'show',
@@ -58,6 +59,84 @@ test('creates one default-Portal publication profile without a chooser', () => {
     'prismjs-1.30.0-after-verified-source'
   )
   assert.equal(manifest.displaySettings.highlighter.sourceExecution, false)
+})
+
+test('flattens generator-oriented navigation layers into the package reader root', (t) => {
+  // <lang><zh-CN>该 fixture 模拟 owner 的完整 root → view → repository → package 链，确保公开树不是靠 CSS 隐藏冗余层级。</zh-CN><en>This fixture models the owner's complete root → view → repository → package chain, proving the public tree does not hide redundant levels with CSS.</en></lang>
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'bp-js-cookie-reader-tree-')
+  )
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }))
+  const navigationRoot = path.join(temporaryRoot, 'navigation')
+  fs.mkdirSync(navigationRoot, { recursive: true })
+  /** @lang zh-CN entries 满足冻结的 7 + 11 分类边界，节点身份与本测试的层级断言无关。 @lang en Entries satisfy the frozen 7 + 11 classification boundary; their identities are independent from this test's hierarchy assertion. */
+  const entries = [
+    ...PUBLIC_API_LABELS,
+    ...Array.from({ length: 11 }, (_, index) => `internal-${index + 1}`)
+  ].map((label, index) => ({ id: `node-${index}`, label }))
+  const packageFile =
+    'semantic-repository-bp-docs-js-cookie-package-js-cookie-1234abcd.json'
+  fs.writeFileSync(
+    path.join(navigationRoot, packageFile),
+    `${JSON.stringify({ children: entries })}\n`,
+    'utf8'
+  )
+  fs.writeFileSync(
+    path.join(navigationRoot, 'repository-1234abcd.json'),
+    `${JSON.stringify({
+      children: [
+        {
+          id: 'semantic:repository:bp-docs-js-cookie:package:js-cookie',
+          kind: 'package',
+          label: 'js-cookie 3.0.8',
+          entryCount: 18,
+          childrenPath: `navigation/${packageFile}`
+        }
+      ]
+    })}\n`,
+    'utf8'
+  )
+  fs.writeFileSync(
+    path.join(navigationRoot, 'view-js-1234abcd.json'),
+    `${JSON.stringify({
+      children: [
+        {
+          id: 'semantic:repository:bp-docs-js-cookie',
+          kind: 'repository',
+          label: 'bp-docs-js-cookie',
+          entryCount: 18,
+          childrenPath: 'navigation/repository-1234abcd.json'
+        }
+      ]
+    })}\n`,
+    'utf8'
+  )
+  fs.writeFileSync(
+    path.join(navigationRoot, 'root.json'),
+    `${JSON.stringify({
+      nodeId: 'root',
+      children: [
+        {
+          id: 'view:js',
+          kind: 'view',
+          label: 'JS',
+          entryCount: 18,
+          childrenPath: 'navigation/view-js-1234abcd.json'
+        }
+      ]
+    })}\n`,
+    'utf8'
+  )
+
+  groupApiScopeNavigation(temporaryRoot)
+  const rootShard = JSON.parse(
+    fs.readFileSync(path.join(navigationRoot, 'root.json'), 'utf8')
+  )
+
+  assert.equal(rootShard.children.length, 1)
+  assert.equal(rootShard.children[0].kind, 'package')
+  assert.equal(rootShard.children[0].label, 'js-cookie 3.0.8')
+  assert.equal(rootShard.children[0].childrenPath, `navigation/${packageFile}`)
 })
 
 test('groups the frozen public API set without changing owner entry identities', (t) => {
@@ -145,6 +224,7 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.match(publicHtml, /代码区域 \/ 编辑器设置/u)
   assert.match(publicHtml, /只显示接口 API/u)
   assert.match(publicHtml, /data-hia-show-metadata="hide"/u)
+  assert.match(publicHtml, /data-hia-code-lines="show"/u)
   assert.match(publicHtml, /assets\/prism\.js/u)
   assert.match(publicHtml, /data-hia-public-outline/u)
   assert.match(publicHtml, /data-hia-public-footer/u)
@@ -229,7 +309,13 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   assert.match(runtime, /globalThis\.Prism\.highlightElement\(code\)/u)
   assert.match(
     runtime,
-    /const storageKey = 'hia\.bp-docs-js-cookie\.display\.v2'/u
+    /const storageKey = 'hia\.bp-docs-js-cookie\.display\.v3'/u
+  )
+  assert.match(runtime, /pre\.dataset\.start = String\(startLine\)/u)
+  assert.match(runtime, /ensureOverviewTreeItem\(\)/u)
+  assert.ok(
+    runtime.indexOf("nodeId.includes(':package:')") <
+      runtime.indexOf("nodeId.includes(':repository:')")
   )
   assert.equal(/\bfetch\s*\(/u.test(runtime), false)
 })

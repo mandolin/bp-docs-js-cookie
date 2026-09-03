@@ -8,14 +8,14 @@
 
 ;(() => {
   /** @lang zh-CN 产品偏好的单一设备本地 key。 @lang en Sole device-local key for product preferences. */
-  const storageKey = 'hia.bp-docs-js-cookie.display.v2'
+  const storageKey = 'hia.bp-docs-js-cookie.display.v3'
   /** @lang zh-CN 未找到有效设备偏好时使用的确认稿默认值。 @lang en Confirmed-baseline defaults used when no valid device preference exists. */
   const defaults = Object.freeze({
     siteTheme: 'light',
     codeTheme: 'site',
     codeFontSize: 'default',
     codeWrap: 'scroll',
-    codeLines: 'hide',
+    codeLines: 'show',
     contentWidth: 'comfortable',
     apiScope: 'public',
     metadata: 'hide',
@@ -421,10 +421,10 @@
       if (nodeId === 'bp:public-api') kind = 'public-group'
       else if (nodeId === 'bp:internal-api') kind = 'internal-group'
       else if (nodeId.startsWith('view:')) kind = 'view'
-      else if (nodeId.includes(':repository:') && !nodeId.includes('|'))
-        kind = 'repository'
       else if (nodeId.includes(':package:') && !nodeId.includes(':entry:'))
         kind = 'package'
+      else if (nodeId.includes(':repository:') && !nodeId.includes('|'))
+        kind = 'repository'
       else if (nodeId.includes('typedef')) kind = 'type'
       else if (nodeId.includes('function')) kind = 'function'
       else if (nodeId.includes('module')) kind = 'module'
@@ -452,6 +452,7 @@
           count.textContent = match[2]
           summaryLabel.after(count)
         }
+        summaryLabel.title = summaryLabel.textContent || ''
         summaryLabel.dataset.hiaTreeDecorated = 'true'
       }
       if (
@@ -468,7 +469,54 @@
       ) {
         summaryLabel.textContent = translate('internalApiGroup')
       }
+      /** @lang zh-CN leafLabel 是 owner 保留的原生 button；title 提供窄栏截断后的完整名称。 @lang en LeafLabel is the native button retained from the owner; its title exposes the complete name after narrow-column truncation. */
+      const leafLabel = item.querySelector(':scope > .hia-project-entry-link')
+      if (leafLabel) leafLabel.title = leafLabel.textContent || ''
+      /** @lang zh-CN 默认展开 package 与公开 API 两个读者层级；内部实现仍保持折叠并受 API scope 控制。</zh-CN><en>Open the package and public-API reader levels by default while keeping internal implementation collapsed and governed by API scope.</en></lang> */
+      const disclosure = item.querySelector(':scope > details')
+      if (
+        disclosure &&
+        (kind === 'package' || kind === 'public-group') &&
+        !disclosure.open
+      ) {
+        disclosure.open = true
+      }
     }
+    ensureOverviewTreeItem()
+  }
+
+  /**
+   * <lang><zh-CN>在读者树根加入可返回 Portal 首页的概览节点；仅当压平后的 package 根存在时生成。</zh-CN><en>Adds a reader-facing overview link back to the Portal landing page, only when the flattened package root is present.</en></lang>
+   *
+   * @returns {void}
+   */
+  function ensureOverviewTreeItem() {
+    if (!treeHost) return
+    /** @lang zh-CN rootList 必须是权威树的直接列表，搜索结果列表不会包含 package 根，因此不会误插概览。 @lang en rootList must be the authoritative direct tree list; search results contain no package root and therefore receive no accidental overview item. */
+    const rootList = treeHost.querySelector(
+      ':scope > .hia-project-hierarchy-list'
+    )
+    if (
+      !rootList?.querySelector(':scope > [data-hia-tree-kind="package"]') ||
+      rootList.querySelector(':scope > [data-hia-public-overview-item]')
+    ) {
+      return
+    }
+    /** @lang zh-CN item 只承载当前文档站内的静态首页链接，不复制 owner entry identity。 @lang en Item carries only a static same-site landing link and does not fabricate an owner entry identity. */
+    const item = document.createElement('li')
+    item.className = 'hia-public-tree-item'
+    item.dataset.hiaTreeKind = 'overview'
+    item.dataset.hiaPublicOverviewItem = 'true'
+    /** @lang zh-CN link 复用 brand 的相对首页地址，以兼容 GitHub Pages 子路径部署。 @lang en Link reuses the brand's relative landing address to remain compatible with a GitHub Pages subpath deployment. */
+    const link = document.createElement('a')
+    link.className = 'hia-project-entry-link hia-public-overview-link'
+    link.href =
+      document.querySelector('.hia-public-brand')?.getAttribute('href') || './'
+    link.textContent = translate('overview')
+    link.title = link.textContent
+    if (!activeEntryIdentity()) link.setAttribute('aria-current', 'page')
+    item.append(link)
+    rootList.prepend(item)
   }
 
   /**
@@ -493,7 +541,21 @@
       const integrity = details.dataset.hiaSourceIntegrity || ''
       if (code.dataset.hiaPrismIntegrity === integrity) continue
       code.classList.add('language-javascript')
-      code.parentElement?.classList.add('line-numbers')
+      /** @lang zh-CN pre 是 Prism line-numbers 插件读取 data-start 的宿主；起始行来自 owner 已生成的源码定位摘要。</zh-CN><en>Pre is the host from which Prism's line-numbers plugin reads data-start; the starting line comes from the owner-generated source-location summary.</en></lang> */
+      const pre = code.parentElement
+      pre?.classList.add('line-numbers')
+      /** @lang zh-CN sourceLocationMatch 只接受摘要末尾的正整数，不解析路径或构造请求。</zh-CN><en>SourceLocationMatch accepts only a trailing positive integer and neither parses a path nor constructs a request.</en></lang> */
+      const sourceLocationMatch = (
+        details.querySelector(':scope > summary')?.textContent || ''
+      )
+        .trim()
+        .match(/:(\d+)$/u)
+      if (pre && sourceLocationMatch) {
+        const startLine = Number(sourceLocationMatch[1])
+        if (Number.isSafeInteger(startLine) && startLine > 0) {
+          pre.dataset.start = String(startLine)
+        }
+      }
       try {
         if (!globalThis.Prism?.highlightElement) return
         code.dataset.hiaPrismIntegrity = integrity

@@ -721,6 +721,13 @@ pre.line-numbers {
   position: relative;
 }
 
+/* <lang><zh-CN>Prism 把行号轨道追加到 code 内；相对定位使其负偏移停留在 pre 的左侧内边距，而不是逸出代码框。</zh-CN><en>Prism appends the line-number rail inside code; relative positioning keeps its negative offset within the pre left padding instead of outside the code panel.</en></lang> */
+pre.line-numbers > code {
+  display: block;
+  position: relative;
+  white-space: inherit;
+}
+
 .line-numbers .line-numbers-rows {
   border-right: 1px solid
     color-mix(in srgb, var(--hia-public-code-fg) 24%, transparent);
@@ -948,16 +955,50 @@ body {
   gap: 0.42rem;
   min-height: 2rem;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   padding: 0.28rem 0.42rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   width: 100%;
 }
 
 .hia-project-hierarchy-list details > summary {
   justify-content: flex-start;
+  list-style: none;
 }
 
-.hia-project-hierarchy-list details > summary::before,
+.hia-project-hierarchy-list details > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* <lang><zh-CN>disclosure chevron 与节点类型图标是两个独立视觉角色，避免文件夹图标被误当成展开状态。</zh-CN><en>The disclosure chevron and node-kind icon are separate visual roles so a folder icon is never mistaken for expansion state.</en></lang> */
+.hia-project-hierarchy-list details > summary::before {
+  background: currentColor;
+  content: '';
+  flex: 0 0 auto;
+  height: 0.72rem;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m5.5 3.5 5 4.5-5 4.5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  opacity: 0.64;
+  transition: transform 120ms ease;
+  width: 0.72rem;
+}
+
+.hia-project-hierarchy-list details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.hia-project-hierarchy-list details > summary > span:first-child {
+  align-items: center;
+  display: flex;
+  gap: 0.42rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hia-project-hierarchy-list details > summary > span:first-child::before,
 .hia-project-hierarchy-list li > .hia-project-entry-link::before,
 .hia-project-hierarchy-list li > span::before {
   background: currentColor;
@@ -975,6 +1016,10 @@ body {
 
 .hia-public-tree-item[data-hia-tree-kind='view'] {
   --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 4 3 12l5 8M16 4l5 8-5 8M14 3l-4 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-item[data-hia-tree-kind='overview'] {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m3.5 11 8.5-7 8.5 7v9H15v-6H9v6H3.5z' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .hia-public-tree-item[data-hia-tree-kind='repository'],
@@ -1009,13 +1054,20 @@ body {
 
 .hia-project-hierarchy-list details > summary:hover,
 .hia-project-hierarchy-list li > .hia-project-entry-link:hover,
-.hia-project-hierarchy-list details[data-hia-active-ancestor='true'] > summary,
 .hia-project-hierarchy-list
   [data-hia-active-entry='true']
-  > .hia-project-entry-link {
+  > .hia-project-entry-link,
+.hia-public-overview-link[aria-current='page'] {
   background: var(--hia-accent-soft);
   border-color: color-mix(in srgb, var(--hia-accent) 26%, transparent);
   color: var(--hia-accent);
+}
+
+.hia-project-hierarchy-list details[data-hia-active-ancestor='true'] > summary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--hia-accent);
+  font-weight: 650;
 }
 
 /* <lang><zh-CN>设置面板按“范围—内容—站点—代码—阅读”组织，避免把所有选项压成换色控件。</zh-CN><en>The settings panel is organized as scope, content, site, code, and reading instead of collapsing everything into color controls.</en></lang> */

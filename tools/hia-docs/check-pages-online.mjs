@@ -203,6 +203,9 @@ async function checkOnce(expectedCommit) {
     'documentation-publication-profile.json'
   )
   const publication = publicationResult.value
+  /** @lang zh-CN readerNavigationResult 证明已部署首屏树直接从 package 开始，而非依赖 CSS 隐藏 view/repository。</zh-CN><en>readerNavigationResult proves the deployed initial tree begins at the package rather than hiding view/repository layers with CSS.</en></lang> */
+  const readerNavigationResult = await readJson('navigation/root.json')
+  const readerNavigation = readerNavigationResult.value
   const presentationResult = await readJson(
     'documentation-presentation-profile.json'
   )
@@ -224,6 +227,7 @@ async function checkOnce(expectedCommit) {
   assert(root.text.includes('<noscript>'), 'Hub lacks no-script reachability.')
   assert(
     root.text.includes('data-hia-api-scope="public"') &&
+      root.text.includes('data-hia-code-lines="show"') &&
       root.text.includes('只显示接口 API') &&
       root.text.includes('assets/prism.js'),
     'Baseline-B API scope, settings, or local highlighter is missing.'
@@ -237,7 +241,11 @@ async function checkOnce(expectedCommit) {
   assert(
     /\[data-hia-api-scope=(?:"public"|'public')\]/u.test(productCss.text) &&
       productCss.text.includes('.token.keyword') &&
+      productCss.text.includes('pre.line-numbers > code') &&
       productJs.text.includes("details.dataset.hiaSourceState !== 'ready'") &&
+      productJs.text.includes("'hia.bp-docs-js-cookie.display.v3'") &&
+      productJs.text.includes('pre.dataset.start = String(startLine)') &&
+      productJs.text.includes('ensureOverviewTreeItem()') &&
       productJs.text.includes('globalThis.Prism.highlightElement(code)') &&
       prismJs.text.includes('Prism') &&
       prismLineNumbersJs.text.includes('line-numbers') &&
@@ -272,9 +280,19 @@ async function checkOnce(expectedCommit) {
       publication.apiScope?.default === 'public' &&
       publication.apiScope?.publicEntryCount === 7 &&
       publication.apiScope?.allEntryCount === 18 &&
+      publication.displaySettings?.codeLineNumbersDefault === 'show' &&
       publication.displaySettings?.codeRuntime ===
         'prismjs-1.30.0-after-verified-source',
     'Deployed baseline-B scope or highlighter contract drifted.'
+  )
+  assert(
+    readerNavigation.children?.length === 1 &&
+      readerNavigation.children[0]?.kind === 'package' &&
+      readerNavigation.children[0]?.label === 'js-cookie 3.0.8' &&
+      /^navigation\/semantic-repository-bp-docs-js-cookie-package-js-cookie-[a-f0-9]+\.json$/u.test(
+        readerNavigation.children[0]?.childrenPath
+      ),
+    'Deployed reader navigation root was not flattened to the package level.'
   )
   assert(
     publication.defaultProfile?.id === 'unified-portal.fetch.classic',

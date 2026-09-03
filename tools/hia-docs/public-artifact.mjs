@@ -103,6 +103,7 @@ export function createPublicArtifactManifest({ buildCommit }) {
       codeFontSizes: ['small', 'default', 'large'],
       codeWrap: ['scroll', 'wrap'],
       codeLineNumbers: ['hide', 'show'],
+      codeLineNumbersDefault: 'show',
       contentWidths: ['comfortable', 'wide'],
       contentVisibility: [
         'metadata',
@@ -139,7 +140,7 @@ export function createPublicArtifactManifest({ buildCommit }) {
 }
 
 /**
- * <lang><zh-CN>把 owner 的平铺 package 导航确定性分组为公开 API 与内部实现。</zh-CN><en>Deterministically groups the owner's flat package navigation into public APIs and internal implementation.</en></lang>
+ * <lang><zh-CN>把 owner 的平铺 package 导航分组，并把仅对生成器有意义的 view/repository 层压平为读者入口。</zh-CN><en>Groups the owner's flat package navigation and flattens generator-oriented view/repository layers into the reader entry point.</en></lang>
  *
  * @param {string} publicRoot <lang><zh-CN>已复制的公开 Portal 根。</zh-CN><en>Copied public Portal root.</en></lang>
  * @returns {{publicEntryCount:number,allEntryCount:number}} <lang><zh-CN>分组后的计数。</zh-CN><en>Counts after grouping.</en></lang>
@@ -214,6 +215,67 @@ export function groupApiScopeNavigation(publicRoot) {
     `${JSON.stringify(packageShard, null, 2)}\n`,
     'utf8'
   )
+
+  // <lang><zh-CN>最小单元 fixture 可以只提供 package shard；真实公开产物必须继续校验并压平完整 root → view → repository → package 链。</zh-CN><en>A minimal unit fixture may provide only the package shard; a real public artifact must additionally validate and flatten its complete root → view → repository → package chain.</en></lang>
+  const rootShardPath = path.join(navigationRoot, 'root.json')
+  if (fs.existsSync(rootShardPath)) {
+    /**
+     * <lang><zh-CN>读取公开根内的 owner 导航引用，并拒绝跨目录或非 JSON 路径。</zh-CN><en>Reads an owner navigation reference inside the public root and rejects traversal or non-JSON paths.</en></lang>
+     *
+     * @param {unknown} reference <lang><zh-CN>owner shard 中的相对引用。</zh-CN><en>Relative reference from an owner shard.</en></lang>
+     * @returns {Object} <lang><zh-CN>已解析导航 shard。</zh-CN><en>Parsed navigation shard.</en></lang>
+     */
+    const readNavigationReference = (reference) => {
+      if (
+        typeof reference !== 'string' ||
+        !/^navigation\/[A-Za-z0-9-]+\.json$/u.test(reference)
+      ) {
+        throw new Error('Default Portal navigation reference is not safe.')
+      }
+      // <lang><zh-CN>candidatePath 在读取前再次按绝对路径边界校验，避免仅依赖正则。</zh-CN><en>candidatePath is checked again against the absolute directory boundary before reading, rather than relying on the regular expression alone.</en></lang>
+      const candidatePath = path.resolve(publicRoot, ...reference.split('/'))
+      const navigationBoundary = `${path.resolve(navigationRoot)}${path.sep}`
+      if (!candidatePath.startsWith(navigationBoundary)) {
+        throw new Error('Default Portal navigation reference escaped its root.')
+      }
+      return JSON.parse(fs.readFileSync(candidatePath, 'utf8'))
+    }
+
+    // <lang><zh-CN>rootShard 是浏览器首个读取的导航事实，因此压平发生在生成期而不是用 CSS 隐藏层级。</zh-CN><en>rootShard is the first navigation fact read by the browser, so flattening happens at generation time rather than hiding levels with CSS.</en></lang>
+    const rootShard = JSON.parse(fs.readFileSync(rootShardPath, 'utf8'))
+    const viewNode = rootShard.children?.[0]
+    if (
+      rootShard.children?.length !== 1 ||
+      viewNode?.kind !== 'view' ||
+      !viewNode.childrenPath
+    ) {
+      throw new Error('Default Portal root navigation hierarchy drifted.')
+    }
+    const viewShard = readNavigationReference(viewNode.childrenPath)
+    const repositoryNode = viewShard.children?.[0]
+    if (
+      viewShard.children?.length !== 1 ||
+      repositoryNode?.kind !== 'repository' ||
+      !repositoryNode.childrenPath
+    ) {
+      throw new Error('Default Portal repository navigation hierarchy drifted.')
+    }
+    const repositoryShard = readNavigationReference(repositoryNode.childrenPath)
+    const packageNode = repositoryShard.children?.[0]
+    if (
+      repositoryShard.children?.length !== 1 ||
+      packageNode?.kind !== 'package' ||
+      packageNode.childrenPath !== `navigation/${packageShardNames[0]}`
+    ) {
+      throw new Error('Default Portal package navigation hierarchy drifted.')
+    }
+    rootShard.children = [packageNode]
+    fs.writeFileSync(
+      rootShardPath,
+      `${JSON.stringify(rootShard, null, 2)}\n`,
+      'utf8'
+    )
+  }
   return {
     publicEntryCount: publicEntries.length,
     allEntryCount: publicEntries.length + internalEntries.length
@@ -330,7 +392,7 @@ function enhancePublicPortal(publicRoot) {
   html = html
     .replace(
       '<html ',
-      '<html data-hia-api-scope="public" data-hia-show-metadata="hide" data-hia-show-contract="show" data-hia-show-coverage="hide" data-hia-show-provenance="show" data-hia-show-relations="hide" data-hia-code-theme="site" data-hia-code-font-size="default" data-hia-code-wrap="scroll" data-hia-code-lines="hide" data-hia-content-width="comfortable" '
+      '<html data-hia-api-scope="public" data-hia-show-metadata="hide" data-hia-show-contract="show" data-hia-show-coverage="hide" data-hia-show-provenance="show" data-hia-show-relations="hide" data-hia-code-theme="site" data-hia-code-font-size="default" data-hia-code-wrap="scroll" data-hia-code-lines="show" data-hia-content-width="comfortable" '
     )
     .replace('data-hia-scheme="system"', 'data-hia-scheme="light"')
     .replace(

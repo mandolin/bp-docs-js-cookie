@@ -193,6 +193,7 @@ function checkPublicSurface() {
       JSON.stringify(['system', 'light', 'dark']) &&
       manifest.displaySettings?.siteThemeDefault === 'light' &&
       manifest.displaySettings?.codeThemes?.length === 6 &&
+      manifest.displaySettings?.codeLineNumbersDefault === 'show' &&
       manifest.displaySettings?.codeRuntime ===
         'prismjs-1.30.0-after-verified-source' &&
       manifest.displaySettings?.highlighter?.license === 'MIT' &&
@@ -434,6 +435,7 @@ function main() {
       rootHtml.includes('代码区域 / 编辑器设置') &&
       rootHtml.includes('只显示接口 API') &&
       rootHtml.includes('data-hia-api-scope="public"') &&
+      rootHtml.includes('data-hia-code-lines="show"') &&
       rootHtml.includes('assets/prism.js') &&
       !rootHtml.includes('data-showcase-profile=') &&
       !rootHtml.includes('candidate-status-strip'),
@@ -450,18 +452,34 @@ function main() {
   assert(
     productCss.includes('@media (max-width: 760px)') &&
       productCss.includes('@media print') &&
-      productCss.includes('@media (forced-colors: active)'),
+      productCss.includes('@media (forced-colors: active)') &&
+      productCss.includes('pre.line-numbers > code'),
     'Public product CSS lacks responsive, print, or forced-colors handling.'
   )
   assert(
-    productJs.includes("'hia.bp-docs-js-cookie.display.v2'") &&
+    productJs.includes("'hia.bp-docs-js-cookie.display.v3'") &&
       productJs.includes('localStorage.setItem') &&
       productJs.includes("details.dataset.hiaSourceState !== 'ready'") &&
+      productJs.includes('pre.dataset.start = String(startLine)') &&
+      productJs.includes('ensureOverviewTreeItem()') &&
       productJs.includes('globalThis.Prism.highlightElement(code)') &&
       !/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\s*\(/u.test(
         productJs
       ),
     'Public product runtime drifted from the device-local, no-network boundary.'
+  )
+  /** @lang zh-CN readerNavigationRoot 必须直接暴露 package；view/repository 仍可保留为未引用 owner shard，但不得出现在读者首屏层级。 @lang en readerNavigationRoot must expose the package directly; view/repository may remain as unreferenced owner shards but cannot appear in the reader's initial hierarchy. */
+  const readerNavigationRoot = readJson(
+    path.join(topology.publicArtifactRoot, 'navigation', 'root.json')
+  )
+  assert(
+    readerNavigationRoot.children?.length === 1 &&
+      readerNavigationRoot.children[0]?.kind === 'package' &&
+      readerNavigationRoot.children[0]?.label === 'js-cookie 3.0.8' &&
+      /^navigation\/semantic-repository-bp-docs-js-cookie-package-js-cookie-[a-f0-9]+\.json$/u.test(
+        readerNavigationRoot.children[0]?.childrenPath
+      ),
+    'Public reader navigation root was not flattened to the package level.'
   )
   assert(
     fs.existsSync(

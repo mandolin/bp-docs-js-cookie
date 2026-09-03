@@ -221,9 +221,12 @@ async function checkOnce(expectedCommit) {
     portalCss.text.includes('hia-project-split-site'),
     'Portal stylesheet lacks the split-site layout.'
   )
+  // <lang><zh-CN>Portal owner 把导航、内容与源码读取器内联在产品 HTML；外部 hia-default.js 只承载主题和 locale 偏好。</zh-CN><en>The Portal owner inlines navigation, content, and source readers in the product HTML; external hia-default.js carries only theme and locale preferences.</en></lang>
   assert(
-    portalJs.text.includes('credentials: \'omit\''),
-    'Portal runtime lacks credential-free source reads.'
+    root.text.includes("credentials: 'omit'") &&
+      root.text.includes("mode: 'same-origin'") &&
+      root.text.includes("redirect: 'error'"),
+    'Portal product lacks credential-free, same-origin, redirect-denying source reads.'
   )
   assert(
     publication.contract ===

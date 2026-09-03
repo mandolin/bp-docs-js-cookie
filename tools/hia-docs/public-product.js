@@ -38,6 +38,14 @@
   const messages = Object.freeze({
     'zh-CN': {
       search: '搜索文档',
+      searchTitle: '搜索文档',
+      searchPlaceholder: '搜索 API 或指南…',
+      searchClose: '关闭',
+      searchEmpty: '没有匹配结果',
+      overview: '概览',
+      searchOverview: '项目概览与快速开始',
+      searchSet: 'Cookies.set() · 写入 Cookie',
+      searchGet: 'Cookies.get() · 读取 Cookie',
       settings: '主题与设置',
       nav: '文档目录',
       outline: '本页内容',
@@ -53,6 +61,14 @@
     },
     en: {
       search: 'Search documentation',
+      searchTitle: 'Search documentation',
+      searchPlaceholder: 'Search APIs or guides…',
+      searchClose: 'Close',
+      searchEmpty: 'No matching result',
+      overview: 'Overview',
+      searchOverview: 'Project overview and quick start',
+      searchSet: 'Cookies.set() · write a Cookie',
+      searchGet: 'Cookies.get() · read a Cookie',
       settings: 'Theme & settings',
       nav: 'Documentation menu',
       outline: 'On this page',
@@ -74,6 +90,14 @@
   const localeControl = document.querySelector('[data-hia-locale-control]')
   /** @lang zh-CN 产品设置对话框使用原生 dialog 语义。 @lang en Product settings use native dialog semantics. */
   const settingsDialog = document.querySelector('[data-hia-settings-dialog]')
+  /** @lang zh-CN 产品搜索对话框保持确认稿的焦点约束与 Escape 行为。 @lang en The product search dialog preserves the confirmed focus containment and Escape behavior. */
+  const searchDialog = document.querySelector('[data-hia-search-dialog]')
+  /** @lang zh-CN searchInput 只过滤三个由构建器绑定的稳定公开入口。 @lang en SearchInput filters only the three stable public entries bound by the builder. */
+  const searchInput = searchDialog?.querySelector('[data-hia-search-input]')
+  /** @lang zh-CN searchResults 是无需额外网络或源码索引的有界结果集。 @lang en SearchResults are a bounded result set requiring no extra network or source index. */
+  const searchResults = [...(searchDialog?.querySelectorAll('[data-hia-search-result]') || [])]
+  /** @lang zh-CN searchEmpty 为过滤零结果提供可读反馈。 @lang en SearchEmpty provides readable feedback when filtering returns zero results. */
+  const searchEmpty = searchDialog?.querySelector('[data-hia-search-empty]')
   /** @lang zh-CN 主内容 host 会被 Portal 在选择节点时整体替换。 @lang en The Portal replaces the main content host when selecting a node. */
   const contentHost = document.querySelector('[data-hia-project-content]')
   /** @lang zh-CN 原导航树 host 是桌面与移动导航的同一事实源。 @lang en The original navigation-tree host is the shared fact source for desktop and mobile navigation. */
@@ -159,9 +183,19 @@
     for (const element of document.querySelectorAll('[data-hia-public-i18n]')) {
       element.textContent = translate(element.dataset.hiaPublicI18n)
     }
+    for (const element of document.querySelectorAll('[data-hia-public-i18n-placeholder]')) {
+      element.setAttribute(
+        'placeholder',
+        translate(element.dataset.hiaPublicI18nPlaceholder)
+      )
+    }
     /** @lang zh-CN locale button 文本表示下一次切换目标。 @lang en The locale-button text represents the next switch target. */
     const localeButton = document.querySelector('[data-hia-public-locale]')
     if (localeButton) localeButton.textContent = currentLocale() === 'en' ? '中' : 'EN'
+    /** @lang zh-CN 窄屏图标按钮仍需具备随 locale 更新的可访问名称。 @lang en The narrow-screen icon button still requires an accessible name updated with the locale. */
+    document
+      .querySelector('.hia-public-mobile-search')
+      ?.setAttribute('aria-label', translate('search'))
   }
 
   /**
@@ -300,6 +334,40 @@
   }
 
   /**
+   * <lang><zh-CN>按当前输入过滤构建期绑定的公开搜索入口。</zh-CN><en>Filters the build-bound public search entries using the current input.</en></lang>
+   *
+   * @returns {void}
+   */
+  function filterSearchResults() {
+    if (!searchInput) return
+    /** @lang zh-CN query 使用当前 locale 进行大小写归一化，但不写入 URL、存储或遥测。 @lang en Query uses the current locale for case normalization but is written to no URL, storage, or telemetry. */
+    const query = searchInput.value.trim().toLocaleLowerCase(currentLocale())
+    /** @lang zh-CN visibleCount 决定空结果提示，生命周期仅限当前过滤操作。 @lang en VisibleCount controls the empty-result message and lives only for the current filter operation. */
+    let visibleCount = 0
+    for (const result of searchResults) {
+      const visible =
+        query.length === 0 ||
+        (result.textContent || '').toLocaleLowerCase(currentLocale()).includes(query)
+      result.hidden = !visible
+      if (visible) visibleCount += 1
+    }
+    if (searchEmpty) searchEmpty.hidden = visibleCount !== 0
+  }
+
+  /**
+   * <lang><zh-CN>打开原生搜索 dialog、重置过滤并把焦点交给 searchbox。</zh-CN><en>Opens the native search dialog, resets filtering, and transfers focus to the searchbox.</en></lang>
+   *
+   * @returns {void}
+   */
+  function openSearchDialog() {
+    if (!(searchDialog instanceof HTMLDialogElement) || !searchInput) return
+    searchInput.value = ''
+    filterSearchResults()
+    if (!searchDialog.open) searchDialog.showModal()
+    window.setTimeout(() => searchInput.focus(), 0)
+  }
+
+  /**
    * <lang><zh-CN>冷启动 deep link 未被 owner runtime 消费时，通过原导航事件有界展开并打开目标。</zh-CN><en>When the owner runtime does not consume a cold-start deep link, boundedly expands the original navigation and opens the target through its own event.</en></lang>
    *
    * @returns {Promise<boolean>} <lang><zh-CN>是否找到或已呈现目标。</zh-CN><en>Whether the target was found or was already presented.</en></lang>
@@ -365,11 +433,27 @@
     preferences = preferencesFromControls()
     applyPreferences(preferences, true)
   })
-  document.querySelector('[data-hia-public-search]')?.addEventListener('click', () => {
-    /** @lang zh-CN 既有 Portal search input 继续承担检索；header 只提供稳定入口。 @lang en The existing Portal search input continues to own search; the header only provides a stable entry. */
-    const search = document.querySelector('[data-hia-project-search]')
-    search?.focus()
-    search?.scrollIntoView({ block: 'center' })
+  for (const trigger of document.querySelectorAll('[data-hia-public-search]')) {
+    trigger.addEventListener('click', openSearchDialog)
+  }
+  searchDialog?.querySelector('[data-hia-search-close]')?.addEventListener('click', () => {
+    searchDialog.close()
+  })
+  searchDialog?.addEventListener('click', (event) => {
+    if (event.target === searchDialog) searchDialog.close()
+  })
+  searchInput?.addEventListener('input', filterSearchResults)
+  document.addEventListener('keydown', (event) => {
+    // <lang><zh-CN>search input 会原生消费 Escape 清空文本；确认稿要求 Escape 直接退出模态，因此在 document 层优先关闭。</zh-CN><en>A search input natively consumes Escape to clear text; the confirmed design requires Escape to exit the modal, so the document handler closes it first.</en></lang>
+    if (event.key === 'Escape' && searchDialog?.open) {
+      event.preventDefault()
+      searchDialog.close()
+      return
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
+      event.preventDefault()
+      openSearchDialog()
+    }
   })
   document.querySelector('[data-hia-public-locale]')?.addEventListener('click', () => {
     if (!localeControl) return

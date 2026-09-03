@@ -157,6 +157,10 @@ pre code {
   width: 100%;
 }
 
+.hia-public-mobile-search {
+  display: none;
+}
+
 .hia-public-header-actions {
   align-items: center;
   display: flex;
@@ -343,6 +347,86 @@ pre code {
   background: rgb(5 12 24 / 62%);
 }
 
+/* <lang><zh-CN>搜索 dialog 复用确认稿的原生模态语义，仅展示构建期绑定的稳定多页入口。</zh-CN><en>The search dialog reuses the confirmed native-modal semantics and exposes only stable multi-page entries bound at build time.</en></lang> */
+.hia-public-search-dialog {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.8rem;
+  color: var(--hia-text);
+  max-height: min(34rem, calc(100vh - 2rem));
+  max-width: min(42rem, calc(100vw - 2rem));
+  overflow: auto;
+  padding: 0;
+  width: 100%;
+}
+
+.hia-public-search-dialog::backdrop {
+  background: rgb(5 12 24 / 62%);
+}
+
+.hia-public-search-header {
+  align-items: center;
+  border-block-end: 1px solid var(--hia-border);
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 1rem;
+}
+
+.hia-public-search-header input {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.5rem;
+  color: var(--hia-text);
+  font: inherit;
+  min-height: 2.75rem;
+  padding-inline: 0.75rem;
+  width: 100%;
+}
+
+.hia-public-search-results {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.8rem;
+}
+
+.hia-public-search-results a {
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  color: var(--hia-text);
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  text-decoration: none;
+}
+
+.hia-public-search-results a:hover,
+.hia-public-search-results a:focus-visible {
+  background: var(--hia-accent-soft);
+  border-color: var(--hia-border);
+}
+
+.hia-public-search-results small,
+.hia-public-search-empty {
+  color: var(--hia-muted);
+}
+
+.hia-public-search-empty {
+  padding: 0 1.55rem 1.2rem;
+}
+
+.hia-public-visually-hidden {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
 .hia-public-settings-header,
 .hia-public-settings-footer {
   align-items: center;
@@ -423,6 +507,10 @@ pre code {
     display: none;
   }
 
+  .hia-public-mobile-search {
+    display: inline-flex;
+  }
+
   .hia-shell.hia-project-split-site {
     display: block;
   }
@@ -484,7 +572,8 @@ pre code {
   .hia-public-mobile-navigation,
   .hia-public-mobile-outline,
   .hia-public-footer,
-  .hia-public-settings-dialog {
+  .hia-public-settings-dialog,
+  .hia-public-search-dialog {
     display: none !important;
   }
 
@@ -500,6 +589,7 @@ pre code {
   .hia-public-brand-mark,
   .hia-public-card,
   .hia-public-settings-dialog,
+  .hia-public-search-dialog,
   .hia-public-search-trigger,
   .hia-public-quiet-button,
   .hia-public-settings-trigger {

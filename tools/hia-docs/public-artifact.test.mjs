@@ -74,6 +74,8 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   const publicHtml = fs.readFileSync(path.join(publicRoot, 'index.html'), 'utf8')
   assert.match(publicHtml, /data-hia-public-product/u)
   assert.match(publicHtml, /data-hia-settings-dialog/u)
+  assert.match(publicHtml, /data-hia-search-dialog/u)
+  assert.match(publicHtml, /aria-controls="hia-public-search"/u)
   assert.match(publicHtml, /代码区域 \/ 编辑器设置/u)
   assert.match(publicHtml, /data-hia-public-outline/u)
   assert.match(publicHtml, /data-hia-public-footer/u)

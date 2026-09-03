@@ -394,6 +394,7 @@ function main() {
       rootHtml.includes('data-hia-skin-control') &&
       rootHtml.includes('data-hia-public-product') &&
       rootHtml.includes('data-hia-settings-dialog') &&
+      rootHtml.includes('data-hia-search-dialog') &&
       rootHtml.includes('data-hia-public-outline') &&
       rootHtml.includes('data-hia-public-footer') &&
       rootHtml.includes('代码区域 / 编辑器设置') &&

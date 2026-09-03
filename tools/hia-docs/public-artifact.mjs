@@ -97,7 +97,7 @@ export function createPublicArtifactManifest({ buildCommit }) {
  * @returns {string} <lang><zh-CN>无外部资源的 HTML fragment。</zh-CN><en>HTML fragment with no external resources.</en></lang>
  */
 function renderPublicHeader() {
-  return `<a class="hia-public-skip" href="#hia-public-main">跳到正文 / Skip to content</a><header class="hia-public-header" data-hia-public-product><a class="hia-public-brand" href="./" aria-label="js-cookie documentation home"><span class="hia-public-brand-mark" aria-hidden="true">JS</span><span class="hia-public-brand-copy"><strong>js-cookie</strong><small>HIA Documentation Portal</small></span></a><button class="hia-public-search-trigger" type="button" data-hia-public-search><span data-hia-public-i18n="search">搜索文档</span> <kbd>Ctrl K</kbd></button><div class="hia-public-header-actions"><span class="hia-public-version">v3.0.8</span><button class="hia-public-quiet-button" type="button" data-hia-public-locale aria-label="Switch documentation language">EN</button><button class="hia-public-settings-trigger" type="button" data-hia-settings-open aria-haspopup="dialog" aria-controls="hia-public-settings"><span aria-hidden="true">◈</span> <span data-hia-public-i18n="settings">主题与设置</span></button></div></header>`
+  return `<a class="hia-public-skip" href="#hia-public-main">跳到正文 / Skip to content</a><header class="hia-public-header" data-hia-public-product><a class="hia-public-brand" href="./" aria-label="js-cookie documentation home"><span class="hia-public-brand-mark" aria-hidden="true">JS</span><span class="hia-public-brand-copy"><strong>js-cookie</strong><small>HIA Documentation Portal</small></span></a><button class="hia-public-search-trigger" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search"><span data-hia-public-i18n="search">搜索文档</span> <kbd>Ctrl K</kbd></button><div class="hia-public-header-actions"><span class="hia-public-version">v3.0.8</span><button class="hia-public-quiet-button hia-public-mobile-search" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search" aria-label="打开文档搜索">⌕</button><button class="hia-public-quiet-button" type="button" data-hia-public-locale aria-label="Switch documentation language">EN</button><button class="hia-public-settings-trigger" type="button" data-hia-settings-open aria-haspopup="dialog" aria-controls="hia-public-settings"><span aria-hidden="true">◈</span> <span data-hia-public-i18n="settings">主题与设置</span></button></div></header>`
 }
 
 /**
@@ -150,6 +150,17 @@ function renderSettingsDialog() {
 }
 
 /**
+ * <lang><zh-CN>生成确认稿中的原生搜索 dialog，并把结果链接绑定到真实多页 route。</zh-CN><en>Generates the confirmed native search dialog with result links bound to real multi-page routes.</en></lang>
+ *
+ * @param {string} setRoute <lang><zh-CN>Cookies.set() route。</zh-CN><en>Cookies.set() route.</en></lang>
+ * @param {string} getRoute <lang><zh-CN>Cookies.get() route。</zh-CN><en>Cookies.get() route.</en></lang>
+ * @returns {string} <lang><zh-CN>不读取额外索引的搜索 HTML。</zh-CN><en>Search HTML that reads no additional index.</en></lang>
+ */
+function renderSearchDialog(setRoute, getRoute) {
+  return `<dialog class="hia-public-search-dialog" id="hia-public-search" data-hia-search-dialog aria-labelledby="hia-public-search-title"><div class="hia-public-search-header"><input type="search" data-hia-search-input data-hia-public-i18n-placeholder="searchPlaceholder" placeholder="搜索 API 或指南…" aria-labelledby="hia-public-search-title"><button class="hia-public-quiet-button" type="button" data-hia-search-close><span data-hia-public-i18n="searchClose">关闭</span></button></div><h2 class="hia-public-visually-hidden" id="hia-public-search-title" data-hia-public-i18n="searchTitle">搜索文档</h2><ul class="hia-public-search-results"><li data-hia-search-result><a href="./"><strong data-hia-public-i18n="overview">概览</strong><small data-hia-public-i18n="searchOverview">项目概览与快速开始</small></a></li><li data-hia-search-result><a href="${setRoute}"><strong>Cookies.set()</strong><small data-hia-public-i18n="searchSet">Cookies.set() · 写入 Cookie</small></a></li><li data-hia-search-result><a href="${getRoute}"><strong>Cookies.get()</strong><small data-hia-public-i18n="searchGet">Cookies.get() · 读取 Cookie</small></a></li></ul><p class="hia-public-search-empty" data-hia-search-empty data-hia-public-i18n="searchEmpty" hidden>没有匹配结果</p></dialog>`
+}
+
+/**
  * <lang><zh-CN>把确认的 BP 产品结构注入默认 Portal 根，并复制同源产品资产。</zh-CN><en>Injects the confirmed BP product structure into the default Portal root and copies same-origin product assets.</en></lang>
  *
  * @param {string} publicRoot <lang><zh-CN>已复制的公开根。</zh-CN><en>Copied public root.</en></lang>
@@ -193,7 +204,7 @@ function enhancePublicPortal(publicRoot) {
     )
     .replace(
       '</main></div><script src="assets/hia-default.js"',
-      `</main>${structure.afterMain}</div>${renderSettingsDialog()}<script src="assets/hia-default.js"`
+      `</main>${structure.afterMain}</div>${renderSettingsDialog()}${renderSearchDialog(setRoute, getRoute)}<script src="assets/hia-default.js"`
     )
     .replace(
       '</body>',

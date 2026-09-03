@@ -311,7 +311,15 @@
       rebuildOutline()
       return true
     }
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    /** @lang zh-CN deadline 给远端冷缓存下的 lazy navigation shards 最多十秒，同时保持恢复过程有界。 @lang en Deadline gives lazy navigation shards at most ten seconds under a remote cold cache while keeping recovery bounded. */
+    const deadline = performance.now() + 10000
+    while (performance.now() < deadline) {
+      // <lang><zh-CN>用户或 owner 已改变 hash 时立即放弃旧目标，避免迟到的 shard 打开错误条目。</zh-CN><en>Abandon the stale target immediately when the user or owner changes the hash, preventing a late shard from opening the wrong entry.</en></lang>
+      if (activeEntryIdentity() !== identity) return false
+      if (projectActiveArticle()) {
+        rebuildOutline()
+        return true
+      }
       /** @lang zh-CN item 通过稳定 entry identity 在权威树中定位。 @lang en Item is located in the authoritative tree by stable entry identity. */
       const item = [...treeHost.querySelectorAll('[data-hia-project-entry-id]')].find(
         (candidate) => candidate.dataset.hiaProjectEntryId === identity
@@ -329,7 +337,7 @@
         ...treeHost.querySelectorAll('details:not([data-loaded="true"])')
       ]
       for (const details of unopened) details.open = true
-      await new Promise((resolve) => setTimeout(resolve, 80))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     return false
   }

@@ -11,6 +11,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 import {
   PUBLICATION_BASELINE_ID,
@@ -21,6 +22,8 @@ import {
 
 /** @lang zh-CN 测试使用的完整公开 commit。 @lang en Full public commit used by tests. */
 const BUILD_COMMIT = '1234567890abcdef1234567890abcdef12345678'
+/** @lang zh-CN 当前测试模块目录用于读取将被原样发布的产品 runtime。 @lang en Current test-module directory is used to read the product runtime that is published verbatim. */
+const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 
 test('creates one default-Portal publication profile without a chooser', () => {
   // <lang><zh-CN>manifest 是 build、Pages checker 与 online checker 的共同公开事实源。</zh-CN><en>The manifest is the shared public fact source for the build, Pages checker, and online checker.</en></lang>
@@ -125,4 +128,16 @@ test('rejects a symbolic link in the default Portal source tree', (t) => {
       }),
     /symbolic link/u
   )
+})
+
+test('keeps deep-link recovery bounded while tolerating remote shard latency', () => {
+  // <lang><zh-CN>静态边界防止恢复窗口回退为仅适合本地延迟的短次数循环，也防止 BP 产品层接管 owner 网络职责。</zh-CN><en>This static boundary prevents the recovery window from regressing to a short local-latency loop and prevents the BP product layer from taking over owner network duties.</en></lang>
+  const runtime = fs.readFileSync(
+    path.join(MODULE_DIRECTORY, 'public-product.js'),
+    'utf8'
+  )
+  assert.match(runtime, /const deadline = performance\.now\(\) \+ 10000/u)
+  assert.match(runtime, /while \(performance\.now\(\) < deadline\)/u)
+  assert.match(runtime, /activeEntryIdentity\(\) !== identity/u)
+  assert.equal(/\bfetch\s*\(/u.test(runtime), false)
 })

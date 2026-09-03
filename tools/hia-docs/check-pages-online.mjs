@@ -194,6 +194,11 @@ async function checkOnce(expectedCommit) {
   const root = await read('')
   const portalCss = await read('assets/hia-default.css')
   const portalJs = await read('assets/hia-default.js')
+  const productCss = await read('assets/hia-public-product.css')
+  const productJs = await read('assets/hia-public-product.js')
+  const prismJs = await read('assets/prism.js')
+  const prismLineNumbersJs = await read('assets/prism-line-numbers.js')
+  const prismLicense = await read('assets/prism-LICENSE.txt')
   const publicationResult = await readJson(
     'documentation-publication-profile.json'
   )
@@ -218,8 +223,26 @@ async function checkOnce(expectedCommit) {
   )
   assert(root.text.includes('<noscript>'), 'Hub lacks no-script reachability.')
   assert(
-    portalCss.text.includes('hia-project-split-site'),
-    'Portal stylesheet lacks the split-site layout.'
+    root.text.includes('data-hia-api-scope="public"') &&
+      root.text.includes('只显示接口 API') &&
+      root.text.includes('assets/prism.js'),
+    'Baseline-B API scope, settings, or local highlighter is missing.'
+  )
+  assert(
+    portalCss.text.includes('hia-project-split-site') &&
+      portalJs.text.includes('data-hia-locale-control') &&
+      portalJs.text.includes('applyThemeSelection'),
+    'Portal owner assets lack split-site, locale, or theme behavior.'
+  )
+  assert(
+    productCss.text.includes('[data-hia-api-scope="public"]') &&
+      productCss.text.includes('.token.keyword') &&
+      productJs.text.includes("details.dataset.hiaSourceState !== 'ready'") &&
+      productJs.text.includes('globalThis.Prism.highlightElement(code)') &&
+      prismJs.text.includes('Prism') &&
+      prismLineNumbersJs.text.includes('line-numbers') &&
+      prismLicense.text.includes('MIT License'),
+    'Deployed product assets lack API-scope, verified highlighting, or license evidence.'
   )
   // <lang><zh-CN>Portal owner 把导航、内容与源码读取器内联在产品 HTML；外部 hia-default.js 只承载主题和 locale 偏好。</zh-CN><en>The Portal owner inlines navigation, content, and source readers in the product HTML; external hia-default.js carries only theme and locale preferences.</en></lang>
   assert(
@@ -229,8 +252,7 @@ async function checkOnce(expectedCommit) {
     'Portal product lacks credential-free, same-origin, redirect-denying source reads.'
   )
   assert(
-    publication.contract ===
-      'bp-documentation-publication-profile@0.1.0-draft',
+    publication.contract === 'bp-documentation-publication-profile@0.1.0-draft',
     'Publication-profile contract drifted.'
   )
   assert(
@@ -242,6 +264,17 @@ async function checkOnce(expectedCommit) {
       publication.localCiCoverageProfileCount === 27 &&
       publication.rootIsProfileChooser === false,
     'Deployed profile separation drifted.'
+  )
+  assert(
+    publication.designBaseline?.id ===
+      'BP-JS-COOKIE-DEFAULT-PORTAL-BASELINE-20260904-B' &&
+      publication.designBaseline?.version === '0.2.0' &&
+      publication.apiScope?.default === 'public' &&
+      publication.apiScope?.publicEntryCount === 7 &&
+      publication.apiScope?.allEntryCount === 18 &&
+      publication.displaySettings?.codeRuntime ===
+        'prismjs-1.30.0-after-verified-source',
+    'Deployed baseline-B scope or highlighter contract drifted.'
   )
   assert(
     publication.defaultProfile?.id === 'unified-portal.fetch.classic',

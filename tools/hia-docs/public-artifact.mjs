@@ -18,9 +18,26 @@ export const PUBLICATION_PROFILE_CONTRACT =
   'bp-documentation-publication-profile@0.1.0-draft'
 /** @lang zh-CN 维护者确认的一级设计基线。 @lang en Maintainer-confirmed level-one design baseline. */
 export const PUBLICATION_BASELINE_ID =
-  'BP-JS-COOKIE-DEFAULT-PORTAL-BASELINE-20260904-A'
+  'BP-JS-COOKIE-DEFAULT-PORTAL-BASELINE-20260904-B'
 /** @lang zh-CN 冻结的默认公开 profile 身份。 @lang en Frozen default public-profile identity. */
 export const PUBLIC_PROFILE_ID = 'unified-portal.fetch.classic'
+/** @lang zh-CN baseline B 冻结的七个公开/导出 API 标签。 @lang en Seven public/exported API labels frozen by baseline B. */
+export const PUBLIC_API_LABELS = Object.freeze([
+  'set',
+  'get',
+  'remove',
+  'withAttributes',
+  'withConverter',
+  'CookieAttributes',
+  'CookieConverter'
+])
+/** @lang zh-CN 产品高亮器来自私有 tooling runtime 的固定安装位置。 @lang en The product highlighter comes from the pinned private tooling-runtime installation. */
+const prismRoot = path.join(
+  moduleDirectory,
+  'runtime',
+  'node_modules',
+  'prismjs'
+)
 
 /**
  * <lang><zh-CN>建立不含路径或源码正文的公开发布 manifest。</zh-CN><en>Creates a public publication manifest containing neither host paths nor source bodies.</en></lang>
@@ -39,7 +56,7 @@ export function createPublicArtifactManifest({ buildCommit }) {
     contractVersion: '0.1.0-draft',
     designBaseline: {
       id: PUBLICATION_BASELINE_ID,
-      version: '0.1.0',
+      version: '0.2.0',
       status: 'maintainer-confirmed'
     },
     buildCommit,
@@ -64,6 +81,13 @@ export function createPublicArtifactManifest({ buildCommit }) {
       'local-outline',
       'footer-relations'
     ],
+    apiScope: {
+      options: ['public', 'all'],
+      default: 'public',
+      publicEntryCount: PUBLIC_API_LABELS.length,
+      allEntryCount: 18,
+      definition: 'public-exported-api'
+    },
     displaySettings: {
       siteThemes: ['system', 'light', 'dark'],
       siteThemeDefault: 'light',
@@ -80,7 +104,30 @@ export function createPublicArtifactManifest({ buildCommit }) {
       codeWrap: ['scroll', 'wrap'],
       codeLineNumbers: ['hide', 'show'],
       contentWidths: ['comfortable', 'wide'],
-      codeRuntime: 'native-pre-code-no-editor-runtime'
+      contentVisibility: [
+        'metadata',
+        'contract',
+        'coverage',
+        'provenance',
+        'relations'
+      ],
+      contentVisibilityDefaults: {
+        metadata: 'hide',
+        contract: 'show',
+        coverage: 'hide',
+        provenance: 'show',
+        relations: 'hide'
+      },
+      codeRuntime: 'prismjs-1.30.0-after-verified-source',
+      highlighter: {
+        package: 'prismjs',
+        version: '1.30.0',
+        license: 'MIT',
+        localOnly: true,
+        verifiedSourceRequired: true,
+        plainTextFallback: true,
+        sourceExecution: false
+      }
     },
     privacy: {
       credentialRequired: false,
@@ -88,6 +135,88 @@ export function createPublicArtifactManifest({ buildCommit }) {
       sourceBodyExecution: false,
       preferenceStorage: 'device-local-display-only'
     }
+  }
+}
+
+/**
+ * <lang><zh-CN>把 owner 的平铺 package 导航确定性分组为公开 API 与内部实现。</zh-CN><en>Deterministically groups the owner's flat package navigation into public APIs and internal implementation.</en></lang>
+ *
+ * @param {string} publicRoot <lang><zh-CN>已复制的公开 Portal 根。</zh-CN><en>Copied public Portal root.</en></lang>
+ * @returns {{publicEntryCount:number,allEntryCount:number}} <lang><zh-CN>分组后的计数。</zh-CN><en>Counts after grouping.</en></lang>
+ * @throws {Error} <lang><zh-CN>导航 shard 或冻结公开集合漂移时 fail closed。</zh-CN><en>Fails closed when the navigation shard or frozen public set drifts.</en></lang>
+ */
+export function groupApiScopeNavigation(publicRoot) {
+  // <lang><zh-CN>navigationRoot 仅解析 public artifact 内的固定导航目录。</zh-CN><en>navigationRoot resolves only the fixed navigation directory inside the public artifact.</en></lang>
+  const navigationRoot = path.join(publicRoot, 'navigation')
+  if (!fs.existsSync(navigationRoot)) {
+    return { publicEntryCount: 0, allEntryCount: 0 }
+  }
+  // <lang><zh-CN>packageShardNames 必须唯一定位 js-cookie package shard，避免误改其它层级。</zh-CN><en>packageShardNames must identify the js-cookie package shard uniquely so no other hierarchy is rewritten.</en></lang>
+  const packageShardNames = fs
+    .readdirSync(navigationRoot)
+    .filter((fileName) =>
+      /^semantic-repository-bp-docs-js-cookie-package-js-cookie-[a-f0-9]+\.json$/u.test(
+        fileName
+      )
+    )
+  if (packageShardNames.length !== 1) {
+    throw new Error('Default Portal package navigation shard is not unique.')
+  }
+  // <lang><zh-CN>packageShard 只包含已公开的 metadata，不读取源码正文。</zh-CN><en>packageShard contains public metadata only and reads no source body.</en></lang>
+  const packageShardPath = path.join(navigationRoot, packageShardNames[0])
+  const packageShard = JSON.parse(fs.readFileSync(packageShardPath, 'utf8'))
+  if (
+    !Array.isArray(packageShard.children) ||
+    packageShard.children.length !== 18
+  ) {
+    throw new Error('Default Portal package navigation entry count drifted.')
+  }
+
+  // <lang><zh-CN>publicLabelsSet 是 baseline B 的 closed public/exported API 集合。</zh-CN><en>publicLabelsSet is baseline B's closed public/exported API set.</en></lang>
+  const publicLabelsSet = new Set(PUBLIC_API_LABELS)
+  // <lang><zh-CN>publicEntries 保留 owner node identity 与真实 content route。</zh-CN><en>publicEntries preserve owner node identities and real content routes.</en></lang>
+  const publicEntries = packageShard.children.filter((entry) =>
+    publicLabelsSet.has(entry.label)
+  )
+  // <lang><zh-CN>internalEntries 是同一平铺集合的确定性补集。</zh-CN><en>internalEntries are the deterministic complement of the same flat set.</en></lang>
+  const internalEntries = packageShard.children.filter(
+    (entry) => !publicLabelsSet.has(entry.label)
+  )
+  if (
+    publicEntries.length !== PUBLIC_API_LABELS.length ||
+    internalEntries.length !== 11 ||
+    new Set(publicEntries.map((entry) => entry.label)).size !==
+      PUBLIC_API_LABELS.length
+  ) {
+    throw new Error('Default Portal public API classification drifted.')
+  }
+
+  packageShard.children = [
+    {
+      id: 'bp:public-api',
+      kind: 'api-scope',
+      label: '公开接口 API',
+      entryCount: publicEntries.length,
+      views: ['js'],
+      children: publicEntries
+    },
+    {
+      id: 'bp:internal-api',
+      kind: 'api-scope',
+      label: '内部实现',
+      entryCount: internalEntries.length,
+      views: ['js'],
+      children: internalEntries
+    }
+  ]
+  fs.writeFileSync(
+    packageShardPath,
+    `${JSON.stringify(packageShard, null, 2)}\n`,
+    'utf8'
+  )
+  return {
+    publicEntryCount: publicEntries.length,
+    allEntryCount: publicEntries.length + internalEntries.length
   }
 }
 
@@ -125,7 +254,7 @@ function findTopicRoute(publicRoot, token) {
  * @returns {string} <lang><zh-CN>可在无脚本模式阅读的 landing article。</zh-CN><en>Landing article readable without scripts.</en></lang>
  */
 function renderPublicLanding(setRoute, getRoute) {
-  return `<article class="hia-public-landing"><header><p class="hia-public-eyebrow">浏览器 Cookie 工具库 / Browser Cookie utility</p><h1>轻量、明确地管理 Cookie。</h1><p class="hia-public-lede">以真实 js-cookie v3.0.8 源码和双语注释生成的多页 API 文档；默认按需读取同源源码，不执行源码正文。</p></header><section aria-labelledby="hia-public-start"><h2 id="hia-public-start">安装与开始 / Install and start</h2><pre><code>npm install js-cookie</code></pre><p><code>import Cookies from 'js-cookie'</code></p></section><section aria-labelledby="hia-public-api"><h2 id="hia-public-api">核心 API / Core API</h2><div class="hia-public-card-grid"><a class="hia-public-card" href="${setRoute}"><strong><code>Cookies.set()</code></strong><p>写入值，并显式控制 expires、path、domain、secure 与 sameSite。</p></a><a class="hia-public-card" href="${getRoute}"><strong><code>Cookies.get()</code></strong><p>读取指定名称，或取得当前文档可见的全部 Cookie。</p></a><a class="hia-public-card" href="pages/index.html"><strong>完整 API 索引</strong><p>浏览 18 个由当前 Portal profile 生成的文档节点。</p></a></div></section><section aria-labelledby="hia-public-provenance"><h2 id="hia-public-provenance">文档与源码溯源 / Provenance</h2><dl class="hia-public-meta"><dt>上游版本</dt><dd>js-cookie v3.0.8</dd><dt>公开 profile</dt><dd><code>unified-portal / fetch / classic</code></dd><dt>源码模式</dt><dd>same-origin · fetch-on-expand · no silent fallback</dd><dt>许可证</dt><dd>MIT</dd></dl></section></article>`
+  return `<article class="hia-public-landing"><header><p class="hia-public-eyebrow">浏览器 Cookie 工具库 / Browser Cookie utility</p><h1>轻量、明确地管理 Cookie。</h1><p class="hia-public-lede">以真实 js-cookie v3.0.8 源码和双语注释生成的多页 API 文档；默认按需读取同源源码，不执行源码正文。</p></header><section aria-labelledby="hia-public-start"><h2 id="hia-public-start">安装与开始 / Install and start</h2><pre><code>npm install js-cookie</code></pre><p><code>import Cookies from 'js-cookie'</code></p></section><section aria-labelledby="hia-public-api"><h2 id="hia-public-api">核心 API / Core API</h2><div class="hia-public-card-grid"><a class="hia-public-card" href="${setRoute}"><strong><code>Cookies.set()</code></strong><p>写入值，并显式控制 expires、path、domain、secure 与 sameSite。</p></a><a class="hia-public-card" href="${getRoute}"><strong><code>Cookies.get()</code></strong><p>读取指定名称，或取得当前文档可见的全部 Cookie。</p></a><a class="hia-public-card" href="pages/index.html"><strong>完整 API 索引</strong><p>默认显示 7 个公开 API；可在设置中切换查看全部 18 个文档节点。</p></a></div></section><section aria-labelledby="hia-public-provenance" data-hia-content-section="provenance"><h2 id="hia-public-provenance">文档与源码溯源 / Provenance</h2><dl class="hia-public-meta"><dt>上游版本</dt><dd>js-cookie v3.0.8</dd><dt>公开 profile</dt><dd><code>unified-portal / fetch / classic</code></dd><dt>源码模式</dt><dd>same-origin · fetch-on-expand · verified before highlight</dd><dt>许可证</dt><dd>MIT</dd></dl></section></article>`
 }
 
 /**
@@ -146,7 +275,17 @@ function renderPublicStructure() {
  * @returns {string} <lang><zh-CN>设置 HTML。</zh-CN><en>Settings HTML.</en></lang>
  */
 function renderSettingsDialog() {
-  return `<dialog class="hia-public-settings-dialog" id="hia-public-settings" data-hia-settings-dialog aria-labelledby="hia-public-settings-title"><div class="hia-public-settings-header"><div><small>js-cookie · Portal</small><h2 id="hia-public-settings-title" data-hia-public-i18n="settingsTitle">显示与代码设置</h2></div><button class="hia-public-quiet-button" type="button" data-hia-settings-close><span data-hia-public-i18n="close">关闭</span></button></div><div class="hia-public-settings-body"><fieldset><legend data-hia-public-i18n="siteTheme">站点主题</legend><div class="hia-public-theme-choices"><label><input type="radio" name="site-theme" value="system" data-hia-preference="siteTheme"> 跟随系统 / System</label><label><input type="radio" name="site-theme" value="light" data-hia-preference="siteTheme"> 浅色 / Light</label><label><input type="radio" name="site-theme" value="dark" data-hia-preference="siteTheme"> 深色 / Dark</label></div></fieldset><fieldset><legend data-hia-public-i18n="codeSettings">代码区域 / 编辑器设置</legend><div class="hia-public-settings-grid"><label class="hia-public-settings-field"><span>代码主题 / Code theme</span><select data-hia-preference="codeTheme"><option value="site">跟随站点 / Follow site</option><option value="paper-light">纸张浅色 / Paper Light</option><option value="midnight">午夜 / Midnight</option><option value="solarized-light">Solarized Light</option><option value="solarized-dark">Solarized Dark</option><option value="high-contrast">高对比度 / High Contrast</option></select></label><label class="hia-public-settings-field"><span>代码字号 / Code size</span><select data-hia-preference="codeFontSize"><option value="small">小 / Small</option><option value="default">默认 / Default</option><option value="large">大 / Large</option></select></label></div><div class="hia-public-toggle-row"><label>长行换行 / Line wrap <select data-hia-preference="codeWrap"><option value="scroll">横向滚动 / Scroll</option><option value="wrap">自动换行 / Wrap</option></select></label><label>行号 / Line numbers <select data-hia-preference="codeLines"><option value="hide">隐藏 / Hide</option><option value="show">显示 / Show</option></select></label></div><pre class="hia-public-settings-preview"><code>const cookie = Cookies.get('theme')\nCookies.set('theme', cookie ?? 'system')</code></pre></fieldset><fieldset><legend data-hia-public-i18n="reading">阅读设置</legend><label class="hia-public-settings-field"><span>正文宽度 / Content width</span><select data-hia-preference="contentWidth"><option value="comfortable">舒适 / Comfortable</option><option value="wide">宽幅 / Wide</option></select></label></fieldset></div><div class="hia-public-settings-footer"><div><p class="hia-public-settings-privacy" data-hia-public-i18n="privacy">仅保存显示偏好；不关联账号、不发送分析数据。</p><span data-hia-settings-status aria-live="polite"></span></div><button class="hia-public-secondary-button" type="button" data-hia-settings-reset><span data-hia-public-i18n="reset">恢复默认</span></button></div></dialog>`
+  return `<dialog class="hia-public-settings-dialog" id="hia-public-settings" data-hia-settings-dialog aria-labelledby="hia-public-settings-title">
+  <div class="hia-public-settings-header"><div><small>js-cookie · Portal</small><h2 id="hia-public-settings-title" data-hia-public-i18n="settingsTitle">主题、内容与代码设置</h2></div><button class="hia-public-quiet-button" type="button" data-hia-settings-close><span data-hia-public-i18n="close">关闭</span></button></div>
+  <div class="hia-public-settings-body">
+    <fieldset><legend data-hia-public-i18n="apiScope">API 显示范围</legend><div class="hia-public-theme-choices"><label><input type="radio" name="api-scope" value="public" data-hia-preference="apiScope"> <span data-hia-public-i18n="publicApi">只显示接口 API</span></label><label><input type="radio" name="api-scope" value="all" data-hia-preference="apiScope"> <span data-hia-public-i18n="allApi">显示全部 API</span></label></div></fieldset>
+    <fieldset><legend data-hia-public-i18n="contentVisibility">内容显隐</legend><div class="hia-public-visibility-grid"><label><input type="checkbox" data-hia-preference="metadata"> <span data-hia-public-i18n="metadata">元数据</span></label><label><input type="checkbox" data-hia-preference="contract"> <span data-hia-public-i18n="contract">契约</span></label><label><input type="checkbox" data-hia-preference="coverage"> <span data-hia-public-i18n="coverage">覆盖情况</span></label><label><input type="checkbox" data-hia-preference="provenance"> <span data-hia-public-i18n="provenance">溯源</span></label><label><input type="checkbox" data-hia-preference="relations"> <span data-hia-public-i18n="relations">项目关系</span></label></div></fieldset>
+    <fieldset><legend data-hia-public-i18n="siteTheme">站点主题</legend><div class="hia-public-theme-choices"><label><input type="radio" name="site-theme" value="system" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeSystem">跟随系统</span></label><label><input type="radio" name="site-theme" value="light" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeLight">浅色</span></label><label><input type="radio" name="site-theme" value="dark" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeDark">深色</span></label></div></fieldset>
+    <fieldset><legend data-hia-public-i18n="codeSettings">代码区域 / 编辑器设置</legend><div class="hia-public-settings-grid"><label class="hia-public-settings-field"><span data-hia-public-i18n="codeTheme">代码主题</span><select data-hia-preference="codeTheme"><option value="site" data-hia-public-i18n="codeThemeSite">跟随站点</option><option value="paper-light">Paper Light</option><option value="midnight">Midnight</option><option value="solarized-light">Solarized Light</option><option value="solarized-dark">Solarized Dark</option><option value="high-contrast" data-hia-public-i18n="codeThemeContrast">高对比度</option></select></label><label class="hia-public-settings-field"><span data-hia-public-i18n="codeSize">代码字号</span><select data-hia-preference="codeFontSize"><option value="small" data-hia-public-i18n="sizeSmall">小</option><option value="default" data-hia-public-i18n="sizeDefault">默认</option><option value="large" data-hia-public-i18n="sizeLarge">大</option></select></label></div><div class="hia-public-toggle-row"><label><span data-hia-public-i18n="codeWrap">长行换行</span><select data-hia-preference="codeWrap"><option value="scroll" data-hia-public-i18n="wrapScroll">横向滚动</option><option value="wrap" data-hia-public-i18n="wrapAutomatic">自动换行</option></select></label><label><span data-hia-public-i18n="lineNumbers">行号</span><select data-hia-preference="codeLines"><option value="hide" data-hia-public-i18n="hide">隐藏</option><option value="show" data-hia-public-i18n="show">显示</option></select></label></div><pre class="hia-public-settings-preview line-numbers"><code class="language-javascript">const cookie = Cookies.get('theme')\nCookies.set('theme', cookie ?? 'system')</code></pre><p class="hia-public-highlighter-note" data-hia-public-i18n="highlighterNote">源码须先通过字节数与 SHA-384 校验，再进行本地语法高亮；失败时保留纯文本。</p></fieldset>
+    <fieldset><legend data-hia-public-i18n="reading">阅读设置</legend><label class="hia-public-settings-field"><span data-hia-public-i18n="contentWidth">正文宽度</span><select data-hia-preference="contentWidth"><option value="comfortable" data-hia-public-i18n="widthComfortable">舒适</option><option value="wide" data-hia-public-i18n="widthWide">宽幅</option></select></label></fieldset>
+  </div>
+  <div class="hia-public-settings-footer"><div><p class="hia-public-settings-privacy" data-hia-public-i18n="privacy">仅保存显示偏好；不关联账号、不发送分析数据。</p><span data-hia-settings-status aria-live="polite"></span></div><button class="hia-public-secondary-button" type="button" data-hia-settings-reset><span data-hia-public-i18n="reset">恢复默认</span></button></div>
+</dialog>`
 }
 
 /**
@@ -183,11 +322,16 @@ function enhancePublicPortal(publicRoot) {
     }
   }
 
+  // <lang><zh-CN>先确定性改写导航 shard，使 public/all scope 在首屏树加载前已成立。</zh-CN><en>Rewrite the navigation shard deterministically first so public/all scope exists before the initial tree load.</en></lang>
+  groupApiScopeNavigation(publicRoot)
   const setRoute = findTopicRoute(publicRoot, 'init-set-')
   const getRoute = findTopicRoute(publicRoot, 'init-get-')
   const structure = renderPublicStructure()
   html = html
-    .replace('<html ', '<html data-hia-code-theme="site" data-hia-code-font-size="default" data-hia-code-wrap="scroll" data-hia-code-lines="hide" data-hia-content-width="comfortable" ')
+    .replace(
+      '<html ',
+      '<html data-hia-api-scope="public" data-hia-show-metadata="hide" data-hia-show-contract="show" data-hia-show-coverage="hide" data-hia-show-provenance="show" data-hia-show-relations="hide" data-hia-code-theme="site" data-hia-code-font-size="default" data-hia-code-wrap="scroll" data-hia-code-lines="hide" data-hia-content-width="comfortable" '
+    )
     .replace('data-hia-scheme="system"', 'data-hia-scheme="light"')
     .replace(
       '</head>',
@@ -208,7 +352,7 @@ function enhancePublicPortal(publicRoot) {
     )
     .replace(
       '</body>',
-      '<script defer src="assets/hia-public-product.js"></script></body>'
+      '<script>window.Prism=window.Prism||{};window.Prism.manual=true;</script><script defer src="assets/prism.js"></script><script defer src="assets/prism-line-numbers.js"></script><script defer src="assets/hia-public-product.js"></script></body>'
     )
 
   fs.writeFileSync(indexPath, html, 'utf8')
@@ -220,6 +364,25 @@ function enhancePublicPortal(publicRoot) {
   fs.copyFileSync(
     path.join(moduleDirectory, 'public-product.js'),
     path.join(assetRoot, 'hia-public-product.js')
+  )
+  // <lang><zh-CN>Prism 运行时与许可证从 exact-pinned 私有 tooling 依赖复制到同源公开资产。</zh-CN><en>The Prism runtime and license are copied from the exact-pinned private tooling dependency into same-origin public assets.</en></lang>
+  const prismPackage = JSON.parse(
+    fs.readFileSync(path.join(prismRoot, 'package.json'), 'utf8')
+  )
+  if (prismPackage.version !== '1.30.0' || prismPackage.license !== 'MIT') {
+    throw new Error('Pinned Prism runtime identity drifted.')
+  }
+  fs.copyFileSync(
+    path.join(prismRoot, 'prism.js'),
+    path.join(assetRoot, 'prism.js')
+  )
+  fs.copyFileSync(
+    path.join(prismRoot, 'plugins', 'line-numbers', 'prism-line-numbers.js'),
+    path.join(assetRoot, 'prism-line-numbers.js')
+  )
+  fs.copyFileSync(
+    path.join(prismRoot, 'LICENSE'),
+    path.join(assetRoot, 'prism-LICENSE.txt')
   )
 }
 

@@ -29,8 +29,11 @@ Owner repositories must be clean and remain at these full commits:
 | `hia-jsdoc` umbrella             | `8f246729a9bec72baafab0b7699a14536ae23d29` | MIT               |
 | HIA main Portal/CLI              | `52c0b70607dfb06638e3f5ccfd49e91f2d1f578f` | MIT package train |
 
-JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. hia-jsdoc uses its own workspace lock. Neither runtime is
-added to the js-cookie root package, and the pipeline does not copy owner theme implementations into this repository.
+JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. PrismJS `1.30.0` is MIT and is isolated in the same private
+tooling runtime solely to highlight already fetched, byte-counted and SHA-384-verified JavaScript source. The public artifact receives
+only Prism's browser runtime, line-number helper and license; it never executes documented source, loads no CDN resource and keeps plain
+text as the failure fallback. hia-jsdoc uses its own workspace lock. None of these tools is added to the js-cookie root package, and the
+pipeline does not copy owner theme implementations into this repository.
 
 ## Matrix and defaults
 

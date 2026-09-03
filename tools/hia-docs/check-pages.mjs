@@ -152,7 +152,10 @@ function checkSourceAsset(surfaceRoot, asset) {
  */
 function checkPublicSurface() {
   const manifest = readJson(
-    path.join(topology.publicArtifactRoot, 'documentation-publication-profile.json')
+    path.join(
+      topology.publicArtifactRoot,
+      'documentation-publication-profile.json'
+    )
   )
   assert(
     manifest.contract === PUBLICATION_PROFILE_CONTRACT,
@@ -191,7 +194,15 @@ function checkPublicSurface() {
       manifest.displaySettings?.siteThemeDefault === 'light' &&
       manifest.displaySettings?.codeThemes?.length === 6 &&
       manifest.displaySettings?.codeRuntime ===
-        'native-pre-code-no-editor-runtime',
+        'prismjs-1.30.0-after-verified-source' &&
+      manifest.displaySettings?.highlighter?.license === 'MIT' &&
+      manifest.displaySettings?.highlighter?.verifiedSourceRequired === true &&
+      manifest.apiScope?.default === 'public' &&
+      manifest.apiScope?.publicEntryCount === 7 &&
+      manifest.apiScope?.allEntryCount === 18 &&
+      manifest.displaySettings?.contentVisibilityDefaults?.metadata ===
+        'hide' &&
+      manifest.displaySettings?.contentVisibilityDefaults?.contract === 'show',
     'Public display-settings contract drifted.'
   )
 
@@ -320,14 +331,18 @@ function checkWorkflow(workflow) {
 }
 
 /**
- * <lang><zh-CN>验证隔离 JSDoc runtime 的 exact dependency 与 lock。</zh-CN><en>Validates the isolated JSDoc runtime's exact dependency and lock.</en></lang>
+ * <lang><zh-CN>验证隔离文档 runtime 的 JSDoc/Prism exact dependencies 与 lock。</zh-CN><en>Validates exact JSDoc/Prism dependencies and lock state in the isolated documentation runtime.</en></lang>
  *
- * @returns {{jsdocVersion:string,lockfileVersion:number}} <lang><zh-CN>公开安全的 runtime 摘要。</zh-CN><en>Public-safe runtime summary.</en></lang>
+ * @returns {{jsdocVersion:string,prismVersion:string,lockfileVersion:number}} <lang><zh-CN>公开安全的 runtime 摘要。</zh-CN><en>Public-safe runtime summary.</en></lang>
  */
 function checkDocumentationRuntime() {
   const runtimeRoot = path.join(repositoryRoot, 'tools', 'hia-docs', 'runtime')
   const manifest = readJson(path.join(runtimeRoot, 'package.json'))
   const lock = readJson(path.join(runtimeRoot, 'package-lock.json'))
+  /** @lang zh-CN prismManifest 用于核对包内声明的许可证；npm lock v3 不重复记录该字段。 @lang en PrismManifest checks the package-declared license because npm lock v3 does not repeat that field. */
+  const prismManifest = readJson(
+    path.join(runtimeRoot, 'node_modules', 'prismjs', 'package.json')
+  )
   assert(
     manifest.private === true,
     'Documentation runtime must remain private.'
@@ -337,6 +352,10 @@ function checkDocumentationRuntime() {
     'Documentation JSDoc version drifted.'
   )
   assert(
+    manifest.devDependencies?.prismjs === '1.30.0',
+    'Documentation Prism version drifted.'
+  )
+  assert(
     lock.lockfileVersion === 3,
     'Documentation runtime lockfile version drifted.'
   )
@@ -344,7 +363,17 @@ function checkDocumentationRuntime() {
     lock.packages?.['node_modules/jsdoc']?.version === '4.0.5',
     'Documentation runtime lock does not pin JSDoc 4.0.5.'
   )
-  return { jsdocVersion: '4.0.5', lockfileVersion: lock.lockfileVersion }
+  assert(
+    lock.packages?.['node_modules/prismjs']?.version === '1.30.0' &&
+      prismManifest.version === '1.30.0' &&
+      prismManifest.license === 'MIT',
+    'Documentation runtime lock does not pin MIT-licensed Prism 1.30.0.'
+  )
+  return {
+    jsdocVersion: '4.0.5',
+    prismVersion: '1.30.0',
+    lockfileVersion: lock.lockfileVersion
+  }
 }
 
 /**
@@ -376,13 +405,18 @@ function main() {
 
   const publicSurface = checkPublicSurface()
   assert(publicSurface.surfaceCount === 1, 'Pages surface count drifted.')
-  assert(publicSurface.sourceAssetCount > 0, 'Pages artifact lacks source assets.')
+  assert(
+    publicSurface.sourceAssetCount > 0,
+    'Pages artifact lacks source assets.'
+  )
   assert(
     !fs.existsSync(path.join(topology.publicArtifactRoot, 'profiles')) &&
       !fs.existsSync(
         path.join(topology.publicArtifactRoot, 'showcase-matrix.json')
       ) &&
-      !fs.existsSync(path.join(topology.publicArtifactRoot, 'assets', 'showcase.js')),
+      !fs.existsSync(
+        path.join(topology.publicArtifactRoot, 'assets', 'showcase.js')
+      ),
     'Public artifact contains the local/CI chooser or unused profiles.'
   )
   const rootHtml = fs.readFileSync(
@@ -398,6 +432,9 @@ function main() {
       rootHtml.includes('data-hia-public-outline') &&
       rootHtml.includes('data-hia-public-footer') &&
       rootHtml.includes('代码区域 / 编辑器设置') &&
+      rootHtml.includes('只显示接口 API') &&
+      rootHtml.includes('data-hia-api-scope="public"') &&
+      rootHtml.includes('assets/prism.js') &&
       !rootHtml.includes('data-showcase-profile=') &&
       !rootHtml.includes('candidate-status-strip'),
     'Public root is not the direct default Portal product.'
@@ -417,12 +454,30 @@ function main() {
     'Public product CSS lacks responsive, print, or forced-colors handling.'
   )
   assert(
-    productJs.includes("'hia.bp-docs-js-cookie.display.v1'") &&
+    productJs.includes("'hia.bp-docs-js-cookie.display.v2'") &&
       productJs.includes('localStorage.setItem') &&
+      productJs.includes("details.dataset.hiaSourceState !== 'ready'") &&
+      productJs.includes('globalThis.Prism.highlightElement(code)') &&
       !/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\s*\(/u.test(
         productJs
       ),
     'Public product runtime drifted from the device-local, no-network boundary.'
+  )
+  assert(
+    fs.existsSync(
+      path.join(topology.publicArtifactRoot, 'assets', 'prism.js')
+    ) &&
+      fs.existsSync(
+        path.join(
+          topology.publicArtifactRoot,
+          'assets',
+          'prism-line-numbers.js'
+        )
+      ) &&
+      fs.existsSync(
+        path.join(topology.publicArtifactRoot, 'assets', 'prism-LICENSE.txt')
+      ),
+    'Pinned local Prism assets or license are missing.'
   )
   for (const filePath of artifact.files.filter((candidate) =>
     /\.(?:html|json|js|css)$/u.test(candidate)

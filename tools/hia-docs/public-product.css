@@ -7,46 +7,46 @@
   --hia-public-code-fg: var(--hia-color-code-text);
 }
 
-:root[data-hia-content-width="wide"] {
+:root[data-hia-content-width='wide'] {
   --hia-public-content-width: 68rem;
 }
 
-:root[data-hia-code-font-size="small"] {
+:root[data-hia-code-font-size='small'] {
   --hia-public-code-size: 0.78rem;
 }
 
-:root[data-hia-code-font-size="large"] {
+:root[data-hia-code-font-size='large'] {
   --hia-public-code-size: 1rem;
 }
 
 /* <lang><zh-CN>代码主题和站点主题分离；site 仅复用当前站点最终配色。</zh-CN><en>Code themes are independent from site themes; site alone reuses the resolved site palette.</en></lang> */
-:root[data-hia-code-theme="paper-light"] {
+:root[data-hia-code-theme='paper-light'] {
   --hia-public-code-bg: #f7f3e8;
   --hia-public-code-fg: #292524;
 }
 
-:root[data-hia-code-theme="midnight"] {
+:root[data-hia-code-theme='midnight'] {
   --hia-public-code-bg: #0b1020;
   --hia-public-code-fg: #d9e6ff;
 }
 
-:root[data-hia-code-theme="solarized-light"] {
+:root[data-hia-code-theme='solarized-light'] {
   --hia-public-code-bg: #fdf6e3;
   --hia-public-code-fg: #586e75;
 }
 
-:root[data-hia-code-theme="solarized-dark"] {
+:root[data-hia-code-theme='solarized-dark'] {
   --hia-public-code-bg: #002b36;
   --hia-public-code-fg: #93a1a1;
 }
 
-:root[data-hia-code-theme="high-contrast"] {
+:root[data-hia-code-theme='high-contrast'] {
   --hia-public-code-bg: #000;
   --hia-public-code-fg: #fff;
 }
 
-html[data-hia-code-theme]:not([data-hia-code-theme="site"]) pre,
-html[data-hia-code-theme]:not([data-hia-code-theme="site"]) pre code {
+html[data-hia-code-theme]:not([data-hia-code-theme='site']) pre,
+html[data-hia-code-theme]:not([data-hia-code-theme='site']) pre code {
   background: var(--hia-public-code-bg);
   color: var(--hia-public-code-fg);
 }
@@ -56,17 +56,17 @@ pre code {
   font-size: var(--hia-public-code-size);
 }
 
-:root[data-hia-code-wrap="wrap"] pre,
-:root[data-hia-code-wrap="wrap"] pre code {
+:root[data-hia-code-wrap='wrap'] pre,
+:root[data-hia-code-wrap='wrap'] pre code {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
-:root[data-hia-code-lines="show"] pre code {
+:root[data-hia-code-lines='show'] pre code {
   counter-reset: hia-public-line;
 }
 
-:root[data-hia-code-lines="show"] pre code > .code-line::before {
+:root[data-hia-code-lines='show'] pre code > .code-line::before {
   color: var(--hia-muted);
   content: counter(hia-public-line);
   counter-increment: hia-public-line;
@@ -180,7 +180,10 @@ pre code {
 .hia-shell.hia-project-split-site {
   align-items: start;
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) minmax(11rem, 14rem);
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr) minmax(
+      11rem,
+      14rem
+    );
   margin: 0 auto;
   max-width: 112rem;
   min-height: calc(100vh - var(--hia-public-header-height));
@@ -603,5 +606,486 @@ pre code {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* <lang><zh-CN>Baseline B：公开/全部 API 与五类 topic section 都由根级 closed 状态确定性控制。</zh-CN><en>Baseline B: public/all API scope and five topic-section categories are controlled deterministically by root-level closed state.</en></lang> */
+:root[data-hia-api-scope='public'] [data-hia-api-scope-only='all'],
+:root[data-hia-show-metadata='hide'] [data-hia-topic-section='metadata'],
+:root[data-hia-show-contract='hide'] [data-hia-topic-section='contract'],
+:root[data-hia-show-coverage='hide'] [data-hia-topic-section='coverage'],
+:root[data-hia-show-provenance='hide'] [data-hia-topic-section='provenance'],
+:root[data-hia-show-provenance='hide'] [data-hia-content-section='provenance'],
+:root[data-hia-show-relations='hide'] [data-hia-topic-section='relations'] {
+  display: none;
+}
+
+/* <lang><zh-CN>站点跟随型代码主题采用同一明暗语义，同时给其余内置编辑器主题提供独立 token。</zh-CN><en>The site-following code theme shares the site's light/dark semantics while other built-in editor themes retain independent tokens.</en></lang> */
+:root[data-hia-code-theme='site'] {
+  --hia-public-code-bg: #f3f7f7;
+  --hia-public-code-fg: #16303a;
+  --hia-public-code-comment: #617176;
+  --hia-public-code-keyword: #7855a5;
+  --hia-public-code-string: #0b716b;
+  --hia-public-code-function: #925f18;
+  --hia-public-code-number: #9a3c5a;
+}
+
+:root[data-hia-code-theme='site'][data-hia-scheme='dark'],
+:root[data-hia-code-theme='midnight'],
+:root[data-hia-code-theme='solarized-dark'] {
+  --hia-public-code-bg: #0d1720;
+  --hia-public-code-fg: #e8f4f4;
+  --hia-public-code-comment: #8fa3b8;
+  --hia-public-code-keyword: #c7a0ff;
+  --hia-public-code-string: #8fe3ce;
+  --hia-public-code-function: #ffd28a;
+  --hia-public-code-number: #f3a5bc;
+}
+
+:root[data-hia-code-theme='paper-light'],
+:root[data-hia-code-theme='solarized-light'] {
+  --hia-public-code-comment: #69736d;
+  --hia-public-code-keyword: #7652a7;
+  --hia-public-code-string: #08746d;
+  --hia-public-code-function: #9b5d13;
+  --hia-public-code-number: #a33d63;
+}
+
+:root[data-hia-code-theme='high-contrast'] {
+  --hia-public-code-comment: #d0d0d0;
+  --hia-public-code-keyword: #ffff00;
+  --hia-public-code-string: #00ffff;
+  --hia-public-code-function: #ffffff;
+  --hia-public-code-number: #ff9fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-hia-code-theme='site'][data-hia-scheme='system'] {
+    --hia-public-code-bg: #0d1720;
+    --hia-public-code-fg: #e8f4f4;
+    --hia-public-code-comment: #8fa3b8;
+    --hia-public-code-keyword: #c7a0ff;
+    --hia-public-code-string: #8fe3ce;
+    --hia-public-code-function: #ffd28a;
+    --hia-public-code-number: #f3a5bc;
+  }
+}
+
+html[data-hia-code-theme] pre,
+html[data-hia-code-theme] pre code {
+  background: var(--hia-public-code-bg);
+  color: var(--hia-public-code-fg);
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--hia-public-code-comment);
+  font-style: italic;
+}
+
+.token.keyword,
+.token.atrule,
+.token.boolean {
+  color: var(--hia-public-code-keyword);
+}
+
+.token.string,
+.token.char,
+.token.attr-value,
+.token.regex {
+  color: var(--hia-public-code-string);
+}
+
+.token.function,
+.token.class-name {
+  color: var(--hia-public-code-function);
+}
+
+.token.number,
+.token.constant,
+.token.symbol {
+  color: var(--hia-public-code-number);
+}
+
+.token.operator,
+.token.punctuation {
+  color: var(--hia-public-code-fg);
+}
+
+pre.line-numbers {
+  counter-reset: linenumber;
+  padding-left: 3.8em;
+  position: relative;
+}
+
+.line-numbers .line-numbers-rows {
+  border-right: 1px solid
+    color-mix(in srgb, var(--hia-public-code-fg) 24%, transparent);
+  font-size: 100%;
+  inset: 0 auto 0 -3.8em;
+  letter-spacing: -1px;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  width: 3em;
+}
+
+.line-numbers-rows > span {
+  counter-increment: linenumber;
+  display: block;
+}
+
+.line-numbers-rows > span::before {
+  color: color-mix(in srgb, var(--hia-public-code-fg) 58%, transparent);
+  content: counter(linenumber);
+  display: block;
+  padding-right: 0.8em;
+  text-align: right;
+}
+
+:root[data-hia-code-lines='hide'] .line-numbers .line-numbers-rows {
+  display: none;
+}
+
+:root[data-hia-code-lines='hide'] pre.line-numbers {
+  padding-left: 1rem;
+}
+
+/* <lang><zh-CN>Baseline B 的整体密度保持接近确认稿：紧凑 header、稳定三栏和居中的阅读卡片。</zh-CN><en>Baseline B follows the confirmed composition with a compact header, stable three columns, and a centered reading card.</en></lang> */
+:root {
+  --hia-public-header-height: 4.25rem;
+  --hia-public-content-width: 58rem;
+}
+
+body {
+  line-height: 1.62;
+}
+
+.hia-public-header {
+  gap: clamp(0.8rem, 2.2vw, 2.6rem);
+  grid-template-columns: minmax(13rem, 19rem) minmax(18rem, 48rem) auto;
+  padding-inline: clamp(1rem, 2vw, 2rem);
+}
+
+.hia-public-brand-mark {
+  border-radius: 0.65rem;
+  font-size: 0.82rem;
+  height: 2.45rem;
+  width: 2.45rem;
+}
+
+.hia-public-brand-copy strong {
+  font-size: 1.08rem;
+}
+
+.hia-public-search-trigger {
+  min-height: 2.65rem;
+  padding-inline: 1rem;
+}
+
+.hia-shell.hia-project-split-site {
+  grid-template-columns: minmax(16rem, 18.5rem) minmax(0, 1fr) minmax(
+      11.5rem,
+      14rem
+    );
+  max-width: 96rem;
+}
+
+.hia-shell.hia-project-split-site > .hia-sidebar {
+  align-self: stretch;
+  background: color-mix(in srgb, var(--hia-surface) 42%, var(--hia-bg));
+  border-inline-end: 1px solid var(--hia-border);
+  min-height: calc(100vh - var(--hia-public-header-height));
+  overflow-x: hidden;
+  padding: 1.45rem 1rem 3rem;
+}
+
+.hia-shell.hia-project-split-site > .hia-sidebar > .hia-project-views,
+.hia-shell.hia-project-split-site > .hia-sidebar > label,
+.hia-shell.hia-project-split-site > .hia-sidebar > input,
+.hia-shell.hia-project-split-site
+  > .hia-sidebar
+  > .hia-project-secondary-action {
+  display: none;
+}
+
+.hia-public-content-column {
+  padding: 2rem clamp(1.5rem, 3vw, 3rem) 5rem;
+}
+
+.hia-public-breadcrumb {
+  font-size: 0.9rem;
+  margin-block-end: 1.5rem;
+}
+
+.hia-public-content-column > .hia-main > .hia-project-entry,
+.hia-public-landing {
+  background: var(--hia-surface);
+  border: 1px solid var(--hia-border);
+  border-radius: 0.8rem;
+  box-shadow: 0 0.35rem 1.2rem rgb(10 31 42 / 5%);
+  padding: clamp(1.35rem, 3vw, 2.4rem);
+}
+
+.hia-project-topic-header {
+  border-block-end: 1px solid var(--hia-border);
+  padding-block-end: 1.15rem;
+}
+
+.hia-project-topic-header h2 {
+  font-size: clamp(1.8rem, 3.2vw, 2.35rem);
+  letter-spacing: -0.025em;
+  margin: 0 0 0.35rem;
+}
+
+.hia-project-topic-section {
+  margin-top: 0;
+  padding-block: 1rem 0.1rem;
+}
+
+.hia-project-topic-section > summary {
+  align-items: center;
+  display: flex;
+  font-size: 1rem;
+  gap: 0.35rem;
+  min-height: 2rem;
+}
+
+.hia-project-topic-section > .hia-project-topic-section-body {
+  padding: 0.65rem 0 0.6rem;
+}
+
+.hia-project-meta {
+  column-gap: 1.2rem;
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+  margin: 0;
+  row-gap: 0.25rem;
+}
+
+.hia-project-meta dt,
+.hia-project-meta dd {
+  margin: 0;
+  padding-block: 0.12rem;
+}
+
+.hia-public-landing h1 {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+}
+
+.hia-public-card {
+  border-radius: 0.75rem;
+  min-height: 8rem;
+  padding: 1.15rem;
+}
+
+.hia-public-card:hover,
+.hia-public-card:focus-visible {
+  border-color: var(--hia-accent);
+  box-shadow: 0 0.5rem 1.1rem
+    color-mix(in srgb, var(--hia-accent) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+.hia-public-outline {
+  background: color-mix(in srgb, var(--hia-surface) 20%, var(--hia-bg));
+  padding: 2.15rem 1.1rem;
+}
+
+.hia-public-outline-label {
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.hia-public-outline-list {
+  gap: 0.6rem;
+}
+
+.hia-public-outline-list a {
+  font-size: 0.86rem;
+}
+
+.hia-public-outline-list a:hover,
+.hia-public-outline-list a:focus-visible {
+  color: var(--hia-accent);
+}
+
+/* <lang><zh-CN>树行使用第一方 SVG mask 图标和层级轨道，不再用方块字符模拟类型。</zh-CN><en>Tree rows use first-party SVG-mask icons and hierarchy rails instead of square characters that simulate types.</en></lang> */
+.hia-project-hierarchy-list,
+.hia-project-hierarchy-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hia-project-hierarchy-list ul {
+  margin-inline-start: 0.72rem;
+  padding-inline-start: 0.7rem;
+}
+
+.hia-project-hierarchy-list li {
+  margin-block: 0.14rem;
+}
+
+.hia-project-hierarchy-list details > ul {
+  border-inline-start: 1px solid
+    color-mix(in srgb, var(--hia-border) 72%, transparent);
+  margin-inline-start: 0.72rem;
+}
+
+.hia-project-hierarchy-list details > summary,
+.hia-project-hierarchy-list li > .hia-project-entry-link,
+.hia-project-hierarchy-list li > span {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.42rem;
+  color: var(--hia-text);
+  display: flex;
+  gap: 0.42rem;
+  min-height: 2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 0.28rem 0.42rem;
+  width: 100%;
+}
+
+.hia-project-hierarchy-list details > summary {
+  justify-content: flex-start;
+}
+
+.hia-project-hierarchy-list details > summary::before,
+.hia-project-hierarchy-list li > .hia-project-entry-link::before,
+.hia-project-hierarchy-list li > span::before {
+  background: currentColor;
+  content: '';
+  flex: 0 0 auto;
+  height: 1rem;
+  mask: var(--hia-tree-icon) center / contain no-repeat;
+  opacity: 0.78;
+  width: 1rem;
+}
+
+.hia-public-tree-item {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 2h9l5 5v15H6zM14 3v6h5M9 13h8M9 17h6' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-item[data-hia-tree-kind='view'] {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 4 3 12l5 8M16 4l5 8-5 8M14 3l-4 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-item[data-hia-tree-kind='repository'],
+.hia-public-tree-item[data-hia-tree-kind='package'],
+.hia-public-tree-item[data-hia-tree-kind$='group'] {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 6.5h7l2 2h9v10.5H3z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-item[data-hia-tree-kind='function'] {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 4c-4 0-4 5-5 9s-2 7-5 7M7 11h8M15 11l4 4m0-4-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-item[data-hia-tree-kind='type'] {
+  --hia-tree-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 5h14M12 5v14M8 19h8' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.hia-public-tree-count {
+  background: var(--hia-accent-soft);
+  border-radius: 999px;
+  color: var(--hia-accent);
+  font-size: 0.68rem;
+  line-height: 1.2;
+  margin-inline-start: auto;
+  padding: 0.18rem 0.42rem;
+  white-space: nowrap;
+}
+
+.hia-project-tree-open {
+  margin-inline-start: auto;
+  width: auto;
+}
+
+.hia-project-hierarchy-list details > summary:hover,
+.hia-project-hierarchy-list li > .hia-project-entry-link:hover,
+.hia-project-hierarchy-list details[data-hia-active-ancestor='true'] > summary,
+.hia-project-hierarchy-list
+  [data-hia-active-entry='true']
+  > .hia-project-entry-link {
+  background: var(--hia-accent-soft);
+  border-color: color-mix(in srgb, var(--hia-accent) 26%, transparent);
+  color: var(--hia-accent);
+}
+
+/* <lang><zh-CN>设置面板按“范围—内容—站点—代码—阅读”组织，避免把所有选项压成换色控件。</zh-CN><en>The settings panel is organized as scope, content, site, code, and reading instead of collapsing everything into color controls.</en></lang> */
+.hia-public-settings-dialog {
+  max-width: min(52rem, calc(100vw - 2rem));
+}
+
+.hia-public-settings-body {
+  background: color-mix(in srgb, var(--hia-bg) 55%, var(--hia-surface));
+  grid-auto-flow: dense;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hia-public-settings-body fieldset {
+  background: var(--hia-surface);
+}
+
+.hia-public-settings-body fieldset:nth-of-type(4) {
+  grid-column: 1 / -1;
+}
+
+.hia-public-visibility-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hia-public-theme-choices label,
+.hia-public-visibility-grid label {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.hia-public-toggle-row label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hia-public-toggle-row select {
+  min-height: 2.4rem;
+}
+
+.hia-public-highlighter-note {
+  color: var(--hia-muted);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+@media (max-width: 1080px) {
+  .hia-shell.hia-project-split-site {
+    grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
+  }
+
+  .hia-public-outline {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .hia-public-settings-body {
+    grid-template-columns: 1fr;
+  }
+
+  .hia-public-settings-body fieldset:nth-of-type(4) {
+    grid-column: auto;
+  }
+
+  .hia-public-content-column > .hia-main > .hia-project-entry,
+  .hia-public-landing {
+    padding: 1.1rem;
   }
 }

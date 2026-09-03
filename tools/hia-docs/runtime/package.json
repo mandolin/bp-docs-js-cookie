@@ -2,9 +2,10 @@
   "name": "bp-docs-js-cookie-documentation-runtime",
   "version": "0.0.0",
   "private": true,
-  "description": "Pinned JSDoc runtime for the bp-docs-js-cookie documentation pipeline.",
+  "description": "Pinned extraction and presentation runtime for the bp-docs-js-cookie documentation pipeline.",
   "license": "UNLICENSED",
   "devDependencies": {
-    "jsdoc": "4.0.5"
+    "jsdoc": "4.0.5",
+    "prismjs": "1.30.0"
   }
 }

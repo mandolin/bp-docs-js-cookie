@@ -235,13 +235,13 @@ async function checkOnce(expectedCommit) {
     'Portal owner assets lack split-site, locale, or theme behavior.'
   )
   assert(
-    productCss.text.includes('[data-hia-api-scope="public"]') &&
+    /\[data-hia-api-scope=(?:"public"|'public')\]/u.test(productCss.text) &&
       productCss.text.includes('.token.keyword') &&
       productJs.text.includes("details.dataset.hiaSourceState !== 'ready'") &&
       productJs.text.includes('globalThis.Prism.highlightElement(code)') &&
       prismJs.text.includes('Prism') &&
       prismLineNumbersJs.text.includes('line-numbers') &&
-      prismLicense.text.includes('MIT License'),
+      prismLicense.text.toUpperCase().includes('MIT LICENSE'),
     'Deployed product assets lack API-scope, verified highlighting, or license evidence.'
   )
   // <lang><zh-CN>Portal owner 把导航、内容与源码读取器内联在产品 HTML；外部 hia-default.js 只承载主题和 locale 偏好。</zh-CN><en>The Portal owner inlines navigation, content, and source readers in the product HTML; external hia-default.js carries only theme and locale preferences.</en></lang>

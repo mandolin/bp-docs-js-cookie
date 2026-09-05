@@ -1128,6 +1128,20 @@ body {
 }
 
 @media (max-width: 760px) {
+  /* <lang><zh-CN>Baseline B 的桌面三栏 header 声明位于早期响应式规则之后，因此在最终层再次收口为品牌 + 操作两栏，避免 390px 下生成隐式第三列。</zh-CN><en>The Baseline B desktop three-column header declaration follows the earlier responsive rules, so the final layer collapses it again to brand plus actions and prevents an implicit third track at 390px.</en></lang> */
+  .hia-public-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hia-public-brand {
+    min-width: 0;
+  }
+
+  .hia-public-header-actions {
+    min-width: 0;
+    width: max-content;
+  }
+
   .hia-public-settings-body {
     grid-template-columns: 1fr;
   }

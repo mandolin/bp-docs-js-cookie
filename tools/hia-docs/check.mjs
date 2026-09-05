@@ -320,6 +320,60 @@ function checkSurface(profile, surface, identityByGroup) {
       fs.existsSync(path.join(root, 'pages', 'index.html')),
       `${profile.id}/${surface.kind} lacks no-script page index.`
     )
+    // <lang><zh-CN>每个 Portal surface 必须携带 owner 生成的 W-P123 exact report；BP 只核对 metadata，不读取译文 bundle。</zh-CN><en>Every Portal surface must carry an owner-generated exact W-P123 report; BP checks metadata only and reads no translation bundle.</en></lang>
+    const uiLocaleReportPath = path.join(
+      root,
+      'documentation-ui-locale-completeness.json'
+    )
+    assert(
+      fs.existsSync(uiLocaleReportPath),
+      `${profile.id}/${surface.kind} lacks UI-locale completeness report.`
+    )
+    const uiLocaleReportText = fs.readFileSync(uiLocaleReportPath, 'utf8')
+    const uiLocaleReport = JSON.parse(uiLocaleReportText)
+    const expectedUiLocaleIdentity =
+      surface.kind === 'portal-bridge'
+        ? 'hia-jsdoc.portal-bridge'
+        : 'portal.default'
+    assert(
+      uiLocaleReport.contract === 'documentation-ui-locale-completeness' &&
+        uiLocaleReport.contractVersion === '0.1.0-draft' &&
+        uiLocaleReport.status === 'complete' &&
+        uiLocaleReport.profileId === expectedUiLocaleIdentity,
+      `${profile.id}/${surface.kind} has invalid UI-locale report identity.`
+    )
+    assert(
+      uiLocaleReport.surfaces?.length === 1 &&
+        uiLocaleReport.surfaces[0]?.surfaceId ===
+          (surface.kind === 'portal-bridge'
+            ? 'hia-jsdoc.portal-bridge'
+            : 'portal.split-site'),
+      `${profile.id}/${surface.kind} has invalid UI-locale surface identity.`
+    )
+    assert(
+      uiLocaleReport.evaluations?.every(
+        (evaluation) =>
+          evaluation.status === 'complete' &&
+          evaluation.summary?.exact === evaluation.summary?.requirements &&
+          evaluation.summary?.fallback === 0 &&
+          evaluation.summary?.missing === 0 &&
+          evaluation.summary?.placeholderMismatch === 0
+      ),
+      `${profile.id}/${surface.kind} has incomplete UI-locale evaluation.`
+    )
+    assert(
+      uiLocaleReport.privacy?.messageTextIncluded === false &&
+        uiLocaleReport.privacy?.contentBodyIncluded === false &&
+        uiLocaleReport.privacy?.sourceBodyIncluded === false &&
+        !uiLocaleReportText.includes('Search documentation') &&
+        !uiLocaleReportText.includes('搜索文档'),
+      `${profile.id}/${surface.kind} UI-locale report crossed its privacy boundary.`
+    )
+    assert(
+      fs.existsSync(path.join(root, 'pages', 'zh-CN', 'index.html')) &&
+        fs.existsSync(path.join(root, 'pages', 'en', 'index.html')),
+      `${profile.id}/${surface.kind} lacks direct locale-specific no-script indexes.`
+    )
   }
 
   const assets = presentation.source.assets

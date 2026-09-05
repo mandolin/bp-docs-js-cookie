@@ -26,8 +26,8 @@ Owner repositories must be clean and remain at these full commits:
 | -------------------------------- | ------------------------------------------ | ----------------- |
 | `@mandolin/jsdoc-plugin-hia-sys` | `ac1fa5831dd33c204dd2168eed812b654eab24e4` | MIT               |
 | `@mandolin/jsdoc-theme-hia`      | `9c78b017567c5c23a212ae572e72ad36376ed78d` | MIT               |
-| `hia-jsdoc` umbrella             | `8f246729a9bec72baafab0b7699a14536ae23d29` | MIT               |
-| HIA main Portal/CLI              | `52c0b70607dfb06638e3f5ccfd49e91f2d1f578f` | MIT package train |
+| `hia-jsdoc` umbrella             | `4774c9bd685f1b0ced7f0032a1208eeee2a13a5f` | MIT               |
+| HIA main Portal/CLI              | `62f4570f7f70b094f65df32a2424d28463d0415d` | MIT package train |
 
 JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. PrismJS `1.30.0` is MIT and is isolated in the same private
 tooling runtime solely to highlight already fetched, byte-counted and SHA-384-verified JavaScript source. The public artifact receives

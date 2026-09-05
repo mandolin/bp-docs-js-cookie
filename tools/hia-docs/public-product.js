@@ -49,7 +49,10 @@
   /** @lang zh-CN 产品壳自身的最小双语词典；owner 全量 locale 治理由 W-P125 承担。 @lang en Minimal bilingual dictionary for this product shell; W-P125 owns full owner-locale adoption. */
   const messages = Object.freeze({
     'zh-CN': {
+      skip: '跳到正文',
+      home: 'js-cookie 文档首页',
       search: '搜索文档',
+      openSearch: '打开文档搜索',
       searchTitle: '搜索文档',
       searchPlaceholder: '搜索 API 或指南…',
       searchClose: '关闭',
@@ -62,6 +65,11 @@
       nav: '文档目录',
       outline: '本页内容',
       breadcrumb: '概览',
+      breadcrumbAccessible: '面包屑',
+      pageIndex: '完整页面索引',
+      backToContent: '返回正文顶部',
+      switchToEnglish: '切换到英语界面',
+      switchToChinese: '切换到中文界面',
       settingsTitle: '主题、内容与代码设置',
       apiScope: 'API 显示范围',
       publicApi: '只显示接口 API',
@@ -104,7 +112,10 @@
       saved: '设置已保存在此设备。'
     },
     en: {
+      skip: 'Skip to content',
+      home: 'js-cookie documentation home',
       search: 'Search documentation',
+      openSearch: 'Open documentation search',
       searchTitle: 'Search documentation',
       searchPlaceholder: 'Search APIs or guides…',
       searchClose: 'Close',
@@ -117,6 +128,11 @@
       nav: 'Documentation menu',
       outline: 'On this page',
       breadcrumb: 'Overview',
+      breadcrumbAccessible: 'Breadcrumb',
+      pageIndex: 'Complete page index',
+      backToContent: 'Back to content',
+      switchToEnglish: 'Switch interface to English',
+      switchToChinese: 'Switch interface to Chinese',
       settingsTitle: 'Theme, content, and code settings',
       apiScope: 'API visibility',
       publicApi: 'Public APIs only',
@@ -161,10 +177,19 @@
     }
   })
 
+  // <lang><zh-CN>产品壳的两份 bundle 必须保持 exact key parity；缺项时在交互绑定前 fail closed。</zh-CN><en>The two product-shell bundles must retain exact key parity and fail closed before interaction binding when an entry is missing.</en></lang>
+  const chineseMessageIds = Object.keys(messages['zh-CN']).sort()
+  const englishMessageIds = Object.keys(messages.en).sort()
+  if (chineseMessageIds.join() !== englishMessageIds.join()) {
+    throw new Error('BP product UI locale bundles are incomplete.')
+  }
+
   /** @lang zh-CN 根元素承载所有无脚本可忽略的显示状态。 @lang en Root element carries all display state that can be ignored without scripts. */
   const root = document.documentElement
-  /** @lang zh-CN 原 Portal locale 控件仍是正文 locale 的权威入口。 @lang en The original Portal locale control remains authoritative for content locale. */
-  const localeControl = document.querySelector('[data-hia-locale-control]')
+  /** @lang zh-CN Portal UI locale 控件是产品 chrome 的唯一语言事实源；正文 locale 保持独立。 @lang en The Portal UI-locale control is the sole language source for product chrome; content locale remains independent. */
+  const uiLocaleControl = document.querySelector(
+    '[data-hia-ui-locale-control]'
+  )
   /** @lang zh-CN 产品设置对话框使用原生 dialog 语义。 @lang en Product settings use native dialog semantics. */
   const settingsDialog = document.querySelector('[data-hia-settings-dialog]')
   /** @lang zh-CN 产品搜索对话框保持确认稿的焦点约束与 Escape 行为。 @lang en The product search dialog preserves the confirmed focus containment and Escape behavior. */
@@ -240,7 +265,9 @@
    * @returns {'zh-CN'|'en'} <lang><zh-CN>受支持 locale。</zh-CN><en>Supported locale.</en></lang>
    */
   function currentLocale() {
-    return localeControl?.value === 'en' || root.lang === 'en' ? 'en' : 'zh-CN'
+    return uiLocaleControl?.value === 'en' || root.lang === 'en'
+      ? 'en'
+      : 'zh-CN'
   }
 
   /**
@@ -270,10 +297,25 @@
         translate(element.dataset.hiaPublicI18nPlaceholder)
       )
     }
+    for (const element of document.querySelectorAll(
+      '[data-hia-public-i18n-aria]'
+    )) {
+      element.setAttribute(
+        'aria-label',
+        translate(element.dataset.hiaPublicI18nAria)
+      )
+    }
     /** @lang zh-CN locale button 文本表示下一次切换目标。 @lang en The locale-button text represents the next switch target. */
     const localeButton = document.querySelector('[data-hia-public-locale]')
-    if (localeButton)
+    if (localeButton) {
       localeButton.textContent = currentLocale() === 'en' ? '中' : 'EN'
+      localeButton.dataset.hiaPublicI18nAria =
+        currentLocale() === 'en' ? 'switchToChinese' : 'switchToEnglish'
+      localeButton.setAttribute(
+        'aria-label',
+        translate(localeButton.dataset.hiaPublicI18nAria)
+      )
+    }
     /** @lang zh-CN 窄屏图标按钮仍需具备随 locale 更新的可访问名称。 @lang en The narrow-screen icon button still requires an accessible name updated with the locale. */
     document
       .querySelector('.hia-public-mobile-search')
@@ -787,13 +829,11 @@
   document
     .querySelector('[data-hia-public-locale]')
     ?.addEventListener('click', () => {
-      if (!localeControl) return
-      localeControl.value = currentLocale() === 'en' ? 'zh-CN' : 'en'
-      localeControl.dispatchEvent(new Event('change', { bubbles: true }))
-      applyProductLocale()
-      rebuildOutline()
+      if (!uiLocaleControl) return
+      uiLocaleControl.value = currentLocale() === 'en' ? 'zh-CN' : 'en'
+      uiLocaleControl.dispatchEvent(new Event('change', { bubbles: true }))
     })
-  localeControl?.addEventListener('change', () => {
+  uiLocaleControl?.addEventListener('change', () => {
     applyProductLocale()
     rebuildOutline()
   })

@@ -210,6 +210,10 @@ async function checkOnce(expectedCommit) {
     'documentation-presentation-profile.json'
   )
   const presentation = presentationResult.value
+  const uiLocaleResult = await readJson(
+    'documentation-ui-locale-completeness.json'
+  )
+  const uiLocaleReport = uiLocaleResult.value
   assert(
     root.text.includes('hia-project-split-site'),
     'Public root is not the default Portal product.'
@@ -298,6 +302,22 @@ async function checkOnce(expectedCommit) {
     publication.defaultProfile?.id === 'unified-portal.fetch.classic',
     'Deployed default profile drifted.'
   )
+  assert(
+    publication.defaultProfile?.uiLocale?.profileId === 'portal.default' &&
+      publication.defaultProfile?.uiLocale?.surfaceId === 'portal.split-site' &&
+      uiLocaleReport.status === 'complete' &&
+      uiLocaleReport.profileId === 'portal.default' &&
+      uiLocaleReport.evaluations?.every(
+        (evaluation) =>
+          evaluation.status === 'complete' &&
+          evaluation.summary?.fallback === 0 &&
+          evaluation.summary?.missing === 0 &&
+          evaluation.summary?.placeholderMismatch === 0
+      ),
+    'Deployed UI-locale completeness evidence drifted.'
+  )
+  await read('pages/zh-CN/index.html')
+  await read('pages/en/index.html')
   assert(
     presentation.pagePartition?.mode === 'multi-page',
     'Default Portal is not multi-page.'

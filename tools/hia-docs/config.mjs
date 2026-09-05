@@ -52,8 +52,20 @@ export const DEFAULT_SHOWCASE_PROFILE_ID = 'unified-portal.fetch.classic'
 export const OWNER_COMMITS = Object.freeze({
   plugin: 'ac1fa5831dd33c204dd2168eed812b654eab24e4',
   theme: '9c78b017567c5c23a212ae572e72ad36376ed78d',
-  hiaJsdoc: '8f246729a9bec72baafab0b7699a14536ae23d29',
-  portal: '52c0b70607dfb06638e3f5ccfd49e91f2d1f578f'
+  hiaJsdoc: '4774c9bd685f1b0ced7f0032a1208eeee2a13a5f',
+  portal: '62f4570f7f70b094f65df32a2424d28463d0415d'
+})
+
+/** @lang zh-CN W-P123 UI locale completeness capability 的 exact identity。 @lang en Exact identity of the W-P123 UI-locale completeness capability. */
+export const PORTAL_UI_LOCALE_CAPABILITY = Object.freeze({
+  capability: 'documentation-ui-locale-completeness',
+  capabilityVersion: '0.1.0-draft',
+  ownerPackage: '@hia-doc/renderer-html',
+  reportPath: 'documentation-ui-locale-completeness.json',
+  uiLocales: ['zh-CN', 'en'],
+  modes: ['interactive', 'no-script'],
+  channels: ['visible', 'accessibility', 'status'],
+  privacy: 'metadata-only'
 })
 
 /** @lang zh-CN GitHub project Pages 的精确公开地址与 base path。 @lang en Exact public URL and base path for the GitHub project Pages site. */
@@ -185,6 +197,10 @@ export function createPortalConfig(options = {}) {
   const sourceMode = options.sourceMode ?? 'fetch'
   const skin = options.skin ?? 'portal.classic'
   const scheme = options.scheme ?? 'system'
+  // <lang><zh-CN>默认 Portal 使用 owner profile；hia-jsdoc surface 必须提交并通过完整 bridge descriptor。</zh-CN><en>The default Portal uses the owner profile; an hia-jsdoc surface must supply and pass the complete bridge descriptor.</en></lang>
+  const uiLocaleCompleteness = resolvePortalUiLocaleCompleteness(
+    options.uiLocaleBridge
+  )
   if (!SOURCE_READING_MODES.includes(sourceMode) && sourceMode !== 'none') {
     throw new TypeError(`Unsupported showcase source mode: ${sourceMode}`)
   }
@@ -201,6 +217,7 @@ export function createPortalConfig(options = {}) {
       renderer: {
         projectLayout: 'split-site',
         uiLocale: 'zh-CN',
+        uiLocaleCompleteness,
         informationArchitecture: {
           contract: 'documentation-portal-information-architecture',
           contractVersion: '0.1.0-draft',
@@ -227,6 +244,55 @@ export function createPortalConfig(options = {}) {
       }
     }
   }
+}
+
+/**
+ * <lang><zh-CN>把可选 hia-jsdoc bridge descriptor 收窄为 Portal 配置所需的两个稳定 ID。</zh-CN><en>Narrows an optional hia-jsdoc bridge descriptor to the two stable IDs required by Portal configuration.</en></lang>
+ *
+ * @param {Object | undefined} descriptor <lang><zh-CN>从已固定 hia-jsdoc owner 读取的 capability descriptor；缺失表示默认 Portal。</zh-CN><en>Capability descriptor read from the pinned hia-jsdoc owner; omission selects the default Portal.</en></lang>
+ * @returns {{profileId:string,surfaceId:string}} <lang><zh-CN>不含译文或 owner 私有结构的配置投影。</zh-CN><en>Configuration projection containing no translations or owner-private structure.</en></lang>
+ * @throws {TypeError} <lang><zh-CN>未知、缺失或扩展字段会 fail closed。</zh-CN><en>Unknown, missing, or extended fields fail closed.</en></lang>
+ */
+export function resolvePortalUiLocaleCompleteness(descriptor) {
+  if (descriptor === undefined) {
+    return { profileId: 'portal.default', surfaceId: 'portal.split-site' }
+  }
+  if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)) {
+    throw new TypeError('hia-jsdoc UI locale bridge must be an object.')
+  }
+  // <lang><zh-CN>exactFields 防止译文、selector、target identity 或未来未理解字段静默跨越仓库边界。</zh-CN><en>ExactFields prevent translations, selectors, target identity, or unknown future fields from silently crossing the repository boundary.</en></lang>
+  const exactFields = [
+    'capability',
+    'capabilityVersion',
+    'ownerPackage',
+    'profileId',
+    'surfaceId',
+    'reportPath',
+    'uiLocales',
+    'modes',
+    'channels',
+    'privacy'
+  ]
+  if (
+    Object.keys(descriptor).sort().join() !== exactFields.sort().join() ||
+    descriptor.capability !== PORTAL_UI_LOCALE_CAPABILITY.capability ||
+    descriptor.capabilityVersion !==
+      PORTAL_UI_LOCALE_CAPABILITY.capabilityVersion ||
+    descriptor.ownerPackage !== PORTAL_UI_LOCALE_CAPABILITY.ownerPackage ||
+    descriptor.profileId !== 'hia-jsdoc.portal-bridge' ||
+    descriptor.surfaceId !== 'hia-jsdoc.portal-bridge' ||
+    descriptor.reportPath !== PORTAL_UI_LOCALE_CAPABILITY.reportPath ||
+    JSON.stringify(descriptor.uiLocales) !==
+      JSON.stringify(PORTAL_UI_LOCALE_CAPABILITY.uiLocales) ||
+    JSON.stringify(descriptor.modes) !==
+      JSON.stringify(PORTAL_UI_LOCALE_CAPABILITY.modes) ||
+    JSON.stringify(descriptor.channels) !==
+      JSON.stringify(PORTAL_UI_LOCALE_CAPABILITY.channels) ||
+    descriptor.privacy !== PORTAL_UI_LOCALE_CAPABILITY.privacy
+  ) {
+    throw new TypeError('hia-jsdoc UI locale bridge descriptor is unsupported.')
+  }
+  return { profileId: descriptor.profileId, surfaceId: descriptor.surfaceId }
 }
 
 /** @lang zh-CN JTH skin 到 Portal owner skin 的唯一中性 identity 映射。 @lang en Sole neutral identity mapping from JTH skins to Portal-owner skins. */

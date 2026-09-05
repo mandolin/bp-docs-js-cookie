@@ -39,6 +39,17 @@ test('creates one default-Portal publication profile without a chooser', () => {
   assert.equal(manifest.defaultProfile.id, 'unified-portal.fetch.classic')
   assert.equal(manifest.defaultProfile.sourceMode, 'fetch')
   assert.equal(manifest.defaultProfile.pageMode, 'multi-page')
+  assert.deepEqual(manifest.defaultProfile.uiLocale, {
+    default: 'zh-CN',
+    supported: ['zh-CN', 'en'],
+    profileId: 'portal.default',
+    surfaceId: 'portal.split-site',
+    reportPath: 'documentation-ui-locale-completeness.json',
+    noScriptLocaleIndexes: [
+      'pages/zh-CN/index.html',
+      'pages/en/index.html'
+    ]
+  })
   assert.equal(manifest.rootIsProfileChooser, false)
   assert.equal(manifest.reviewOnlyElementsIncluded, false)
   assert.equal(manifest.designBaseline.version, '0.2.0')
@@ -194,7 +205,7 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   fs.mkdirSync(unusedRoot, { recursive: true })
   fs.writeFileSync(
     path.join(defaultRoot, 'index.html'),
-    '<!doctype html><html data-hia-scheme="system"><head><link rel="stylesheet" href="assets/hia-default.css"></head><body><div class="hia-shell hia-project-split-site"><aside class="hia-sidebar"><input data-hia-project-search></aside><main class="hia-main" data-hia-project-content><p class="hia-project-empty">Empty</p><noscript><p>No script</p></noscript></main></div><script src="assets/hia-default.js"></script></body></html>'
+    '<!doctype html><html data-hia-scheme="system"><head><link rel="stylesheet" href="assets/hia-default.css"></head><body><div class="hia-shell hia-project-split-site"><aside class="hia-sidebar"><input data-hia-project-search></aside><main class="hia-main" data-hia-project-content><p class="hia-project-empty"><span data-hia-ui-message="portal.navigation.select">Select a documentation entry.</span></p><noscript><p>No script</p></noscript></main></div><script src="assets/hia-default.js"></script></body></html>'
   )
   fs.writeFileSync(path.join(defaultRoot, 'assets', 'site.css'), ':root{}')
   fs.writeFileSync(
@@ -218,6 +229,7 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
     'utf8'
   )
   assert.match(publicHtml, /data-hia-public-product/u)
+  assert.match(publicHtml, /data-hia-public-i18n-aria="home"/u)
   assert.match(publicHtml, /data-hia-settings-dialog/u)
   assert.match(publicHtml, /data-hia-search-dialog/u)
   assert.match(publicHtml, /aria-controls="hia-public-search"/u)
@@ -313,6 +325,9 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   )
   assert.match(runtime, /pre\.dataset\.start = String\(startLine\)/u)
   assert.match(runtime, /ensureOverviewTreeItem\(\)/u)
+  assert.match(runtime, /\[data-hia-ui-locale-control\]/u)
+  assert.equal(runtime.includes('[data-hia-locale-control]'), false)
+  assert.match(runtime, /BP product UI locale bundles are incomplete/u)
   assert.ok(
     runtime.indexOf("nodeId.includes(':package:')") <
       runtime.indexOf("nodeId.includes(':repository:')")

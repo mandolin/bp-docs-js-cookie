@@ -177,6 +177,13 @@ function checkPublicSurface() {
     'Public default profile drifted.'
   )
   assert(
+    manifest.defaultProfile?.uiLocale?.profileId === 'portal.default' &&
+      manifest.defaultProfile?.uiLocale?.surfaceId === 'portal.split-site' &&
+      JSON.stringify(manifest.defaultProfile?.uiLocale?.supported) ===
+        JSON.stringify(['zh-CN', 'en']),
+    'Public UI-locale publication metadata drifted.'
+  )
+  assert(
     JSON.stringify(manifest.informationArchitecture) ===
       JSON.stringify([
         'global-header',
@@ -224,6 +231,34 @@ function checkPublicSurface() {
   assert(
     presentation.theme?.skinId === 'portal.classic',
     'Public Portal default skin drifted.'
+  )
+  const uiLocaleReport = readJson(
+    path.join(
+      topology.publicArtifactRoot,
+      'documentation-ui-locale-completeness.json'
+    )
+  )
+  assert(
+    uiLocaleReport.status === 'complete' &&
+      uiLocaleReport.profileId === 'portal.default' &&
+      uiLocaleReport.surfaces?.[0]?.surfaceId === 'portal.split-site' &&
+      uiLocaleReport.evaluations?.every(
+        (evaluation) =>
+          evaluation.status === 'complete' &&
+          evaluation.summary?.fallback === 0 &&
+          evaluation.summary?.missing === 0 &&
+          evaluation.summary?.placeholderMismatch === 0
+      ),
+    'Public Portal UI-locale completeness report is incomplete.'
+  )
+  assert(
+    fs.existsSync(
+      path.join(topology.publicArtifactRoot, 'pages', 'zh-CN', 'index.html')
+    ) &&
+      fs.existsSync(
+        path.join(topology.publicArtifactRoot, 'pages', 'en', 'index.html')
+      ),
+    'Public Portal lacks locale-specific no-script indexes.'
   )
 
   let sourceAssetCount = 0

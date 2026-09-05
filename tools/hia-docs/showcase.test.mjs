@@ -17,7 +17,8 @@ import {
   createJsdocConfig,
   createPortalConfig,
   createShowcaseProfiles,
-  mapPortalSkin
+  mapPortalSkin,
+  resolvePortalUiLocaleCompleteness
 } from './config.mjs'
 import { createShowcaseManifest, renderShowcaseHub } from './hub.mjs'
 
@@ -82,6 +83,10 @@ test('creates split-site Portal configurations without silent source fallback', 
     })
 
     assert.equal(config.docs.renderer.projectLayout, 'split-site')
+    assert.deepEqual(config.docs.renderer.uiLocaleCompleteness, {
+      profileId: 'portal.default',
+      surfaceId: 'portal.split-site'
+    })
     assert.equal(config.docs.source.presentation, sourceMode)
     assert.equal(config.docs.source.publicAssetPolicy, 'explicit-public')
     assert.equal(config.docs.theme.skin, 'portal.graphite')
@@ -89,6 +94,42 @@ test('creates split-site Portal configurations without silent source fallback', 
     assert.equal('fetchBaseUrl' in config.docs.source, false)
     assert.equal('linkBaseUrl' in config.docs.source, false)
   }
+})
+
+test('adopts the exact hia-jsdoc UI locale bridge without copying owner content', () => {
+  const descriptor = {
+    capability: 'documentation-ui-locale-completeness',
+    capabilityVersion: '0.1.0-draft',
+    ownerPackage: '@hia-doc/renderer-html',
+    profileId: 'hia-jsdoc.portal-bridge',
+    surfaceId: 'hia-jsdoc.portal-bridge',
+    reportPath: 'documentation-ui-locale-completeness.json',
+    uiLocales: ['zh-CN', 'en'],
+    modes: ['interactive', 'no-script'],
+    channels: ['visible', 'accessibility', 'status'],
+    privacy: 'metadata-only'
+  }
+
+  assert.deepEqual(resolvePortalUiLocaleCompleteness(descriptor), {
+    profileId: 'hia-jsdoc.portal-bridge',
+    surfaceId: 'hia-jsdoc.portal-bridge'
+  })
+  assert.deepEqual(
+    createPortalConfig({ uiLocaleBridge: descriptor }).docs.renderer
+      .uiLocaleCompleteness,
+    {
+      profileId: 'hia-jsdoc.portal-bridge',
+      surfaceId: 'hia-jsdoc.portal-bridge'
+    }
+  )
+  assert.throws(
+    () =>
+      resolvePortalUiLocaleCompleteness({
+        ...descriptor,
+        translation: 'must-not-cross'
+      }),
+    /descriptor is unsupported/u
+  )
 })
 
 test('keeps none as a separate fail-closed privacy regression', () => {

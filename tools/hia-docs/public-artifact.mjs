@@ -71,7 +71,18 @@ export function createPublicArtifactManifest({ buildCommit }) {
       skin: 'classic',
       portalSkin: 'portal.classic',
       pageMode: 'multi-page',
-      sourcePresentation: 'same-origin-fetch-on-expand'
+      sourcePresentation: 'same-origin-fetch-on-expand',
+      uiLocale: {
+        default: 'zh-CN',
+        supported: ['zh-CN', 'en'],
+        profileId: 'portal.default',
+        surfaceId: 'portal.split-site',
+        reportPath: 'documentation-ui-locale-completeness.json',
+        noScriptLocaleIndexes: [
+          'pages/zh-CN/index.html',
+          'pages/en/index.html'
+        ]
+      }
     },
     informationArchitecture: [
       'global-header',
@@ -288,7 +299,7 @@ export function groupApiScopeNavigation(publicRoot) {
  * @returns {string} <lang><zh-CN>无外部资源的 HTML fragment。</zh-CN><en>HTML fragment with no external resources.</en></lang>
  */
 function renderPublicHeader() {
-  return `<a class="hia-public-skip" href="#hia-public-main">跳到正文 / Skip to content</a><header class="hia-public-header" data-hia-public-product><a class="hia-public-brand" href="./" aria-label="js-cookie documentation home"><span class="hia-public-brand-mark" aria-hidden="true">JS</span><span class="hia-public-brand-copy"><strong>js-cookie</strong><small>HIA Documentation Portal</small></span></a><button class="hia-public-search-trigger" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search"><span data-hia-public-i18n="search">搜索文档</span> <kbd>Ctrl K</kbd></button><div class="hia-public-header-actions"><span class="hia-public-version">v3.0.8</span><button class="hia-public-quiet-button hia-public-mobile-search" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search" aria-label="打开文档搜索">⌕</button><button class="hia-public-quiet-button" type="button" data-hia-public-locale aria-label="Switch documentation language">EN</button><button class="hia-public-settings-trigger" type="button" data-hia-settings-open aria-haspopup="dialog" aria-controls="hia-public-settings"><span aria-hidden="true">◈</span> <span data-hia-public-i18n="settings">主题与设置</span></button></div></header>`
+  return `<a class="hia-public-skip" href="#hia-public-main" data-hia-public-i18n="skip">跳到正文</a><header class="hia-public-header" data-hia-public-product><a class="hia-public-brand" href="./" aria-label="js-cookie 文档首页" data-hia-public-i18n-aria="home"><span class="hia-public-brand-mark" aria-hidden="true">JS</span><span class="hia-public-brand-copy"><strong>js-cookie</strong><small>HIA Documentation Portal</small></span></a><button class="hia-public-search-trigger" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search"><span data-hia-public-i18n="search">搜索文档</span> <kbd>Ctrl K</kbd></button><div class="hia-public-header-actions"><span class="hia-public-version">v3.0.8</span><button class="hia-public-quiet-button hia-public-mobile-search" type="button" data-hia-public-search aria-haspopup="dialog" aria-controls="hia-public-search" aria-label="打开文档搜索" data-hia-public-i18n-aria="openSearch">⌕</button><button class="hia-public-quiet-button" type="button" data-hia-public-locale aria-label="切换到英语界面" data-hia-public-i18n-aria="switchToEnglish">EN</button><button class="hia-public-settings-trigger" type="button" data-hia-settings-open aria-haspopup="dialog" aria-controls="hia-public-settings"><span aria-hidden="true">◈</span> <span data-hia-public-i18n="settings">主题与设置</span></button></div></header>`
 }
 
 /**
@@ -326,8 +337,8 @@ function renderPublicLanding(setRoute, getRoute) {
  */
 function renderPublicStructure() {
   return {
-    beforeMain: `<div class="hia-public-content-column"><details class="hia-public-mobile-navigation" data-hia-public-mobile-navigation><summary data-hia-public-i18n="nav">文档目录</summary><div data-hia-public-mobile-navigation-host></div></details><nav class="hia-public-breadcrumb" aria-label="Breadcrumb"><a href="./">js-cookie</a><span aria-hidden="true">/</span><span data-hia-public-breadcrumb-current data-hia-public-i18n="breadcrumb">概览</span></nav><details class="hia-public-mobile-outline"><summary data-hia-public-i18n="outline">本页内容</summary><nav data-hia-public-mobile-outline-list></nav></details>`,
-    afterMain: `<footer class="hia-public-footer" data-hia-public-footer><a href="pages/index.html">完整页面索引 / Page index</a><a href="#hia-public-main">返回正文顶部 / Back to content</a></footer></div><aside class="hia-public-outline" data-hia-public-outline aria-label="On this page"><p class="hia-public-outline-label" data-hia-public-i18n="outline">本页内容</p><nav data-hia-public-outline-list></nav></aside>`
+    beforeMain: `<div class="hia-public-content-column"><details class="hia-public-mobile-navigation" data-hia-public-mobile-navigation><summary data-hia-public-i18n="nav">文档目录</summary><div data-hia-public-mobile-navigation-host></div></details><nav class="hia-public-breadcrumb" aria-label="面包屑" data-hia-public-i18n-aria="breadcrumbAccessible"><a href="./">js-cookie</a><span aria-hidden="true">/</span><span data-hia-public-breadcrumb-current data-hia-public-i18n="breadcrumb">概览</span></nav><details class="hia-public-mobile-outline"><summary data-hia-public-i18n="outline">本页内容</summary><nav data-hia-public-mobile-outline-list></nav></details>`,
+    afterMain: `<footer class="hia-public-footer" data-hia-public-footer><a href="pages/index.html" data-hia-public-i18n="pageIndex">完整页面索引</a><a href="#hia-public-main" data-hia-public-i18n="backToContent">返回正文顶部</a></footer></div><aside class="hia-public-outline" data-hia-public-outline aria-label="本页内容" data-hia-public-i18n-aria="outline"><p class="hia-public-outline-label" data-hia-public-i18n="outline">本页内容</p><nav data-hia-public-outline-list></nav></aside>`
   }
 }
 
@@ -384,6 +395,13 @@ function enhancePublicPortal(publicRoot) {
     }
   }
 
+  // <lang><zh-CN>空状态锚点兼容旧纯文本节点与 W-P125 owner 消息 span；它只界定受控替换范围，不吞并相邻 markup。</zh-CN><en>The empty-state anchor accepts both the legacy text node and the W-P125 owner message span; it bounds the controlled replacement without consuming adjacent markup.</en></lang>
+  const emptyStatePattern =
+    /<p class="hia-project-empty">(?:<span data-hia-ui-message="portal\.navigation\.select">[^<]*<\/span>|[^<]*)<\/p>/u
+  if (!emptyStatePattern.test(html)) {
+    throw new Error('Default Portal output lacks the supported empty-state shape.')
+  }
+
   // <lang><zh-CN>先确定性改写导航 shard，使 public/all scope 在首屏树加载前已成立。</zh-CN><en>Rewrite the navigation shard deterministically first so public/all scope exists before the initial tree load.</en></lang>
   groupApiScopeNavigation(publicRoot)
   const setRoute = findTopicRoute(publicRoot, 'init-set-')
@@ -405,7 +423,7 @@ function enhancePublicPortal(publicRoot) {
       `${structure.beforeMain}$1 id="hia-public-main"$2`
     )
     .replace(
-      /<p class="hia-project-empty">[^<]*<\/p>/u,
+      emptyStatePattern,
       renderPublicLanding(setRoute, getRoute)
     )
     .replace(

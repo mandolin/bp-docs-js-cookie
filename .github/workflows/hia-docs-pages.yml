@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/hia-jsdoc
-          ref: 8f246729a9bec72baafab0b7699a14536ae23d29
+          ref: 4774c9bd685f1b0ced7f0032a1208eeee2a13a5f
           path: .hia-docs-owners/HIA/hia-jsdoc
           persist-credentials: false
 
@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/HIA-Documentation
-          ref: 52c0b70607dfb06638e3f5ccfd49e91f2d1f578f
+          ref: 62f4570f7f70b094f65df32a2424d28463d0415d
           path: .hia-docs-owners/main-repo
           persist-credentials: false
 

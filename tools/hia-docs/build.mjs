@@ -188,7 +188,7 @@ function validateOwners() {
 /**
  * <lang><zh-CN>验证两个 JSDoc runtime 与 Portal CLI 都由显式安装/构建提供。</zh-CN><en>Validates that both JSDoc runtimes and the Portal CLI are supplied by explicit install/build steps.</en></lang>
  *
- * @returns {{directJsdocEntry: string, hiaJsdocRunnerEntry: string, portalCliEntry: string}} <lang><zh-CN>已验证入口。</zh-CN><en>Validated entries.</en></lang>
+ * @returns {{directJsdocEntry: string, hiaJsdocRunnerEntry: string, hiaJsdocSpecEntry: string, portalCliEntry: string}} <lang><zh-CN>已验证入口。</zh-CN><en>Validated entries.</en></lang>
  */
 function resolveRuntimeEntries() {
   // <lang><zh-CN>直接 JPHS/JTH 链复用 BP 工具专属 exact-lock runtime。</zh-CN><en>The direct JPHS/JTH chain uses the BP tool-specific exact-lock runtime.</en></lang>
@@ -212,6 +212,14 @@ function resolveRuntimeEntries() {
     'src',
     'index.mjs'
   )
+  // <lang><zh-CN>spec entry 是 Portal bridge descriptor 的唯一跨仓事实源。</zh-CN><en>The spec entry is the sole cross-repository fact source for the Portal bridge descriptor.</en></lang>
+  const hiaJsdocSpecEntry = path.join(
+    topology.hiaJsdocRoot,
+    'packages',
+    'jsdoc-spec',
+    'src',
+    'index.mjs'
+  )
   // <lang><zh-CN>Portal CLI 在 main owner 的一次性 build 后出现。</zh-CN><en>The Portal CLI appears after the one-time main-owner build.</en></lang>
   const portalCliEntry = path.join(
     topology.portalRoot,
@@ -226,12 +234,21 @@ function resolveRuntimeEntries() {
       'Pinned BP documentation runtime is missing; run its npm ci through mise.'
     )
   }
-  if (!fs.existsSync(hiaJsdocRuntime) || !fs.existsSync(hiaJsdocRunnerEntry)) {
+  if (
+    !fs.existsSync(hiaJsdocRuntime) ||
+    !fs.existsSync(hiaJsdocRunnerEntry) ||
+    !fs.existsSync(hiaJsdocSpecEntry)
+  ) {
     throw new Error(
       'Pinned hia-jsdoc workspace runtime is missing; run its npm ci through mise.'
     )
   }
-  return { directJsdocEntry, hiaJsdocRunnerEntry, portalCliEntry }
+  return {
+    directJsdocEntry,
+    hiaJsdocRunnerEntry,
+    hiaJsdocSpecEntry,
+    portalCliEntry
+  }
 }
 
 /**
@@ -489,9 +506,16 @@ function buildHiaJsdocProfile(profile, buildCommit, runHiaJsdocProject) {
  * @param {string} surfaceKind <lang><zh-CN>portal 或 portal-bridge。</zh-CN><en>portal or portal-bridge.</en></lang>
  * @param {string} integrationPath <lang><zh-CN>清洗后的 integration。</zh-CN><en>Sanitized integration.</en></lang>
  * @param {string} cliEntry <lang><zh-CN>已构建的 Portal CLI。</zh-CN><en>Built Portal CLI.</en></lang>
+ * @param {Object | undefined} uiLocaleBridge <lang><zh-CN>hia-jsdoc owner descriptor；默认 Portal 省略。</zh-CN><en>hia-jsdoc owner descriptor; omitted for the default Portal.</en></lang>
  * @returns {void}
  */
-function buildPortalSurface(profile, surfaceKind, integrationPath, cliEntry) {
+function buildPortalSurface(
+  profile,
+  surfaceKind,
+  integrationPath,
+  cliEntry,
+  uiLocaleBridge
+) {
   const surface = profile.surfaces.find(
     (candidate) => candidate.kind === surfaceKind
   )
@@ -523,7 +547,8 @@ function buildPortalSurface(profile, surfaceKind, integrationPath, cliEntry) {
       sourceMode: profile.sourceMode,
       skin: profile.portalSkin,
       scheme: profile.scheme,
-      localRoot: repositoryRoot
+      localRoot: repositoryRoot,
+      uiLocaleBridge
     })
   )
 
@@ -684,6 +709,20 @@ async function main() {
     if (typeof runnerModule.runHiaJsdocProject !== 'function') {
       throw new Error('hia-jsdoc owner lacks runHiaJsdocProject().')
     }
+    // <lang><zh-CN>descriptor 与 runner 从同一冻结 owner commit 导入，BP 不复制或重写 capability metadata。</zh-CN><en>The descriptor and runner are imported from the same pinned owner commit; BP neither copies nor rewrites capability metadata.</en></lang>
+    const hiaJsdocSpecModule = await import(
+      pathToFileURL(runtimeEntries.hiaJsdocSpecEntry).href
+    )
+    if (
+      typeof hiaJsdocSpecModule.createHiaJsdocPortalUiLocaleBridge !==
+      'function'
+    ) {
+      throw new Error(
+        'hia-jsdoc owner lacks createHiaJsdocPortalUiLocaleBridge().'
+      )
+    }
+    const hiaJsdocPortalUiLocaleBridge =
+      hiaJsdocSpecModule.createHiaJsdocPortalUiLocaleBridge()
     for (const profile of profiles.filter(
       (candidate) => candidate.pipeline === 'hia-jsdoc'
     )) {
@@ -716,7 +755,8 @@ async function main() {
         profile,
         'portal-bridge',
         integrationPath,
-        runtimeEntries.portalCliEntry
+        runtimeEntries.portalCliEntry,
+        hiaJsdocPortalUiLocaleBridge
       )
     }
     for (const profile of profiles.filter(

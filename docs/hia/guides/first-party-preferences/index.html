@@ -1,0 +1,142 @@
+<!doctype html>
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="第一方访客语言与主题偏好设置指南。">
+    <title>访客偏好集成指南 · js-cookie</title>
+    <link rel="stylesheet" href="assets/guide-portal.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到正文 / Skip to content</a>
+
+
+
+
+    <!-- <lang zh-CN>全局栏只保留品牌、当前 package/version、次级 API 入口和静态语言对应页。</lang>
+         <lang en>The global band keeps only the brand, package/version, secondary API entry, and static locale counterpart.</lang> -->
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="js-cookie 集成指南首页">
+        <span class="brand-mark" aria-hidden="true">JS</span>
+        <span class="brand-copy"><strong>js-cookie</strong><small>开发者集成指南</small></span>
+      </a>
+      <nav class="header-links" aria-label="全局链接">
+        <a href="guides/preferences.html#api-reference">API 参考</a>
+        <a href="index.en.html" lang="en" hreflang="en">English</a>
+      </nav>
+      <span class="version-badge">v3.0.8</span>
+    </header>
+
+    <div class="guide-layout">
+      <!-- <lang zh-CN>桌面 guide rail 用任务与步骤组织导航，不复刻 package/API 树。</lang>
+           <lang en>The desktop guide rail organizes tasks and steps instead of reproducing a package/API tree.</lang> -->
+      <aside class="guide-rail" aria-label="指南导航">
+        <p class="rail-kicker">COOKIE PREFERENCES</p>
+        <nav aria-label="开发者指南">
+          <a class="rail-link is-current" href="index.html" aria-current="page">开始这里</a>
+          <a class="rail-link" href="guides/preferences.html">实现偏好流程</a>
+          <a class="rail-link rail-sub" href="guides/preferences.html#read-validate">01　读取与校验</a>
+          <a class="rail-link rail-sub" href="guides/preferences.html#persist">02　更新与保存</a>
+          <a class="rail-link rail-sub" href="guides/preferences.html#fallback">03　失败时回退</a>
+          <a class="rail-link" href="guides/troubleshooting.html">排查与分支</a>
+          <a class="rail-link" href="guides/preferences.html#api-reference">API 快速参考</a>
+        </nav>
+        <p class="rail-footnote">以任务路径为入口<br>API 与边界作为次级内容</p>
+      </aside>
+
+      <main class="main-content" id="main-content">
+        <!-- <lang zh-CN>窄屏把 guide rail 与 outline 各自变为原生 disclosure，正文仍保持唯一主列。</lang>
+             <lang en>On narrow screens, the guide rail and outline become separate native disclosures while the article remains the single main column.</lang> -->
+        <details class="mobile-guide-nav">
+          <summary>指南导航</summary>
+          <nav aria-label="移动端指南导航">
+            <a href="index.html" aria-current="page">开始这里</a>
+            <a href="guides/preferences.html">实现偏好流程</a>
+            <a href="guides/troubleshooting.html">排查与分支</a>
+            <a href="guides/preferences.html#api-reference">API 快速参考</a>
+          </nav>
+        </details>
+        <details class="mobile-outline">
+          <summary>本页内容</summary>
+          <nav aria-label="移动端本页目录">
+            <a href="#goal">要完成什么</a><a href="#journey">流程概览</a><a href="#branches">先看分支</a>
+          </nav>
+        </details>
+
+        <nav class="breadcrumb" aria-label="面包屑"><span>js-cookie</span><span aria-hidden="true">/</span><span>开发者指南</span></nav>
+
+        <!-- <lang zh-CN>首屏直接说明目标、适用数据和模型事实边界，避免把示例参数误读为 BP 线上配置。</lang>
+             <lang en>The first screen states the goal, eligible data, and model boundary so example settings are not mistaken for BP production configuration.</lang> -->
+        <section class="hero" id="goal" aria-labelledby="page-title">
+          <p class="eyebrow">第一方网站 · 访客偏好</p>
+          <h1 id="page-title">为访客保存语言与主题偏好</h1>
+          <p class="hero-lede">按一个可恢复、可回退、可清除的流程完成集成；浏览器不保存时，当前页面仍照常工作。</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="guides/preferences.html">开始 5 步集成 <span aria-hidden="true">→</span></a>
+            <a class="secondary-action" href="guides/troubleshooting.html">我遇到了问题</a>
+          </div>
+          <p class="model-note"><strong>参考模型：</strong>以下 Cookie 名称、枚举、30 天持久期与属性是设计示例，不代表目标项目的生产配置。</p>
+        </section>
+
+        <!-- <lang zh-CN>任务卡让首次访问者从目标进入，API 查阅仍可达但不压过主流程。</lang>
+             <lang en>Task cards let first-time readers start from a goal while keeping API lookup available as a secondary path.</lang> -->
+        <section class="content-section" id="journey" aria-labelledby="journey-title">
+          <div class="section-heading"><p class="eyebrow">选择入口</p><h2 id="journey-title">你现在要完成哪件事？</h2></div>
+          <div class="task-grid">
+            <a class="task-card task-card-primary" href="guides/preferences.html">
+              <span class="card-number">01</span><span class="card-label">完整流程</span>
+              <h3>从读取到清除</h3><p>校验现有值、应用选择、处理浏览器拒写，并定义恢复默认的路径。</p>
+              <span class="card-link">阅读集成指南 <span aria-hidden="true">→</span></span>
+            </a>
+            <a class="task-card" href="guides/troubleshooting.html">
+              <span class="card-number">02</span><span class="card-label">异常分支</span>
+              <h3>偏好没有恢复？</h3><p>从缺失、非法值、scope 变化、SSR 或嵌入式上下文找到下一步。</p>
+              <span class="card-link">打开故障排查 <span aria-hidden="true">→</span></span>
+            </a>
+            <a class="task-card" href="guides/preferences.html#api-reference">
+              <span class="card-number">03</span><span class="card-label">次级参考</span>
+              <h3>查 set / get / remove</h3><p>查看与这条流程相关的最小 API 入口及 Cookie 属性边界。</p>
+              <span class="card-link">查看 API 摘要 <span aria-hidden="true">→</span></span>
+            </a>
+          </div>
+        </section>
+
+        <!-- <lang zh-CN>流程路线图把关键步骤和失败后的去向放在同一视野，不把教程变成孤立 API 卡片集合。</lang>
+             <lang en>The journey map keeps the primary steps and failure destinations together instead of turning the guide into isolated API cards.</lang> -->
+        <section class="content-section" aria-labelledby="steps-title">
+          <div class="section-heading"><p class="eyebrow">主路径</p><h2 id="steps-title">五步完成基础集成</h2></div>
+          <ol class="journey-list">
+            <li><span class="journey-index">1</span><div><strong>限定用途与字段</strong><p>只保存固定的语言和主题枚举，不放身份、会话、同意或分析数据。</p></div></li>
+            <li><span class="journey-index">2</span><div><strong>读取后先校验</strong><p>未知或损坏值走默认分支；每个偏好独立判定。</p></div></li>
+            <li><span class="journey-index">3</span><div><strong>先更新当前页面</strong><p>访客的选择立即生效，Cookie 写入只作尽力持久化。</p></div></li>
+            <li><span class="journey-index">4</span><div><strong>保留失败降级</strong><p>浏览器拒写、过期或清理后仍可阅读，不谎报跨访问保存成功。</p></div></li>
+            <li><span class="journey-index">5</span><div><strong>支持重置与迁移</strong><p>清除时复用原 scope；旧 path/domain 另设显式迁移步骤。</p></div></li>
+          </ol>
+        </section>
+
+        <!-- <lang zh-CN>分支卡片把不可互换的技术边界显式分流，避免把基础偏好流程扩成认证或跨站跟踪。</lang>
+             <lang en>Branch cards make non-interchangeable technical boundaries explicit so the preference flow does not grow into authentication or cross-site tracking.</lang> -->
+        <section class="content-section" id="branches" aria-labelledby="branches-title">
+          <div class="section-heading"><p class="eyebrow">先分流</p><h2 id="branches-title">遇到这些情境时，换一条路径</h2></div>
+          <div class="branch-grid">
+            <article class="branch-card"><span class="branch-tag">服务端渲染</span><h3>没有浏览器 document</h3><p>把读取放到客户端边界；服务端如需 Cookie，使用明确的请求 API 与独立隐私边界。</p><a href="guides/troubleshooting.html#ssr">查看 SSR 分支</a></article>
+            <article class="branch-card"><span class="branch-tag">第三方嵌入</span><h3>存储可能分区或被阻止</h3><p>不要承诺跨顶层站点共享；先确认是否真的需要嵌入式持久化。</p><a href="guides/troubleshooting.html#embedded">查看嵌入分支</a></article>
+            <article class="branch-card branch-card-warning"><span class="branch-tag">认证与会话</span><h3>不要使用 js-cookie 保存令牌</h3><p>认证 Cookie 应由服务端设置，并保留 HttpOnly 等服务端安全属性。</p><a href="guides/troubleshooting.html#authentication">查看安全边界</a></article>
+          </div>
+        </section>
+
+        <footer class="page-footer"><span>访客偏好集成指南</span><a href="guides/preferences.html">下一步：实现偏好流程 →</a><a href="../../" class="portal-return">返回 js-cookie 文档 Portal</a></footer>
+      </main>
+
+      <!-- <lang zh-CN>wide 视口展示可选 outline；compact/narrow 时由 CSS 收起或转为独立 disclosure。</lang>
+           <lang en>The optional outline appears in wide viewports and collapses or becomes an independent disclosure at compact/narrow widths.</lang> -->
+      <aside class="outline-rail" aria-label="本页内容">
+        <p class="rail-kicker">本页内容</p>
+        <nav><a href="#goal">要完成什么</a><a href="#journey">选择入口</a><a href="#steps-title">五步集成</a><a href="#branches">遇到分支</a></nav>
+        <div class="outline-callout"><strong>默认边界</strong><p>第一方显示偏好，不是认证 Cookie，也不是 consent 记录。</p></div>
+      </aside>
+    </div>
+  </body>
+</html>

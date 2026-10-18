@@ -85,6 +85,8 @@ All generated files remain ignored under `build/hia-docs/`:
 - `showcase/showcase-matrix.json`: public-safe 27-profile manifest;
 - `showcase/profiles/`: all 36 owner-rendered surfaces;
 - `public/`: chooser-free default `unified-portal.fetch.classic` Pages artifact with its publication manifest and BP product shell;
+- `public/guides/first-party-preferences/`: an additive bilingual static guide route for visitor language/theme preferences; baseline B still governs the existing landing/API Portal, and the guide's owner-authorized examples remain illustrative rather than verified production settings;
+  新增的双语静态指南 route 只覆盖访客语言/主题偏好流程；baseline B 继续管理现有首页/API Portal，负责人授权的示例仍是说明模型而非已核实的生产设置。
 - `evidence/`: counts, booleans, versions, aggregate hashes and statuses without source bodies;
 - `cache/`: execution-only configs and raw handoffs, deleted after every successful or failed build.
 

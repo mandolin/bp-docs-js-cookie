@@ -1,0 +1,250 @@
+
+
+/*
+ * <lang zh-CN>第一方访客偏好指南的局部响应式样式；仅为本 guide route 提供固定全局栏、步骤导航与窄屏回流。</lang>
+ * <lang en>Scoped responsive styles for the first-party visitor preference guide; provides its pinned header, step navigation, and narrow reflow only.</lang>
+ */
+:root {
+  color-scheme: light;
+  --canvas: #f5f7fb;
+  --surface: #ffffff;
+  --surface-subtle: #eef2f8;
+  --text: #172033;
+  --text-soft: #536078;
+  --text-faint: #748097;
+  --line: #dce2ec;
+  --line-strong: #c4cddd;
+  --accent: #2855d9;
+  --accent-strong: #173ca9;
+  --accent-soft: #e9efff;
+  --success: #16745a;
+  --warning: #8a5900;
+  --danger: #b4233d;
+  --content: 50rem;
+  --rail: 15.5rem;
+  --outline: 13rem;
+  --radius: 0.8rem;
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 0; }
+a { color: var(--accent-strong); text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
+a:hover { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 0.2rem; }
+code, pre { font-family: var(--font-mono); }
+code { color: #173ca9; }
+
+/* <lang zh-CN>评审识别、全局栏与跳转链接采用清晰视觉层级；评审状态条不会模拟生产功能。</lang>
+   <lang en>Review identity, global navigation, and skip link use clear hierarchy; the review strip does not simulate product functionality.</lang> */
+.skip-link { position: absolute; inset-block-start: 0.5rem; inset-inline-start: 0.75rem; z-index: 10; transform: translateY(-160%); background: var(--surface); padding: 0.55rem 0.8rem; }
+.skip-link:focus { transform: translateY(0); }
+.site-header { position: sticky; inset-block-start: 0; z-index: 20; min-height: 4.35rem; display: flex; align-items: center; gap: 1.5rem; padding: 0 1.5rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+/* <lang zh-CN>片段导航和跳到正文目标为吸附栏留出空间，避免目标标题滚到栏下方。</lang>
+   <lang en>Fragment and skip-link targets reserve room for the pinned header so destination headings remain visible.</lang> */
+:target { scroll-margin-block-start: 5.5rem; }
+.brand { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--text); text-decoration: none; min-width: 14rem; }
+.brand-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0.7rem; background: var(--accent); color: white; font-weight: 800; }
+.brand-copy { display: grid; line-height: 1.15; }
+.brand-copy strong { font-size: 1rem; }
+.brand-copy small { margin-top: 0.2rem; color: var(--text-faint); font-size: 0.72rem; }
+.header-links { display: flex; align-items: center; gap: 1.1rem; margin-inline-start: auto; }
+.header-links a { font-size: 0.86rem; font-weight: 650; }
+.version-badge { border: 1px solid var(--line-strong); border-radius: 999px; padding: 0.18rem 0.55rem; color: var(--text-soft); font-size: 0.73rem; font-weight: 700; }
+
+/* <lang zh-CN>wide 为 guide rail、正文和可选 outline；compact 只保留 guide rail，窄屏改成单列。</lang>
+   <lang en>Wide uses a guide rail, article, and optional outline; compact keeps only the guide rail, while narrow becomes one column.</lang> */
+.guide-layout { display: grid; grid-template-columns: minmax(13.5rem, var(--rail)) minmax(0, var(--content)) minmax(11rem, var(--outline)); justify-content: center; align-items: start; min-height: calc(100vh - 6.35rem); }
+.guide-rail, .outline-rail { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; align-self: start; }
+.guide-rail { padding: 2rem 1rem 2rem 1.25rem; border-right: 1px solid var(--line); }
+.outline-rail { padding: 2rem 1rem 2rem 1.2rem; border-left: 1px solid var(--line); }
+.rail-kicker { margin: 0 0 0.85rem; color: var(--text-faint); font-size: 0.67rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; }
+.guide-rail nav, .outline-rail nav { display: grid; gap: 0.25rem; }
+.rail-link, .outline-rail nav a { color: var(--text-soft); text-decoration: none; border-radius: 0.48rem; }
+.rail-link { padding: 0.55rem 0.65rem; font-size: 0.85rem; }
+.rail-sub { padding-inline-start: 1.25rem; font-size: 0.77rem; }
+.rail-link:hover, .outline-rail nav a:hover { background: var(--surface-subtle); color: var(--text); }
+.rail-link.is-current, .rail-link[aria-current="step"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 750; }
+.rail-footnote { margin: 1.2rem 0 0; padding: 0.8rem; border-top: 1px solid var(--line); color: var(--text-faint); font-size: 0.73rem; }
+.outline-rail nav a { padding: 0.35rem 0.45rem; font-size: 0.77rem; line-height: 1.45; }
+.outline-callout { margin-top: 1.3rem; padding: 0.8rem; border: 1px solid var(--line); border-radius: 0.65rem; background: var(--surface); font-size: 0.76rem; }
+.outline-callout strong { color: var(--accent-strong); }
+.outline-callout p { margin: 0.35rem 0 0; color: var(--text-soft); }
+.main-content { min-width: 0; padding: 2rem clamp(1.25rem, 3vw, 3rem) 4rem; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 0.55rem; margin: 0 0 1.3rem; color: var(--text-faint); font-size: 0.77rem; }
+.breadcrumb a { color: var(--text-soft); }
+.mobile-guide-nav, .mobile-outline { display: none; }
+
+/* <lang zh-CN>页面标题、入口卡片和流程路线图先突出任务，再引出 API 与边界。</lang>
+   <lang en>Page heading, task cards, and journey map prioritize the task before API and boundary details.</lang> */
+.hero { padding: 1.2rem 0 1.6rem; }
+.eyebrow { margin: 0 0 0.35rem; color: var(--accent-strong); font-size: 0.73rem; font-weight: 800; letter-spacing: 0.07em; }
+h1, h2, h3, p { overflow-wrap: anywhere; }
+h1 { max-width: 16ch; margin: 0.15rem 0 0.8rem; font-size: clamp(2.1rem, 4vw, 3.15rem); line-height: 1.12; letter-spacing: -0.045em; }
+.hero-lede { max-width: 58ch; margin: 0; color: var(--text-soft); font-size: 1.08rem; line-height: 1.72; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.25rem; }
+.primary-action, .secondary-action { display: inline-flex; align-items: center; gap: 0.65rem; min-height: 2.75rem; padding: 0.55rem 0.95rem; border: 1px solid var(--line-strong); border-radius: 0.65rem; text-decoration: none; font-weight: 750; }
+.primary-action { border-color: var(--accent); background: var(--accent); color: #fff; }
+.primary-action:hover { background: var(--accent-strong); color: #fff; }
+.secondary-action { background: var(--surface); color: var(--text); }
+.model-note { margin: 0.9rem 0 0; padding: 0.85rem 1rem; border-left: 4px solid #d38a16; border-radius: 0 0.55rem 0.55rem 0; background: #fff8e8; color: #563900; font-size: 0.84rem; }
+.content-section { margin-top: 2.2rem; }
+.section-heading { margin-bottom: 0.85rem; }
+.section-heading h2, .guide-step h2 { margin: 0.15rem 0 0; font-size: 1.55rem; line-height: 1.25; letter-spacing: -0.025em; }
+.task-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+.task-card { display: flex; min-width: 0; flex-direction: column; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; box-shadow: 0 7px 22px rgb(38 53 84 / 5%); }
+.task-card:hover { border-color: #99ace9; transform: translateY(-1px); color: var(--text); }
+.task-card-primary { border-top: 3px solid var(--accent); }
+.card-number { color: var(--accent-strong); font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800; }
+.card-label { margin-top: 0.55rem; color: var(--text-faint); font-size: 0.72rem; }
+.task-card h3 { margin: 0.2rem 0 0.35rem; font-size: 1.05rem; }
+.task-card p { flex: 1; margin: 0; color: var(--text-soft); font-size: 0.82rem; line-height: 1.55; }
+.card-link { margin-top: 1rem; color: var(--accent-strong); font-size: 0.79rem; font-weight: 750; }
+.journey-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.journey-list li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.8rem; padding: 0.8rem 0; border-bottom: 1px solid var(--line); }
+.journey-index { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 1px solid #b8c8f7; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 0.76rem; font-weight: 800; }
+.journey-list strong { font-size: 0.92rem; }
+.journey-list p { margin: 0.15rem 0 0; color: var(--text-soft); font-size: 0.82rem; }
+.branch-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+.branch-card { min-width: 0; padding: 0.95rem; border: 1px solid var(--line); border-radius: 0.7rem; background: var(--surface); }
+.branch-card-warning { border-color: #e5c7a3; background: #fffaf4; }
+.branch-tag { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 999px; background: var(--surface-subtle); color: var(--text-soft); font-size: 0.68rem; font-weight: 750; }
+.branch-card h3 { margin: 0.55rem 0 0.35rem; font-size: 0.95rem; }
+.branch-card p { margin: 0 0 0.55rem; color: var(--text-soft); font-size: 0.79rem; }
+.branch-card a { font-size: 0.78rem; font-weight: 700; }
+.page-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 0.83rem; }
+
+/* <lang zh-CN>教程正文使用阶段卡片、状态标签和原生 disclosure；导航折叠仍保留浏览器原生键盘行为。</lang>
+   <lang en>The guide uses step cards, state labels, and native disclosures; collapsed navigation keeps browser-native keyboard behavior.</lang> */
+.article-heading { padding: 0.5rem 0 1.2rem; }
+.article-heading h1 { max-width: 18ch; }
+.article-meta { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 1rem; }
+.meta-pill { padding: 0.25rem 0.55rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text-soft); font-size: 0.72rem; font-weight: 700; }
+.step-progress { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 1.4rem; padding: 0.65rem; border: 1px solid var(--line); border-radius: 0.75rem; background: var(--surface); list-style: none; }
+.step-progress li { min-width: 0; }
+.step-progress a { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.48rem; border-radius: 0.45rem; color: var(--text-soft); text-decoration: none; font-size: 0.72rem; font-weight: 700; }
+.step-progress a:hover, .step-progress a[aria-current="step"] { background: var(--accent-soft); color: var(--accent-strong); }
+.step-progress span { color: var(--accent-strong); font-family: var(--font-mono); font-weight: 850; }
+.guide-step { margin-top: 1.2rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 5px 18px rgb(38 53 84 / 4%); scroll-margin-top: 1rem; }
+.guide-step:target, .main-content:target { scroll-margin-block-start: 5.5rem; }
+.step-heading { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; }
+.step-number { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 0.75rem; background: var(--accent-soft); color: var(--accent-strong); font-family: var(--font-mono); font-weight: 850; }
+.reference-mark { width: auto; padding-inline: 0.45rem; font-size: 0.76rem; }
+.guide-step > p { color: var(--text-soft); }
+.preference-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 0.65rem; }
+.preference-table { width: 100%; border-collapse: collapse; min-width: 34rem; font-size: 0.81rem; }
+.preference-table caption { padding: 0.65rem; background: var(--surface-subtle); color: var(--text-soft); text-align: start; font-weight: 700; }
+.preference-table th, .preference-table td { padding: 0.65rem; border-top: 1px solid var(--line); text-align: start; vertical-align: top; }
+.preference-table thead th { color: var(--text-soft); font-size: 0.73rem; }
+.preference-table tbody th { white-space: nowrap; }
+.code-card { margin: 1rem 0; border: 1px solid var(--line-strong); border-radius: 0.7rem; overflow: hidden; background: #f1f4f9; }
+.code-card-header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; padding: 0.58rem 0.8rem; border-bottom: 1px solid var(--line); color: var(--text-soft); font-size: 0.73rem; font-weight: 700; }
+.code-card pre { max-width: 100%; margin: 0; padding: 0.95rem; overflow: auto; color: #1f2a3d; font-size: 0.77rem; line-height: 1.6; tab-size: 2; }
+.code-card code { color: inherit; white-space: pre; }
+.code-comment { color: #536078; }
+.callout { margin: 0.9rem 0; padding: 0.85rem 1rem; border-inline-start: 4px solid var(--accent); border-radius: 0 0.55rem 0.55rem 0; background: #f0f4ff; }
+.callout strong { color: var(--accent-strong); }
+.callout p { margin: 0.25rem 0 0; color: var(--text-soft); font-size: 0.84rem; }
+.callout-warning { border-color: #d38a16; background: #fff8e8; }
+.callout-warning strong { color: #674700; }
+.callout-danger { border-color: var(--danger); background: #fff0f2; }
+.callout-danger strong { color: #8f1930; }
+.callout-info { border-color: #3277bd; background: #eef7ff; }
+.step-outcome { padding-top: 0.7rem; border-top: 1px solid var(--line); font-size: 0.86rem; }
+.outcome-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.outcome-card { min-width: 0; padding: 0.85rem; border: 1px solid var(--line); border-radius: 0.65rem; }
+.outcome-card h3 { margin: 0.45rem 0 0.25rem; font-size: 0.9rem; }
+.outcome-card p { margin: 0; color: var(--text-soft); font-size: 0.8rem; }
+.state-label { display: inline-flex; align-items: center; padding: 0.16rem 0.45rem; border-radius: 999px; font-size: 0.67rem; font-weight: 800; }
+.state-empty { background: #edf2f8; color: #445269; }
+.state-error { background: #ffedf0; color: #92243a; }
+.state-blocked { background: #fff2d9; color: #704800; }
+.state-conflict { background: #eeeaff; color: #4f3d9c; }
+.branch-detail { margin-top: 0.65rem; border: 1px solid var(--line); border-radius: 0.65rem; background: #fbfcfe; }
+.branch-detail summary { padding: 0.7rem 0.85rem; color: var(--text); cursor: pointer; font-size: 0.84rem; font-weight: 750; }
+.branch-detail p { margin: 0; padding: 0 0.85rem 0.8rem; color: var(--text-soft); font-size: 0.82rem; }
+.api-list { margin: 0; }
+.api-list div { display: grid; grid-template-columns: minmax(15rem, 0.9fr) minmax(0, 1.1fr); gap: 0.8rem; padding: 0.65rem 0; border-bottom: 1px solid var(--line); }
+.api-list dt { font-weight: 750; }
+.api-list dd { margin: 0; color: var(--text-soft); font-size: 0.82rem; }
+.reference-links { margin-top: 1rem; font-size: 0.8rem; }
+.inline-return { display: inline-block; margin-top: 0.65rem; font-size: 0.84rem; font-weight: 750; }
+.decision-banner { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.7rem; padding: 0.85rem; border: 1px solid #b9c9f7; border-radius: 0.7rem; background: var(--accent-soft); }
+.decision-mark { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 850; }
+.decision-banner p { margin: 0.2rem 0 0; color: var(--text-soft); font-size: 0.82rem; }
+.issue-list { display: grid; }
+.issue-row { display: grid; grid-template-columns: 7.8rem minmax(0, 1fr) auto; gap: 0.75rem; align-items: start; padding: 0.85rem 0; border-bottom: 1px solid var(--line); }
+.issue-row h3 { margin: 0; font-size: 0.88rem; }
+.issue-row p { margin: 0.2rem 0 0; color: var(--text-soft); font-size: 0.8rem; }
+.issue-row > a { font-size: 0.75rem; font-weight: 750; white-space: nowrap; }
+
+/* <lang zh-CN>compact 下取消 outline 常驻；narrow 保留正文逻辑顺序并容纳 320px 长表/代码溢出。</lang>
+   <lang en>Compact removes the persistent outline; narrow preserves article order and contains long table/code overflow down to 320px.</lang> */
+@media (max-width: 1120px) {
+  .guide-layout { grid-template-columns: minmax(12.5rem, 14rem) minmax(0, var(--content)); }
+  .outline-rail { display: none; }
+}
+@media (max-width: 760px) {
+  .site-header { min-height: 3.9rem; gap: 0.5rem; padding-inline: 0.8rem; }
+  .brand { min-width: 0; gap: 0.5rem; }
+  .brand-mark { width: 2.15rem; height: 2.15rem; }
+  .brand-copy small { font-size: 0.65rem; }
+  .header-links { gap: 0.55rem; }
+  .header-links a { font-size: 0.73rem; }
+  .version-badge { display: none; }
+  .guide-layout { display: block; min-height: auto; }
+  .guide-rail, .outline-rail { display: none; }
+  .main-content { padding: 0.95rem 0.85rem 2.5rem; }
+  .mobile-guide-nav, .mobile-outline { display: block; margin: 0.55rem 0; border: 1px solid var(--line); border-radius: 0.6rem; background: var(--surface); }
+  .mobile-guide-nav summary, .mobile-outline summary { padding: 0.62rem 0.75rem; color: var(--text); cursor: pointer; font-size: 0.82rem; font-weight: 750; }
+  .mobile-guide-nav nav, .mobile-outline nav { display: grid; gap: 0.2rem; padding: 0.2rem 0.75rem 0.7rem; }
+  .mobile-guide-nav nav a, .mobile-outline nav a { padding: 0.25rem 0; font-size: 0.8rem; }
+  .breadcrumb { margin-top: 0.8rem; }
+  .hero { padding-top: 0.45rem; }
+  h1 { font-size: clamp(2rem, 9vw, 2.55rem); }
+  .hero-lede { font-size: 0.98rem; }
+  .task-grid, .branch-grid, .outcome-grid { grid-template-columns: 1fr; }
+  .task-card { padding: 0.9rem; }
+  .content-section { margin-top: 1.75rem; }
+  .guide-step { padding: 0.9rem; }
+  .step-progress { gap: 0.15rem; padding: 0.45rem; }
+  .step-progress a { padding: 0.32rem; font-size: 0.67rem; }
+  .issue-row { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+  .issue-row > a { white-space: normal; }
+  .api-list div { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+  .page-footer { flex-direction: column; }
+}
+@media (max-width: 360px) {
+  .main-content { padding-inline: 0.7rem; }
+  .header-links { gap: 0.35rem; }
+  .brand-copy small { max-width: 9rem; }
+  .primary-action, .secondary-action { width: 100%; justify-content: center; }
+  .step-heading { grid-template-columns: 2.1rem minmax(0, 1fr); gap: 0.55rem; }
+  .step-number { width: 2rem; height: 2rem; }
+}
+
+/* <lang zh-CN>强制颜色模式和打印依赖边框/文本表达状态；不以色彩作为唯一反馈。</lang>
+   <lang en>Forced-colors and print use borders/text to convey state and never rely on color alone.</lang> */
+@media (forced-colors: active) {
+  .brand-mark, .primary-action, .decision-mark { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  .task-card, .guide-step, .branch-card, .callout, .branch-detail, .mobile-guide-nav, .mobile-outline { border: 1px solid CanvasText; box-shadow: none; }
+  .rail-link.is-current, .rail-link[aria-current="step"], .step-progress a[aria-current="step"] { outline: 2px solid Highlight; }
+  a { color: LinkText; }
+}
+@media print {
+  .site-header, .guide-rail, .outline-rail, .mobile-guide-nav, .mobile-outline, .hero-actions { display: none !important; }
+  .guide-layout { display: block; }
+  .main-content { max-width: 52rem; margin: 0 auto; padding: 0; }
+  .guide-step, .task-card, .branch-card { break-inside: avoid; box-shadow: none; }
+  a { color: inherit; text-decoration: underline; }
+  .model-note, .callout { border: 1px solid currentColor; background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

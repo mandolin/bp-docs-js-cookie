@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- <lang zh-CN>本页用问题入口呈现偏好流程的异常分支，给每个问题一个可回到主步骤的去向。</lang>
+     <lang en>This page presents preference-flow exception branches by problem and routes each one back to a primary guide step.</lang> -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="排查 Cookie 偏好恢复、写入与 scope 问题。">
+    <title>排查与分支 · js-cookie</title><link rel="stylesheet" href="../assets/guide-portal.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到正文 / Skip to content</a>
+
+    <header class="site-header"><a class="brand" href="../index.html" aria-label="js-cookie 集成指南首页"><span class="brand-mark" aria-hidden="true">JS</span><span class="brand-copy"><strong>js-cookie</strong><small>开发者集成指南</small></span></a><nav class="header-links" aria-label="全局链接"><a href="preferences.html#api-reference">API 参考</a><a href="troubleshooting.en.html" lang="en" hreflang="en">English</a></nav><span class="version-badge">v3.0.8</span></header>
+    <div class="guide-layout">
+      <aside class="guide-rail" aria-label="指南导航"><p class="rail-kicker">COOKIE PREFERENCES</p><nav aria-label="开发者指南"><a class="rail-link" href="../index.html">开始这里</a><a class="rail-link" href="preferences.html">实现偏好流程</a><a class="rail-link rail-sub" href="preferences.html#read-validate">01　读取与校验</a><a class="rail-link rail-sub" href="preferences.html#persist">02　更新与保存</a><a class="rail-link rail-sub" href="preferences.html#fallback">03　失败时回退</a><a class="rail-link is-current" href="troubleshooting.html" aria-current="page">排查与分支</a><a class="rail-link" href="preferences.html#api-reference">API 快速参考</a></nav><p class="rail-footnote">遇到边界问题时<br>先定位情境再选处理</p></aside>
+      <main class="main-content" id="main-content">
+        <details class="mobile-guide-nav"><summary>指南导航</summary><nav aria-label="移动端指南导航"><a href="../index.html">开始这里</a><a href="preferences.html">实现偏好流程</a><a href="troubleshooting.html" aria-current="page">排查与分支</a><a href="preferences.html#api-reference">API 快速参考</a></nav></details>
+        <details class="mobile-outline"><summary>本页问题</summary><nav aria-label="移动端问题目录"><a href="#value">值没有恢复</a><a href="#write">写入没有保留</a><a href="#scope">读取到旧值</a><a href="#environment">运行环境分支</a><a href="#security">安全用途分支</a></nav></details>
+        <nav class="breadcrumb" aria-label="面包屑"><a href="../index.html">js-cookie</a><span aria-hidden="true">/</span><a href="preferences.html">指南</a><span aria-hidden="true">/</span><span>排查与分支</span></nav>
+        <header class="article-heading"><p class="eyebrow">故障排查 · 分支导航</p><h1>先判断情境，再选择处理路径</h1><p class="hero-lede">Cookie 丢失、不可见或被浏览器拒绝时，偏好流程应当回退而不是绕过限制。</p><div class="article-meta"><span class="meta-pill">基于 29 个代表性场景</span><span class="meta-pill">问题 → 分支 → 主步骤</span></div></header>
+        <div class="model-note"><strong>覆盖边界：</strong>这是负责人授权的现实类别模型，不是目标仓生产问题统计、浏览器兼容认证或用户支持记录。</div>
+
+        <!-- <lang zh-CN>分支状态目录把触发条件、处理动作和回到主指南的链接并列，支持扫读与辅助技术导航。</lang>
+             <lang en>The branch index places trigger, action, and return link together for scanning and assistive-technology navigation.</lang> -->
+        <section class="guide-step" id="value" aria-labelledby="value-title"><div class="step-heading"><span class="step-number">A</span><div><p class="eyebrow">读取与校验</p><h2 id="value-title">值没有恢复，或恢复成了意外选项</h2></div></div>
+          <div class="issue-list">
+            <article class="issue-row"><span class="state-label state-empty">缺失</span><div><h3>首次访问、过期、站点数据被清理</h3><p>分别回退到 `zh-CN` 与 `system`，再允许访客选择。Cookie 可被提前清除，不是永久数据库。</p></div><a href="preferences.html#read-validate">回到步骤 01</a></article>
+            <article class="issue-row"><span class="state-label state-error">格式异常</span><div><h3>未知枚举、截断值或解码失败</h3><p>只丢弃无效字段并使用默认；不要执行字符串、拼接 HTML 或无限尝试宽松解码。</p></div><a href="preferences.html#read-validate">回到步骤 01</a></article>
+            <article class="issue-row"><span class="state-label state-conflict">部分状态</span><div><h3>语言有效，主题缺失（或相反）</h3><p>独立校验每个字段，保留有效选择；不要因为一项异常重置全部偏好。</p></div><a href="preferences.html#read-validate">回到步骤 01</a></article>
+            <article class="issue-row"><span class="state-label state-conflict">并发 / 系统</span><div><h3>两个标签页或系统主题产生不同结果</h3><p>定义入口读取和最后写入策略；js-cookie 本身不提供跨标签事件协议。只有选择 `system` 时跟随系统主题，显式 `light` / `dark` 优先。</p></div><a href="preferences.html#persist">回到步骤 02</a></article>
+          </div>
+        </section>
+
+        <section class="guide-step" id="write" aria-labelledby="write-title"><div class="step-heading"><span class="step-number">B</span><div><p class="eyebrow">更新与保存</p><h2 id="write-title">页面改了，但下一次访问没有保留</h2></div></div>
+          <div class="decision-banner"><span class="decision-mark" aria-hidden="true">?</span><div><strong>先区分“当前页已应用”和“下次访问可恢复”</strong><p>当前页应用由应用状态决定；持久化还受过期、scope、HTTPS、浏览器策略和用户清理影响。</p></div></div>
+          <details class="branch-detail"><summary>浏览器设置阻止写入，应该怎么反馈？</summary><p>保留本页选择和正文功能；只说明无法确认跨访问恢复，不向用户承诺保存成功，也不尝试绕开浏览器策略。</p></details>
+          <details class="branch-detail"><summary>生产 HTTPS 与本地 HTTP 的结果不同？</summary><p>生产 HTTPS 明确核对 `Secure`；开发 localhost 的行为单独验证。不要把本地例外外推到真实域名，也不要在示例中放真实 host。</p></details>
+          <a class="inline-return" href="preferences.html#persist">查看步骤 02：更新与保存 →</a>
+        </section>
+
+        <section class="guide-step" id="scope" aria-labelledby="scope-title"><div class="step-heading"><span class="step-number">C</span><div><p class="eyebrow">Path / Domain / 迁移</p><h2 id="scope-title">读到旧值、重复值或删不掉</h2></div></div>
+          <div class="issue-list">
+            <article class="issue-row"><span class="state-label state-conflict">Path 改变</span><div><h3>站点从根路径迁到子路径</h3><p>固定并记录新写入 path；为旧 path 制定迁移/清理步骤。Path 控制发送范围，不是安全边界。</p></div><a href="preferences.html#remove">回到步骤 04</a></article>
+            <article class="issue-row"><span class="state-label state-conflict">子域隔离</span><div><h3>不同子域需要共享偏好</h3><p>本模型默认 host-only。扩大 Domain 前先确认产品需要、所有子域信任边界与删除策略。</p></div><a href="preferences.html#boundary">回到步骤 00</a></article>
+            <article class="issue-row"><span class="state-label state-conflict">旧 scope</span><div><h3>同名 Cookie 曾在多个 scope 写入</h3><p>不要假设 `get()` 可以判定具体 path/domain 来源；必须按迁移前记录处理旧 scope。</p></div><a href="preferences.html#remove">回到步骤 04</a></article>
+            <article class="issue-row"><span class="state-label state-blocked">容量 / 驱逐</span><div><h3>偏好偶尔消失或存储被回收</h3><p>只保存短枚举；丢失后回默认。不要把 Cookie 当作大对象存储或永久用户数据库。</p></div><a href="preferences.html#fallback">回到步骤 03</a></article>
+          </div>
+        </section>
+
+        <section class="guide-step" id="environment" aria-labelledby="environment-title"><div class="step-heading"><span class="step-number">D</span><div><p class="eyebrow">环境与嵌入</p><h2 id="environment-title">代码在浏览器外运行，或页面处于 iframe</h2></div></div>
+          <div class="branch-grid">
+            <article class="branch-card"><span class="branch-tag">SSR / SSG / Node</span><h3 id="ssr">把浏览器访问放在客户端</h3><p>构建阶段没有 `document`。服务端确实需要 Cookie 时，使用明确的 request API，不复用浏览器偏好读取来泄露请求值。</p></article>
+            <article class="branch-card"><span class="branch-tag">第三方 iframe</span><h3 id="embedded">默认假设存储受限</h3><p>嵌入上下文可能遇到分区或阻止。CHIPS/Storage Access 需要独立需求和兼容性审查，不等于跨站共享保证。</p></article>
+            <article class="branch-card"><span class="branch-tag">无 JavaScript</span><h3>正文与导航仍要可达</h3><p>无脚本时不宣称 js-cookie 能保存；静态内容、普通链接和基础故障说明仍可读。</p></article>
+            <article class="branch-card"><span class="branch-tag">同步性能</span><h3 id="performance">不要在每次渲染中读取</h3><p>`document.cookie` 是同步接口；在应用入口读取并校验一次，再使用应用状态。Cookie Store API 是另一条异步路线，需单独做功能检测与 fallback。</p></article>
+          </div>
+          <div class="callout callout-info"><strong>浏览器版本也要单独核对</strong><p>为实际支持的浏览器验证读、写、删除与 HTTPS 属性；本文模型不是浏览器兼容认证，也不承诺 Cookie 永不被驱逐。</p></div>
+        </section>
+
+        <section class="guide-step" id="security" aria-labelledby="security-title"><div class="step-heading"><span class="step-number">E</span><div><p class="eyebrow">安全 / 隐私重新定界</p><h2 id="security-title">用途变成认证、同意或追踪</h2></div></div>
+          <div class="callout callout-danger"><strong id="authentication">停止沿用偏好设置路径。</strong><p>会话/token 应由服务端按认证设计设置 HttpOnly Cookie。SameSite 只是发送条件与部分防护，不能替代敏感写操作的 CSRF 与授权方案。</p></div>
+          <p>同意记录、analytics 与广告追踪需要独立的业务用途、隐私负责人决策、字段与保留政策；不能偷偷并入语言/主题流程。登出或切换账户是否保留偏好也要明确；本参考模型按与账户无关处理，认证状态由服务端独立管理。</p>
+          <a class="inline-return" href="preferences.html#boundary">回到步骤 00：限定用途 →</a>
+        </section>
+        <footer class="page-footer"><a href="preferences.html">← 返回偏好集成指南</a><a href="../index.html">回到指南首页 →</a><a href="../../../" class="portal-return">返回 js-cookie 文档 Portal</a></footer>
+      </main>
+      <aside class="outline-rail" aria-label="本页问题"><p class="rail-kicker">按问题定位</p><nav><a href="#value">值没有恢复</a><a href="#write">写入没有保留</a><a href="#scope">Path / Domain / 迁移</a><a href="#environment">SSR / iframe / no-script</a><a href="#security">认证 / consent / analytics</a></nav><div class="outline-callout"><strong>主要分支</strong><p>缺失 → 默认<br>非法 → 丢弃<br>拒写 → 本页继续</p></div></aside>
+    </div>
+  </body>
+</html>

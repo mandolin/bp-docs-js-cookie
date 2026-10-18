@@ -1,0 +1,126 @@
+<!doctype html>
+
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="按步骤集成语言与主题 Cookie 偏好。">
+    <title>实现偏好流程 · js-cookie</title><link rel="stylesheet" href="../assets/guide-portal.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到正文 / Skip to content</a>
+
+    <header class="site-header">
+      <a class="brand" href="../index.html" aria-label="js-cookie 集成指南首页"><span class="brand-mark" aria-hidden="true">JS</span><span class="brand-copy"><strong>js-cookie</strong><small>开发者集成指南</small></span></a>
+      <nav class="header-links" aria-label="全局链接"><a href="#api-reference">API 参考</a><a href="preferences.en.html" lang="en" hreflang="en">English</a></nav><span class="version-badge">v3.0.8</span>
+    </header>
+    <div class="guide-layout">
+      <!-- <lang zh-CN>左侧 rail 表示用户旅程位置；它是普通导航链接，不声明应用菜单或 ARIA tree。</lang>
+           <lang en>The left rail shows journey position using ordinary navigation links; it does not claim an application menu or ARIA tree.</lang> -->
+      <aside class="guide-rail" aria-label="指南导航">
+        <p class="rail-kicker">COOKIE PREFERENCES</p><nav aria-label="开发者指南">
+          <a class="rail-link" href="../index.html">开始这里</a><a class="rail-link is-current" href="preferences.html" aria-current="page">实现偏好流程</a>
+          <a class="rail-link rail-sub" href="#boundary">00　限定用途</a><a class="rail-link rail-sub" href="#read-validate" aria-current="step">01　读取与校验</a>
+          <a class="rail-link rail-sub" href="#persist">02　更新与保存</a><a class="rail-link rail-sub" href="#fallback">03　失败时回退</a><a class="rail-link rail-sub" href="#remove">04　清除与迁移</a>
+          <a class="rail-link" href="troubleshooting.html">排查与分支</a><a class="rail-link" href="#api-reference">API 快速参考</a>
+        </nav><p class="rail-footnote">基础流程不处理认证、交易或追踪</p>
+      </aside>
+      <main class="main-content" id="main-content">
+        <details class="mobile-guide-nav"><summary>指南导航</summary><nav aria-label="移动端指南导航"><a href="../index.html">开始这里</a><a href="preferences.html" aria-current="page">实现偏好流程</a><a href="troubleshooting.html">排查与分支</a><a href="#api-reference">API 快速参考</a></nav></details>
+        <details class="mobile-outline"><summary>本页内容</summary><nav aria-label="移动端本页目录"><a href="#boundary">限定用途</a><a href="#read-validate">读取与校验</a><a href="#persist">更新与保存</a><a href="#fallback">失败时回退</a><a href="#remove">清除与迁移</a><a href="#api-reference">API 摘要</a></nav></details>
+        <nav class="breadcrumb" aria-label="面包屑"><a href="../index.html">js-cookie</a><span aria-hidden="true">/</span><span>指南</span><span aria-hidden="true">/</span><span>访客偏好</span></nav>
+
+        <!-- <lang zh-CN>标题先给出目标和五步范围，再提示参数属于参考模型。</lang>
+             <lang en>The heading states the goal and five-step scope before identifying example settings as a reference model.</lang> -->
+        <header class="article-heading">
+          <p class="eyebrow">指南 · 约 6 分钟</p><h1>实现访客语言与主题偏好</h1>
+          <p class="hero-lede">让访客选择立即生效；可恢复时再跨访问保留，并为每个失败分支设计安全默认。</p>
+          <div class="article-meta"><span class="meta-pill">第一方显示状态</span><span class="meta-pill">不含用户身份</span><span class="meta-pill">5 个步骤</span></div>
+        </header>
+        <div class="model-note"><strong>模型参数，不是生产事实。</strong>示例值采用 `site_locale`、`site_theme`、30 天、`path=/`、host-only 与 `SameSite=Lax`；线上部署、域名及浏览器行为尚未从 BP 配置或生产环境核验。</div>
+
+        <ol class="step-progress" aria-label="集成步骤"><li><a href="#boundary"><span>00</span>限定用途</a></li><li><a href="#read-validate" aria-current="step"><span>01</span>读取校验</a></li><li><a href="#persist"><span>02</span>更新保存</a></li><li><a href="#fallback"><span>03</span>失败回退</a></li><li><a href="#remove"><span>04</span>清除迁移</a></li></ol>
+
+        <!-- <lang zh-CN>每个步骤同时说明动作、结果和不适用场景，让读者不必先理解完整 API 树。</lang>
+             <lang en>Each step states its action, outcome, and exclusions so readers do not need to understand the full API tree first.</lang> -->
+        <section class="guide-step" id="boundary" aria-labelledby="boundary-title">
+          <div class="step-heading"><span class="step-number">00</span><div><p class="eyebrow">先定边界</p><h2 id="boundary-title">只保存非敏感的显示偏好</h2></div></div>
+          <p>这个流程只处理访客明确选择的语言和主题。用途、字段与默认值在此固定；不要把自由文本或任意对象直接写进 Cookie。</p>
+          <div class="preference-table-wrap"><table class="preference-table"><caption>负责人授权参考模型的字段 allowlist</caption><thead><tr><th scope="col">名称</th><th scope="col">允许值</th><th scope="col">回退值</th><th scope="col">用途</th></tr></thead><tbody>
+            <tr><th scope="row"><code>site_locale</code></th><td><code>zh-CN</code> / <code>en</code></td><td><code>zh-CN</code></td><td>当前站点内容语言</td></tr>
+            <tr><th scope="row"><code>site_theme</code></th><td><code>system</code> / <code>light</code> / <code>dark</code></td><td><code>system</code></td><td>当前站点视觉主题</td></tr>
+          </tbody></table></div>
+          <div class="callout callout-danger"><strong>排除数据</strong><p>用户名、session/token、认证/授权、同意证明、analytics、广告追踪及完整请求头均不属于此流程。</p></div>
+        </section>
+
+        <section class="guide-step" id="read-validate" aria-labelledby="read-title">
+          <div class="step-heading"><span class="step-number">01</span><div><p class="eyebrow">恢复已有选择</p><h2 id="read-title">读取后先校验，再应用界面</h2></div></div>
+          <p>把 Cookie 值当作不可信输入。缺失、损坏或超出 allowlist 时回到模型默认；两个字段独立处理，一个异常不抹掉另一个有效选择。</p>
+          <div class="code-card"><div class="code-card-header"><span>偏好恢复 · 概念示例</span><span>需在浏览器客户端执行</span></div><pre><code><span class="code-comment">// &lt;lang zh-CN&gt;枚举集合定义可进入界面状态的唯一取值。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;These sets define the only values allowed to become UI state.&lt;/lang&gt;</span>
+const localeValues = new Set(["zh-CN", "en"]);
+const themeValues = new Set(["system", "light", "dark"]);
+
+<span class="code-comment">// &lt;lang zh-CN&gt;Cookie 值是不可信输入，先分别读取两项，不合并身份信息。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;Cookie values are untrusted; read the two preferences independently and include no identity data.&lt;/lang&gt;</span>
+const storedLocale = Cookies.get("site_locale");
+const storedTheme = Cookies.get("site_theme");
+
+<span class="code-comment">// &lt;lang zh-CN&gt;只有 allowlist 命中才应用；未知或缺失值使用显式默认。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;Apply only allowlisted values; missing or unknown values use explicit defaults.&lt;/lang&gt;</span>
+const locale = localeValues.has(storedLocale) ? storedLocale : "zh-CN";
+const theme = themeValues.has(storedTheme) ? storedTheme : "system";</code></pre></div>
+          <p class="step-outcome"><strong>结果：</strong>每次入口都能从确定状态开始；非法 Cookie 不会决定 DOM、样式或执行路径。</p>
+        </section>
+
+        <section class="guide-step" id="persist" aria-labelledby="persist-title">
+          <div class="step-heading"><span class="step-number">02</span><div><p class="eyebrow">访客作出选择</p><h2 id="persist-title">先更新当前页，再尽力写入</h2></div></div>
+          <p>收到设置控件的选择后，先以已校验枚举更新当前页面，再调用 `Cookies.set()`。建议以 30 天、根路径、host-only 和 Lax 作为本模型示例；生产部署要单独确认 HTTPS 下的 `Secure` 与真实 scope。</p>
+          <div class="code-card"><div class="code-card-header"><span>写入示例 · illustrative defaults</span><span>不承诺浏览器持久化</span></div><pre><code><span class="code-comment">// &lt;lang zh-CN&gt;selectedTheme 必须先通过 themeValues 校验；属性来自固定配置。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;Validate selectedTheme against themeValues first; keep attributes in fixed configuration.&lt;/lang&gt;</span>
+const preferenceAttributes = {
+  expires: 30,
+  path: "/",
+  sameSite: "Lax",
+  secure: window.location.protocol === "https:",
+};
+
+<span class="code-comment">// &lt;lang zh-CN&gt;先完成当前页状态更新；set 调用不等于跨访问保存成功。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;Update current-page state first; calling set does not prove persistence across visits.&lt;/lang&gt;</span>
+Cookies.set("site_theme", selectedTheme, preferenceAttributes);</code></pre></div>
+          <div class="callout callout-info"><strong>访客反馈应准确</strong><p>可以反馈“本页已应用”。只有重新读取并确认时，才说“下次访问已恢复”；不要把函数返回字符串描述为浏览器保存回执。</p></div>
+        </section>
+
+        <section class="guide-step" id="fallback" aria-labelledby="fallback-title">
+          <div class="step-heading"><span class="step-number">03</span><div><p class="eyebrow">浏览器或环境不配合</p><h2 id="fallback-title">降级到当前页默认，不绕过策略</h2></div></div>
+          <div class="outcome-grid">
+            <article class="outcome-card"><span class="state-label state-empty">缺失 / 过期</span><h3>使用默认值</h3><p>浏览器清理站点数据或 Cookie 到期后，重新走首次访问分支；核心正文不依赖它。</p></article>
+            <article class="outcome-card"><span class="state-label state-error">非法 / 解码异常</span><h3>丢弃这一项</h3><p>校验并处理解码失败；不反复宽松解码，也不让异常 Cookie 值进入界面。</p></article>
+            <article class="outcome-card"><span class="state-label state-blocked">写入被阻止</span><h3>保留当页选择</h3><p>继续以应用状态呈现；明确跨访问恢复不保证，不尝试绕过浏览器隐私策略。</p></article>
+            <article class="outcome-card"><span class="state-label state-conflict">SSR / Node</span><h3>放到客户端边界</h3><p>不要在构建阶段访问不存在的 `document`；服务端读取需走明确的 request API 与权限范围。</p></article>
+          </div>
+          <details class="branch-detail"><summary>如果页面运行在第三方 iframe</summary><p>把 Cookie 视作可能被阻止或分区。只有真实产品需要时才研究 CHIPS、Storage Access API 与目标浏览器支持矩阵；不要把 `SameSite=None` 当作绕过权限的开关。</p></details>
+          <details class="branch-detail"><summary>如果需求转为登录、授权或交易</summary><p>离开本指南的偏好流程。认证 Cookie 由服务端设置并保护；客户端 js-cookie 无法读取 HttpOnly Cookie。写操作还需独立授权和 CSRF 设计。</p></details>
+        </section>
+
+        <section class="guide-step" id="remove" aria-labelledby="remove-title">
+          <div class="step-heading"><span class="step-number">04</span><div><p class="eyebrow">访客清除或版本迁移</p><h2 id="remove-title">复用 scope 清除，旧 scope 显式迁移</h2></div></div>
+          <p>删除操作应使用写入时一致的 `path` 和 `domain`（如曾设置）。若历史版本曾在另一个 path/domain 写过同名 Cookie，先定义并核验旧 scope 清理策略，不假设读取结果能指出来源。</p>
+          <div class="code-card"><div class="code-card-header"><span>清除示例</span><span>scope 必须与写入匹配</span></div><pre><code><span class="code-comment">// &lt;lang zh-CN&gt;使用与 set 相同的 path/domain 识别并移除偏好 Cookie。&lt;/lang&gt;</span>
+<span class="code-comment">// &lt;lang en&gt;Use the same path/domain as set to identify and remove the preference cookie.&lt;/lang&gt;</span>
+Cookies.remove("site_theme", preferenceAttributes);</code></pre></div>
+          <div class="callout callout-warning"><strong>不要顺手清空其它 Cookie</strong><p>偏好重置只影响 `site_locale` 与 `site_theme`；不会触碰登录、同意、购物车或其它用途的数据。</p></div>
+        </section>
+
+        <!-- <lang zh-CN>API 摘要只呈现读者完成步骤必需的入口，完整契约仍留给独立 API 参考。</lang>
+             <lang en>The API summary shows only the entry points needed for the task; complete contracts remain in the independent API reference.</lang> -->
+        <section class="guide-step reference-section" id="api-reference" aria-labelledby="api-title">
+          <div class="step-heading"><span class="step-number reference-mark">API</span><div><p class="eyebrow">次级参考</p><h2 id="api-title">本流程用到的 API</h2></div></div>
+          <dl class="api-list"><div><dt><code>Cookies.get(name)</code></dt><dd>读取当前文档可见的指定 Cookie；缺失时按返回契约处理。</dd></div><div><dt><code>Cookies.set(name, value, attributes)</code></dt><dd>序列化并赋值；浏览器仍决定最终接收与保留。</dd></div><div><dt><code>Cookies.remove(name, attributes)</code></dt><dd>用匹配的 path/domain 让指定 Cookie 立即过期。</dd></div></dl>
+          <p class="reference-links">上游技术资料：<a href="https://github.com/js-cookie/js-cookie">js-cookie 项目文档</a> · <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie">MDN Set-Cookie</a> · <a href="https://www.rfc-editor.org/rfc/rfc6265.html">RFC 6265</a> · <a href="../../../pages/index.html">文档 Portal 中的完整 API 索引</a></p>
+        </section>
+        <footer class="page-footer"><a href="../index.html">← 返回指南首页</a><a href="troubleshooting.html">下一步：排查与分支 →</a><a href="../../../" class="portal-return">返回 js-cookie 文档 Portal</a></footer>
+      </main>
+      <aside class="outline-rail" aria-label="本页内容"><p class="rail-kicker">本页内容</p><nav><a href="#boundary">00　限定用途</a><a href="#read-validate">01　读取与校验</a><a href="#persist">02　更新与保存</a><a href="#fallback">03　失败时回退</a><a href="#remove">04　清除与迁移</a><a href="#api-reference">API 快速参考</a></nav><div class="outline-callout"><strong>当前边界</strong><p>示例模型；不是目标仓生产配置或法律结论。</p></div></aside>
+    </div>
+  </body>
+</html>

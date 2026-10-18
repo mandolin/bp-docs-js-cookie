@@ -261,6 +261,81 @@ function checkPublicSurface() {
     'Public Portal lacks locale-specific no-script indexes.'
   )
 
+  // <lang><zh-CN>附加指南独立于唯一默认 Portal profile；manifest 必须保留 additive 关系且不得声称 adoption。</lang><en>The additional guide is independent of the sole default Portal profile; its manifest must preserve the additive relationship and avoid an adoption claim.</en></lang>
+  const additiveScopes = manifest.additionalDocumentationScopes
+  assert(
+    Array.isArray(additiveScopes) && additiveScopes.length === 1,
+    'Public publication manifest lacks one additional documentation scope.'
+  )
+  const preferenceGuideScope = additiveScopes[0]
+  assert(
+    preferenceGuideScope.baselineId ===
+      'BP-JS-COOKIE-PREFERENCE-GUIDE-BASELINE-20261019-A' &&
+      preferenceGuideScope.version === '0.1.0' &&
+      preferenceGuideScope.relationship === 'additive-independent-guide' &&
+      preferenceGuideScope.route === 'guides/first-party-preferences/' &&
+      preferenceGuideScope.pageCount === 6 &&
+      preferenceGuideScope.staticAssetCount === 1 &&
+      preferenceGuideScope.productionBehaviorObserved === false &&
+      preferenceGuideScope.businessSystemAdoption === false,
+    'Additive preference-guide publication metadata drifted.'
+  )
+  // <lang><zh-CN>expectedGuidePages 是允许公开的双语入口/步骤/故障页面闭集，不接受 manifest 动态添加路由。</lang><en>ExpectedGuidePages is the closed set of public bilingual landing, integration, and troubleshooting pages; the manifest cannot add dynamic routes.</en></lang>
+  const expectedGuidePages = [
+    'index.html',
+    'index.en.html',
+    'guides/preferences.html',
+    'guides/preferences.en.html',
+    'guides/troubleshooting.html',
+    'guides/troubleshooting.en.html'
+  ]
+  assert(
+    JSON.stringify(preferenceGuideScope.pages) ===
+      JSON.stringify(expectedGuidePages),
+    'Additive preference-guide page allowlist drifted.'
+  )
+  // <lang><zh-CN>landingHtml 必须出现两个语言入口，但不接管 baseline B 的默认页面 identity。</lang><en>LandingHtml must expose both locale entries without taking over baseline B's default-page identity.</en></lang>
+  const landingHtml = fs.readFileSync(
+    path.join(topology.publicArtifactRoot, 'index.html'),
+    'utf8'
+  )
+  assert(
+    landingHtml.includes('id="hia-public-preference-guide"') &&
+      landingHtml.includes('href="guides/first-party-preferences/"') &&
+      landingHtml.includes('href="guides/first-party-preferences/index.en.html"'),
+    'Default Portal landing lacks the bilingual preference-guide entry.'
+  )
+  for (const relativePage of expectedGuidePages) {
+    // <lang><zh-CN>guidePath 只由 manifest route 与固定页面闭集拼接，始终位于 public root 内。</zh-CN><en>GuidePath is formed only from the manifest route and closed page set, remaining inside the public root.</en></lang>
+    const guidePath = path.join(
+      topology.publicArtifactRoot,
+      ...preferenceGuideScope.route.split('/'),
+      ...relativePage.split('/')
+    )
+    assert(fs.existsSync(guidePath), `Public guide page is missing: ${relativePage}`)
+    // <lang><zh-CN>guideHtml 作为正文复核静态 HTML、语言身份和候选残留；外部脚本不允许进入指南。</lang><en>GuideHtml is checked for static delivery, locale identity, and candidate residue; external scripts are not allowed in guide pages.</en></lang>
+    const guideHtml = fs.readFileSync(guidePath, 'utf8')
+    assert(
+      /<html\b[^>]*\blang="(?:zh-CN|en)"/u.test(guideHtml) &&
+        !/<\s*(?:script|iframe|object|embed|video|audio)\b/iu.test(guideHtml) &&
+        !/\b(?:W-P133|candidate-status|noindex)\b/iu.test(guideHtml),
+      `Public guide page failed static/privacy checks: ${relativePage}`
+    )
+  }
+  // <lang><zh-CN>guideCssPath 验证唯一页面样式不引用外部 CSS import 或 HTTP 资源。</zh-CN><en>GuideCssPath validates that the single page stylesheet has no external imports or HTTP resources.</en></lang>
+  const guideCssPath = path.join(
+    topology.publicArtifactRoot,
+    ...preferenceGuideScope.route.split('/'),
+    'assets',
+    'guide-portal.css'
+  )
+  assert(fs.existsSync(guideCssPath), 'Public preference-guide stylesheet is missing.')
+  const guideCss = fs.readFileSync(guideCssPath, 'utf8')
+  assert(
+    !/@import\s|url\(\s*['"]?(?:https?:)?\/\//iu.test(guideCss),
+    'Public preference-guide stylesheet references a remote resource.'
+  )
+
   let sourceAssetCount = 0
   for (const asset of presentation.source?.assets ?? []) {
     if (asset.relativeUrl !== undefined) {
@@ -268,7 +343,13 @@ function checkPublicSurface() {
       sourceAssetCount += 1
     }
   }
-  return { profileCount: 1, surfaceCount: 1, sourceAssetCount, manifest }
+  return {
+    profileCount: 1,
+    surfaceCount: 1,
+    sourceAssetCount,
+    preferenceGuidePageCount: expectedGuidePages.length,
+    manifest
+  }
 }
 
 /**
@@ -442,6 +523,10 @@ function main() {
   const publicSurface = checkPublicSurface()
   assert(publicSurface.surfaceCount === 1, 'Pages surface count drifted.')
   assert(
+    publicSurface.preferenceGuidePageCount === 6,
+    'Pages artifact lacks the six-page additive preference guide.'
+  )
+  assert(
     publicSurface.sourceAssetCount > 0,
     'Pages artifact lacks source assets.'
   )
@@ -585,6 +670,7 @@ function main() {
       localCiCoverageProfileCount: offlineEvidence.matrix.profileCount,
       surfaceCount: publicSurface.surfaceCount,
       verifiedSourceAssetCount: publicSurface.sourceAssetCount,
+      preferenceGuidePageCount: publicSurface.preferenceGuidePageCount,
       chooserIncluded: false,
       unusedProfilesIncluded: false
     },
@@ -617,7 +703,7 @@ function main() {
     'utf8'
   )
   process.stdout.write(
-    `${JSON.stringify({ status: evidence.status, fileCount: artifact.files.length, profileCount: publicSurface.profileCount, localCiCoverageProfileCount: offlineEvidence.matrix.profileCount, surfaceCount: publicSurface.surfaceCount, verifiedSourceAssetCount: publicSurface.sourceAssetCount, privacyLeakCount: 0 })}\n`
+    `${JSON.stringify({ status: evidence.status, fileCount: artifact.files.length, profileCount: publicSurface.profileCount, localCiCoverageProfileCount: offlineEvidence.matrix.profileCount, surfaceCount: publicSurface.surfaceCount, verifiedSourceAssetCount: publicSurface.sourceAssetCount, preferenceGuidePageCount: publicSurface.preferenceGuidePageCount, privacyLeakCount: 0 })}\n`
   )
 }
 

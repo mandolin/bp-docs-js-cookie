@@ -36,6 +36,7 @@ import {
   renderShowcaseHub
 } from './hub.mjs'
 import { materializePublicArtifact } from './public-artifact.mjs'
+import { materializePreferenceGuide } from './public-guide.mjs'
 import { sanitizeJsonFile } from './sanitize.mjs'
 
 /** @lang zh-CN 当前模块目录只用于推导 BP repository root，不进入公开产物。 @lang en Current module directory is used only to derive the BP repository root and never enters public artifacts. */
@@ -870,6 +871,19 @@ async function main() {
       ),
       publicRoot: topology.publicArtifactRoot
     })
+    // <lang><zh-CN>第一方偏好指南作为确认的附加 scope 加入同一 Pages artifact；baseline B 的 identity 与默认输出保持不变。</zh-CN><en>The first-party preference guide joins the same Pages artifact as a confirmed additional scope; baseline B identity and default output remain unchanged.</en></lang>
+    const preferenceGuideScope = materializePreferenceGuide({
+      repositoryRoot,
+      publicRoot: topology.publicArtifactRoot
+    })
+    // <lang><zh-CN>publicationProfilePath 固定指向 public root 的发布 manifest，不带入宿主路径或生产事实。</zh-CN><en>PublicationProfilePath is fixed to the release manifest in the public root and introduces no host paths or production facts.</en></lang>
+    const publicationProfilePath = path.join(
+      topology.publicArtifactRoot,
+      'documentation-publication-profile.json'
+    )
+    // <lang><zh-CN>manifest 的主 baseline B facts 原样保留；只在 additionalDocumentationScopes 追加新的 route 契约。</zh-CN><en>Baseline B facts remain intact; only the new route contract is appended under additionalDocumentationScopes.</en></lang>
+    publication.manifest.additionalDocumentationScopes = [preferenceGuideScope]
+    writeJson(publicationProfilePath, publication.manifest)
     const files = summarizeTree(topology.showcaseRoot)
     const fingerprint = fingerprintFiles(files)
     const publicFiles = summarizeTree(topology.publicArtifactRoot)

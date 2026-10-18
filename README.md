@@ -12,7 +12,7 @@
 
 本衍生版本在不改变 js-cookie 运行语义的前提下，为四个核心源码文件补充了中英双语 ROP/JSDoc，并提供可复现的
 本地/CI 文档工程矩阵：直接 JPHS/JTH、hia-jsdoc 独立输出与 Portal bridge、统一 Portal 三条输出链，共 27 个配置 profile、
-36 个可浏览 surface；公开站点则只发布默认 `unified-portal.fetch.classic` 产品入口。建议从
+36 个可浏览 surface；公开 Pages artifact 配置为只包含默认 `unified-portal.fetch.classic` 产品入口。建议从
 [`docs/hia/README.md`](docs/hia/README.md) 开始，再按主题阅读
 [`docs/hia/architecture.md`](docs/hia/architecture.md) 与
 [`docs/hia/cookie-boundaries.md`](docs/hia/cookie-boundaries.md)。
@@ -38,10 +38,10 @@ All local/CI profiles are multi-page and can switch among three owner-provided s
 digest-verified text assets and loads only on expansion. The workflow requires byte-identical local/CI and public artifacts from Node
 `22.23.0` and `24.12.0`. See [`tools/hia-docs/README.md`](tools/hia-docs/README.md) for topology, privacy, and reproducibility details.
 
-The unified Portal is also published as a GitHub project site at
-[mandolin.github.io/bp-docs-js-cookie](https://mandolin.github.io/bp-docs-js-cookie/). Its Pages artifact is rebuilt from pinned HIA
-owners and contains only the sanitized default Portal/fetch/classic product. The 27-profile chooser remains a local/CI test surface and
-is not uploaded to Pages.
+WorkZone W-P125 records a successful Pages deployment and anonymous online check for BP commit `183f508` at
+[mandolin.github.io/bp-docs-js-cookie](https://mandolin.github.io/bp-docs-js-cookie/). The current GitHub Pages settings and live site
+status have not been checked here. The Pages workflow builds from pinned HIA owners and configures the artifact to contain only the
+sanitized default Portal/fetch/classic product. The 27-profile chooser remains a local/CI test surface and is not uploaded to Pages.
 This public site is a documentation-engineering showcase, not an official js-cookie site.
 
 <p align="center">

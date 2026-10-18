@@ -88,6 +88,8 @@ All generated files remain ignored under `build/hia-docs/`:
 - `evidence/`: counts, booleans, versions, aggregate hashes and statuses without source bodies;
 - `cache/`: execution-only configs and raw handoffs, deleted after every successful or failed build.
 
+### Source presentation modes
+
 The source presentation modes have distinct carriers:
 
 - `fetch` is the default: topic HTML contains only same-origin asset metadata; source text is content-addressed, size-bounded,
@@ -95,6 +97,15 @@ The source presentation modes have distinct carriers:
 - `embed` places approved source text only in topic HTML, never in the hub, index JSON, navigation JSON or search JSON;
 - `link` emits a same-origin content-addressed text asset and a normal link, avoiding repeated navigation to a floating branch;
 - `none` disables source presentation, preview and public assets in the separate privacy test.
+
+These Portal modes control how a rendered page presents or requests source text. They are separate from `sourceContentPolicy` on
+JSDoc or flow-handoff metadata, which controls whether those metadata carry source bodies. In particular, `sourceContentPolicy: none`
+does not make a Portal `fetch` page request-free; this repository's public Pages artifact uses `fetch` on reader expansion. The metadata
+still omit source bodies from navigation, search and handoff carriers.
+
+这些 Portal mode 控制渲染页面如何呈现或请求源码文本；它们与 JSDoc/flow-handoff metadata 上控制是否携带源码正文的
+`sourceContentPolicy` 相互独立。`sourceContentPolicy: none` 不会让 Portal `fetch` 页面停止按需请求；本仓公开 Pages artifact
+在读者展开源码区时使用 `fetch`。导航、搜索和 handoff metadata 仍不承载源码正文。
 
 Public JSON is sanitized for raw comments, source-body carriers and host absolute paths. Temporary hia-jsdoc configs, raw integrations,
 credentials, analytics, telemetry and target-project data are excluded. Source/skin variants must preserve topic, page, fragment,

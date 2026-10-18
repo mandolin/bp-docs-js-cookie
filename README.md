@@ -346,10 +346,11 @@ Check out the [Contributing Guidelines](CONTRIBUTING.md)
 
 ## Releasing
 
-Releasing should be done via the `Release` GitHub Actions workflow, so that published packages on npmjs.com have package provenance.
-
-GitHub releases are created as a draft and need to be published manually!
-(This is so we are able to craft suitable release notes before publishing.)
+This HIA documentation derivative does not publish the js-cookie npm package or create
+js-cookie GitHub releases. The `Release` GitHub Actions entry is disabled and performs
+no checkout, build, test, tag, or publishing operation. The upstream js-cookie
+maintainers own runtime package releases; see [UPSTREAM.md](UPSTREAM.md) for the
+repository boundary.
 
 ## Supporters
 

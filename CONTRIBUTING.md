@@ -1,7 +1,11 @@
 ## Issues
 
-- Report issues or feature requests on [GitHub Issues](https://github.com/js-cookie/js-cookie/issues).
-- If reporting a bug, please add a [simplified example](http://sscce.org/).
+- Report HIA documentation, documentation-tooling, Pages, or repository-process issues on [this repository's GitHub Issues](https://github.com/mandolin/bp-docs-js-cookie/issues).
+- Report js-cookie runtime, API, or upstream release issues on the [js-cookie upstream issue tracker](https://github.com/js-cookie/js-cookie/issues).
+- For runtime bug reports, add a [simplified example](http://sscce.org/) that does not contain real Cookie values, tokens, or user data.
+
+HIA 文档、文档工具、Pages 或本仓流程问题请提交到本仓 issue；js-cookie runtime、API 或上游发行问题请提交到上游 issue。
+runtime 缺陷报告可附简化示例，但不得包含真实 Cookie 值、token 或用户数据。
 
 ## Pull requests
 

@@ -31,8 +31,20 @@ throws. Deriving a converter with `withConverter()` performs a shallow enumerabl
 ## 示例与隐私
 
 公开学习材料应使用合成名称和值，不应复制真实 session identifier、authentication token、用户标识、生产 domain 或内部
-路径。HIA 文档产物使用 `sourceContentPolicy: none`：只呈现 pin 到确切 Git commit 的源码链接，不嵌入源码正文、不 fetch，
-navigation/search index 也不承载 raw comment 或 source body。
+路径。对 JSDoc/流程 handoff metadata 而言，`sourceContentPolicy: none` 表示这些 metadata 不携带 raw source body；它本身不决定
+Portal 页面的 source presentation mode。
+
+本仓公开 Pages 默认使用 Portal `fetch` mode：展开源码阅读区时，页面按需读取同源、内容寻址且经过摘要校验的文本资产。该文本
+不会内嵌进 JSDoc metadata、navigation/search index 或 handoff metadata。若某个输出必须完全不请求源码文本，应为该输出显式选择
+Portal `none` mode；两种策略及各自承载位置见 [文档工具说明](../../tools/hia-docs/README.md#source-presentation-modes)。
+
+For JSDoc or flow-handoff metadata, `sourceContentPolicy: none` means those metadata do not carry raw source bodies; it does not select
+the Portal page's source presentation mode.
+
+This repository's public Pages site uses Portal `fetch` mode by default. Expanding a source-reading panel requests a same-origin,
+content-addressed text asset whose digest is verified. The text is not embedded in JSDoc metadata, navigation/search indexes, or
+handoff metadata. Select Portal `none` explicitly when an output must make no request for source text. See the [documentation tooling
+guide](../../tools/hia-docs/README.md#source-presentation-modes) for the distinct policies and carriers.
 
 ## 规范状态
 

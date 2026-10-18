@@ -9,11 +9,12 @@ This repository is a documentation-engineering example maintained for HIA-Docume
 code as a baseline for source documentation, relationships, localization, quality gates, and public presentation. The original software,
 API design, and existing documentation belong to the js-cookie project and its contributors.
 
-本仓库不是 js-cookie 官方仓库，不暗示合作关系、官方 fork 或上游 endorsement。问题与变更应根据归属分别提交到本衍生
-仓库或[上游项目](https://github.com/js-cookie/js-cookie)。
+本仓库不是 js-cookie 官方仓库，不暗示合作关系、官方 fork 或上游 endorsement。HIA 文档、文档工具、Pages 与本仓流程的问题
+应提交到本衍生仓；js-cookie runtime、API 与上游发行的问题应提交到[上游项目](https://github.com/js-cookie/js-cookie)。
 
 This repository is not the official js-cookie repository and does not imply affiliation, an official fork, or upstream endorsement.
-Issues and changes should be filed with this derivative or the [upstream project](https://github.com/js-cookie/js-cookie), as appropriate.
+Report HIA documentation, documentation tooling, Pages, and repository-process issues here. Report js-cookie runtime, API, and
+upstream release issues to the [upstream project](https://github.com/js-cookie/js-cookie).
 
 ## 冻结的源码基线 / Frozen source baseline
 
@@ -65,18 +66,33 @@ tag as source provenance and the npm `gitHead` and integrity as separate package
 
 ## 自动化边界 / Automation boundary
 
-HIA `main` 不启用上游自动化。仓库保留上游 workflow 文件用于来源审阅，但 repository-level GitHub Actions 已关闭；
-上游 `.github/dependabot.yml` 已从 HIA 分支移除，避免在文档化工程尚未建立门禁时自动创建依赖升级分支或 PR。
-Pages、构建、测试、发布和依赖更新自动化均须在后续独立周期中显式评审后启用。
+本节描述可见仓库文件和已记录的历史事实，不代表当前 GitHub repository-level Actions/Pages 设置；该私有设置未在本次核对。
+`.github/workflows/hia-docs-pages.yml` 是 HIA-owned Pages workflow，文件配置了 `main` push 与手动触发、public artifact 上传
+和 Pages deploy。WorkZone 记录了该 workflow 在 BP `183f508` 上的成功运行（run `33992216871`）；这项历史 evidence 不证明
+当前 Pages 设置或当前线上状态。上游 CI workflow 文件保留作 provenance review，不应被描述为 HIA 的自动化运行事实。
+
+`.github/workflows/release.yml` 现在只提供手动禁用说明，不执行发布命令；root `release` script 已移除，`.release-it.json` 的
+npm version/update/publish 与 GitHub release、Git commit、tag 和 push 均显式关闭。HIA 衍生仓不发布 js-cookie 的 npm package 或 GitHub release。
+上游 `.github/dependabot.yml` 已从 HIA 分支移除；导入期间产生的 Dependabot 活动按下方历史记录处理。此处不推断当前仓库设置。
 
 导入时，GitHub 在安全开关完成前自动运行了 2 个 Dependabot update job，并创建 9 个未合并 PR。HIA 随即关闭这些 PR、
 删除对应自动分支；没有 repository CI/build/test workflow 运行，也没有自动更新进入 `main`。
 
-Upstream workflow files are retained for provenance review, while repository-level
-GitHub Actions are disabled. The upstream `.github/dependabot.yml` is removed from HIA
-`main` so dependency-update branches and pull requests cannot be created before an
-explicit documentation-engineering automation review. Pages, build, test, release,
-and dependency-update automation remain disabled until a later dedicated cycle.
+This section describes visible repository files and recorded history; it does not assert
+the current GitHub repository-level Actions or Pages settings, which were not checked.
+`.github/workflows/hia-docs-pages.yml` is the HIA-owned Pages workflow. Its file defines
+`main` push and manual triggers, public artifact upload, and Pages deployment. WorkZone
+records a successful run on BP commit `183f508` (run `33992216871`); that historical
+evidence does not establish current Pages settings or current site status. Inherited
+upstream CI workflow files are retained for provenance review and are not evidence of
+HIA automation runs.
+
+`.github/workflows/release.yml` now only reports that release is disabled and runs no
+release command. The root `release` script is removed, and `.release-it.json` explicitly
+disables npm versioning/publishing, GitHub releases, Git commits, tags, and pushes. This HIA derivative does
+not publish the js-cookie npm package or GitHub releases. The upstream
+`.github/dependabot.yml` is removed from HIA `main`; the import-time Dependabot activity
+is described below. No current repository setting is inferred here.
 
 During import, GitHub started two Dependabot update jobs before the safety setting was
 applied and created nine unmerged pull requests. HIA closed those pull requests and

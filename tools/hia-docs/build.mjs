@@ -11,10 +11,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { spawnSync } from 'node:child_process'
+import { isDeepStrictEqual } from 'node:util'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import {
   ALLOWED_CHANGE_PATTERNS,
+  AUTHORIZED_WP127_COMMIT,
+  AUTHORIZED_WP127_FILES,
   BASELINE_COMMIT,
   DOCUMENTATION_NODE_VERSIONS,
   OWNER_COMMITS,
@@ -43,15 +46,17 @@ const repositoryRoot = path.resolve(moduleDirectory, '..', '..')
 const topology = resolveTopology(repositoryRoot)
 
 /**
- * <lang><zh-CN>执行无 shell 插值的子进程，并用有界诊断 fail closed。</zh-CN><en>Runs a child process without shell interpolation and fails closed with bounded diagnostics.</en></lang>
+ * <lang><zh-CN>执行无 shell 插值的子进程；非零退出时包含安全命令上下文与有界诊断。</zh-CN><en>Runs a child process without shell interpolation and includes safe command context with bounded diagnostics on nonzero exit.</en></lang>
  *
  * @param {string} command <lang><zh-CN>可执行程序。</zh-CN><en>Executable.</en></lang>
- * @param {string[]} args <lang><zh-CN>原样参数数组。</zh-CN><en>Literal argument array.</en></lang>
+ * @param {string[]} args <lang><zh-CN>原样参数数组；本模块调用不得传入凭据或 secret。</zh-CN><en>Literal arguments; callers in this module must not pass credentials or secrets.</en></lang>
  * @param {string} cwd <lang><zh-CN>已验证的工作目录。</zh-CN><en>Validated working directory.</en></lang>
  * @returns {string} <lang><zh-CN>trim 后的 stdout。</zh-CN><en>Trimmed stdout.</en></lang>
- * @throws {Error} <lang><zh-CN>进程无法启动或非零退出时抛出。</zh-CN><en>Thrown when the process cannot start or exits nonzero.</en></lang>
+ * @throws {Error} <lang><zh-CN>进程无法启动或非零退出时抛出；退出错误包含程序、参数及最多 6000 字符输出。</zh-CN><en>Thrown when the process cannot start or exits nonzero; exit errors include the executable, arguments, and at most 6,000 output characters.</en></lang>
  */
 function runCommand(command, args, cwd) {
+  // <lang><zh-CN>固定工具参数不含凭据；输出命令可让 quiet Git failure 指明具体检查点。</zh-CN><en>Fixed tool arguments contain no credentials; including the command identifies the exact quiet Git check that failed.</en></lang>
+  const commandLabel = [command, ...args].join(' ')
   // <lang><zh-CN>shell=false 防止路径、profile id 或 commit 被 PowerShell/cmd 二次解释。</zh-CN><en>shell=false prevents PowerShell/cmd from reinterpreting paths, profile IDs, or commits.</en></lang>
   const result = spawnSync(command, args, {
     cwd,
@@ -66,7 +71,7 @@ function runCommand(command, args, cwd) {
     const diagnostic = `${result.stdout || ''}\n${result.stderr || ''}`
       .trim()
       .slice(-6000)
-    throw new Error(`${command} exited with ${result.status}:\n${diagnostic}`)
+    throw new Error(`${commandLabel} exited with ${result.status}:\n${diagnostic}`)
   }
   return (result.stdout || '').trim()
 }
@@ -110,21 +115,94 @@ function isAllowedChange(relativePath) {
 }
 
 /**
+ * <lang><zh-CN>将 W-P127 修改的公开文档与发布配置固定为已审定提交中的精确内容。</zh-CN><en>Pins the W-P127-edited public documentation and release configuration to their exact content in the reviewed commit.</en></lang>
+ *
+ * @returns {void} <lang><zh-CN>所有 W-P127 例外文件都与审定快照一致时无返回值。</zh-CN><en>No return value when every W-P127 exception file matches the reviewed snapshot.</en></lang>
+ * @throws {Error} <lang><zh-CN>HEAD 或工作树中的文件偏离审定快照时抛出。</zh-CN><en>Thrown when committed or working-tree files differ from the reviewed snapshot.</en></lang>
+ */
+function validateAuthorizedWp127Files() {
+  // <lang><zh-CN>逐文件比较审定提交、当前提交和过滤器规范化后的工作树 blob。</zh-CN><en>Compare each reviewed-commit blob, current committed blob, and filter-normalized worktree blob.</en></lang>
+  for (const relativePath of AUTHORIZED_WP127_FILES) {
+    // <lang><zh-CN>读取 W-P127 审定快照的 Git blob identity，不依赖本机换行符表示。</zh-CN><en>Read the reviewed W-P127 Git blob identity without depending on local line-ending representation.</en></lang>
+    const approvedBlob = runGit([
+      'rev-parse',
+      `${AUTHORIZED_WP127_COMMIT}:${relativePath}`
+    ])
+    // <lang><zh-CN>读取当前 commit 对应 blob，阻止快照以后的发布配置漂移。</zh-CN><en>Read the current committed blob to prevent post-snapshot release-configuration drift.</en></lang>
+    const committedBlob = runGit(['rev-parse', `HEAD:${relativePath}`])
+    // <lang><zh-CN>按 Git path filter 计算工作树 blob，排除尚未提交的差异。</zh-CN><en>Compute the worktree blob through Git path filters so uncommitted differences are also rejected.</en></lang>
+    const workingTreeBlob = runGit([
+      'hash-object',
+      `--path=${relativePath}`,
+      relativePath
+    ])
+
+    // <lang><zh-CN>已提交文件必须逐字节对应 F1–F4 审定版本。</zh-CN><en>The committed file must match the reviewed F1–F4 version byte for byte.</en></lang>
+    if (committedBlob !== approvedBlob) {
+      throw new Error(`${relativePath} differs from the reviewed W-P127 snapshot.`)
+    }
+    // <lang><zh-CN>工作树也必须匹配 commit，避免未提交内容进入构建。</zh-CN><en>The worktree must also match HEAD so uncommitted content cannot enter the build.</en></lang>
+    if (workingTreeBlob !== committedBlob) {
+      throw new Error(`Working-tree ${relativePath} differs from committed HEAD.`)
+    }
+  }
+}
+
+/**
+ * <lang><zh-CN>仅允许 W-P107 root package 基线删除 release-it 发布脚本，其余字段必须保持语义相同。</zh-CN><en>Allows only removal of the release-it script from the W-P107 root package baseline while requiring every other field to remain semantically equal.</en></lang>
+ *
+ * @returns {void} <lang><zh-CN>manifest 例外校验成功时无返回值。</zh-CN><en>No return value when the manifest exception check succeeds.</en></lang>
+ * @throws {Error} <lang><zh-CN>基线无预期脚本、提交 manifest 有其它差异或工作树 manifest 与 HEAD 不同则抛出。</zh-CN><en>Thrown when the baseline lacks the expected script, the committed manifest has other differences, or the worktree manifest differs from HEAD.</en></lang>
+ */
+function validateRootPackageManifest() {
+  // <lang><zh-CN>从 W-P107 不可变 commit 读取冻结的 JSON 语义。</zh-CN><en>Read the frozen JSON semantics from the immutable W-P107 commit.</en></lang>
+  const baselineManifest = JSON.parse(
+    runGit(['show', `${BASELINE_COMMIT}:package.json`])
+  )
+  // <lang><zh-CN>从当前 commit 读取实际参与发布的根 manifest。</zh-CN><en>Read the root manifest from the current commit that would be published.</en></lang>
+  const committedManifest = JSON.parse(runGit(['show', 'HEAD:package.json']))
+  // <lang><zh-CN>单独解析工作树版本，防止仅 HEAD 干净而未提交 manifest 改动混入产物。</zh-CN><en>Parse the worktree copy separately so uncommitted manifest changes cannot enter an artifact even when HEAD itself is valid.</en></lang>
+  const workingTreeManifest = JSON.parse(
+    fs.readFileSync(path.join(repositoryRoot, 'package.json'), 'utf8')
+  )
+  // <lang><zh-CN>只在副本上构造允许态，不改变后续比较所需的 baseline 对象。</zh-CN><en>Construct the allowed state on a copy without mutating the baseline object used for comparison.</en></lang>
+  const expectedManifest = JSON.parse(JSON.stringify(baselineManifest))
+
+  // <lang><zh-CN>先确认基线确实包含预期的单一发布入口，避免在错误基线上放宽规则。</zh-CN><en>Require the baseline's expected single release entry before applying the exception.</en></lang>
+  if (!expectedManifest.scripts || expectedManifest.scripts.release !== 'release-it') {
+    throw new Error('W-P107 package baseline does not contain the expected release script.')
+  }
+
+  // <lang><zh-CN>本轮 F4 只授权删除这一项危险发布入口，保留 root manifest 的所有其它基线字段。</zh-CN><en>F4 authorizes removal of this one unsafe release entry while retaining every other root-manifest baseline field.</en></lang>
+  delete expectedManifest.scripts.release
+
+  // <lang><zh-CN>对象语义比较允许 JSON 键序差异，但不允许任何字段、值或数组次序漂移。</zh-CN><en>Semantic object comparison tolerates JSON key order while rejecting every field, value, or array-order change.</en></lang>
+  if (!isDeepStrictEqual(expectedManifest, committedManifest)) {
+    throw new Error('package.json differs from W-P107 beyond removal of scripts.release.')
+  }
+  // <lang><zh-CN>当前工作树也必须与 HEAD 语义一致，不能携带未提交 manifest 变更。</zh-CN><en>The current worktree must also match HEAD semantically and contain no uncommitted manifest change.</en></lang>
+  if (!isDeepStrictEqual(committedManifest, workingTreeManifest)) {
+    throw new Error('Working-tree package.json differs from committed HEAD.')
+  }
+}
+
+/**
  * <lang><zh-CN>验证 upstream lineage、root package/lock 稳定性与当前 changed-path boundary。</zh-CN><en>Validates upstream lineage, root package/lock stability, and the current changed-path boundary.</en></lang>
  *
  * @returns {string} <lang><zh-CN>用于公开源码链接的 40 位 BP HEAD。</zh-CN><en>Forty-character BP HEAD used for public source links.</en></lang>
  */
 function validateRepositoryBoundary() {
   runGit(['merge-base', '--is-ancestor', BASELINE_COMMIT, 'HEAD'])
+  validateRootPackageManifest()
+  validateAuthorizedWp127Files()
   runGit([
     'diff',
     '--quiet',
     BASELINE_COMMIT,
     '--',
-    'package.json',
     'package-lock.json'
   ])
-  runGit(['diff', '--quiet', '--', 'package.json', 'package-lock.json'])
+  runGit(['diff', '--quiet', '--', 'package-lock.json'])
 
   // <lang><zh-CN>tracked、staged 与 untracked 路径合并后接受同一个 closed allowlist。</zh-CN><en>Tracked, staged, and untracked paths are combined under one closed allowlist.</en></lang>
   const changedPaths = new Set([

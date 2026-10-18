@@ -12,6 +12,17 @@ import process from 'node:process'
 /** @lang zh-CN W-P107 冻结的 BP 文档化基线 commit。 @lang en BP documentation baseline commit frozen by W-P107. */
 export const BASELINE_COMMIT = '630038410a1e0738dc761de653c6f6a09b2d8930'
 
+/** @lang zh-CN W-P127 F1–F4 已审定的文件快照，限制例外路径只能保持该提交的精确内容。 @lang en Reviewed W-P127 F1–F4 file snapshot; exception paths must retain its exact content. */
+export const AUTHORIZED_WP127_COMMIT = '0fe318b267c36fd3c6b14ec42a244ff1727145ee'
+
+/** @lang zh-CN W-P127 F1–F4 唯一额外允许的公开文档/发布配置路径，均由快照校验为精确内容。 @lang en The only extra public-documentation/release-config paths allowed by W-P127 F1–F4; exact content is enforced by snapshot validation. */
+export const AUTHORIZED_WP127_FILES = Object.freeze([
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  '.github/workflows/release.yml',
+  '.release-it.json'
+])
+
 /** @lang zh-CN 允许 JSDoc 解析且允许 ROP 注释变更的精确源码集合。 @lang en Exact source set that JSDoc may parse and the ROP overlay may modify. */
 export const SOURCE_FILES = Object.freeze([
   'index.js',
@@ -20,11 +31,13 @@ export const SOURCE_FILES = Object.freeze([
   'src/converter.mjs'
 ])
 
-/** @lang zh-CN W-P109 可变更的辅助路径模式；root package/lock、test、dist 与 workflow 不在其中。 @lang en Auxiliary path patterns writable in W-P109; root package/lock, tests, dist, and workflows are excluded. */
+/** @lang zh-CN W-P109 辅助路径模式及本轮唯一 root manifest 例外；root package.json 只有 scripts.release 精确移除可变，package-lock、test 与 dist 仍拒绝。 @lang en W-P109 auxiliary paths plus the sole root-manifest exception in this cycle; root package.json is mutable only for exact removal of scripts.release, while package-lock, tests, and dist remain refused. */
 export const ALLOWED_CHANGE_PATTERNS = Object.freeze([
   '.gitignore',
   '.github/workflows/hia-docs-pages.yml',
+  ...AUTHORIZED_WP127_FILES,
   'mise.toml',
+  'package.json',
   'README.md',
   'UPSTREAM.md',
   ...SOURCE_FILES,

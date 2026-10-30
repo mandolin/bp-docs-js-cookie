@@ -193,14 +193,26 @@ function projectIdentitySet(presentation) {
 }
 
 /**
- * <lang><zh-CN>读取 surface 的可见 HTML 集合。</zh-CN><en>Reads the visible HTML set for a surface.</en></lang>
+ * <lang><zh-CN>读取文档页面HTML；带行号的独立源码资产另核配对与禁执行边界，不当作正文内嵌。</zh-CN><en>Reads documentation-page HTML; separately checks pairing and no-execution boundaries for line-numbered source assets instead of treating them as embedded document bodies.</en></lang>
  *
  * @param {string[]} files <lang><zh-CN>surface 普通文件。</zh-CN><en>Regular files in the surface.</en></lang>
  * @returns {string} <lang><zh-CN>仅用于离线断言的组合 HTML。</zh-CN><en>Combined HTML used only for offline assertions.</en></lang>
  */
-function readCombinedHtml(files) {
+function readCombinedHtml(files, sourceAssets = []) {
   return files
-    .filter((filePath) => filePath.endsWith('.html'))
+    .filter((filePath) => {
+      // <lang><zh-CN>只有owner固定命名的sources行号页可归为源码资产，其余HTML仍参与正文隐私断言。</zh-CN><en>Only owner-named source-line pages qualify as source assets; all other HTML remains subject to document-body privacy assertions.</en></lang>
+      if (!filePath.endsWith('.html')) return false
+      const match = path.basename(filePath).match(/^([a-f0-9]{64})\.L[1-9]\d*\.html$/u)
+      if (!match || path.basename(path.dirname(filePath)) !== 'sources') return true
+      // <lang><zh-CN>源码页必须有同身份纯文本资产、原生行锚点和禁执行CSP，不能借扩展名绕过隐私检查。</zh-CN><en>Source pages require a same-identity plain-text asset, native line anchors and no-execution CSP; an extension alone cannot bypass privacy checks.</en></lang>
+      const sourceHtml = fs.readFileSync(filePath, 'utf8')
+      // <lang><zh-CN>查看页按source身份命名，txt按正文摘要命名；从当前owner资产清单关联，不能假定两文件同名。</zh-CN><en>View pages use source identity while text files use content digests; correlate through the current owner asset inventory instead of assuming matching filenames.</en></lang>
+      const assets = sourceAssets.filter((asset) => asset.assetId === `portal.asset:${match[1].slice(0, 32)}`)
+      assert(assets.length === 1 && /^sources\/[a-f0-9]{64}\.txt$/u.test(assets[0].relativeUrl) && fs.existsSync(path.join(path.dirname(filePath), path.basename(assets[0].relativeUrl))), 'Source-line page lacks its inventoried text asset.')
+      assert(sourceHtml.includes("default-src 'none'") && sourceHtml.includes('class="hia-source-code-line"') && !/<\s*script\b/iu.test(sourceHtml), 'Source-line page crossed its no-execution boundary.')
+      return false
+    })
     .map((filePath) => fs.readFileSync(filePath, 'utf8'))
     .join('\n')
 }
@@ -230,8 +242,8 @@ function checkSurface(profile, surface, identityByGroup) {
   )
   const files = listFiles(root)
   const indexHtml = fs.readFileSync(indexPath, 'utf8')
-  const combinedHtml = readCombinedHtml(files)
   const presentation = readJson(presentationPath)
+  const combinedHtml = readCombinedHtml(files, presentation.source?.assets)
   const expectedSkin =
     surface.kind === 'standalone' ? profile.skin : profile.portalSkin
 
@@ -337,7 +349,7 @@ function checkSurface(profile, surface, identityByGroup) {
         : 'portal.default'
     assert(
       uiLocaleReport.contract === 'documentation-ui-locale-completeness' &&
-        uiLocaleReport.contractVersion === '0.1.0-draft' &&
+        uiLocaleReport.contractVersion === '1.0.0' &&
         uiLocaleReport.status === 'complete' &&
         uiLocaleReport.profileId === expectedUiLocaleIdentity,
       `${profile.id}/${surface.kind} has invalid UI-locale report identity.`

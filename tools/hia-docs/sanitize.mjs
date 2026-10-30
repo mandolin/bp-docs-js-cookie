@@ -4,10 +4,13 @@
  * @module bp-docs-js-cookie/hia-docs-sanitize
  * @lang zh-CN 清洗器删除 source body、raw comment 与绝对路径，不改写用户可见的双语 API 说明。
  * @lang en The sanitizer removes source bodies, raw comments, and absolute paths without rewriting user-visible bilingual API descriptions.
+ * @lang zh-CN 已授权同源的高置信parser范围在删除primaryBlock前投影为纯元数据，不把声明锚点误当完整方法。
+ * @lang en High-confidence parser ranges for authorized same-source files survive primaryBlock removal as metadata, without mistaking declaration anchors for complete methods.
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { SOURCE_FILES } from './config.mjs'
 
 /** @lang zh-CN 无条件不得进入公开 JSON 的 JSDoc/runtime 字段。 @lang en JSDoc/runtime fields that must never enter public JSON. */
 const ALWAYS_BLOCKED_KEYS = new Set([
@@ -77,10 +80,39 @@ export function sanitizeJsonValue(value, propertyPath = []) {
       const sanitized = sanitizeJsonValue(item, [...propertyPath, key])
       if (!isAbsolutePathLike(sanitized)) result[key] = sanitized
     }
+    // <lang><zh-CN>删除正文后仍须保留同一授权源的parser确认范围；声明锚点不能冒充完整方法。</zh-CN><en>After removing bodies, retain the parser-confirmed range of the same authorized source; a declaration anchor is not a complete method.</en></lang>
+    const trustedRange = getTrustedPublicSourceRange(value)
+    if (trustedRange && result.definedIn) result.definedIn.range = trustedRange
     return result
   }
 
   return value
+}
+
+/**
+ * @lang zh-CN 从已授权源的高置信parser块投影无正文范围；不扩大现有非零范围或猜测启发式终点。
+ * @lang en Projects a body-free range from a high-confidence parser block in an authorized source, without replacing existing nonzero ranges or guessing heuristic endpoints.
+ * @param {Object} value <lang><zh-CN>原始来源对象，仅只读。</zh-CN><en>Original source object, read-only.</en></lang>
+ * @returns {Object|undefined} <lang><zh-CN>新建的现有行/可选列范围，未知时不投影；不声明跨地图字符精度。</zh-CN><en>A fresh existing line/optional-column range, or no projection when unknown; makes no cross-map character-precision claim.</en></lang>
+ */
+function getTrustedPublicSourceRange(value) {
+  // <lang><zh-CN>只处理现有JSDoc来源模型与明确允许展示源码的模式。</zh-CN><en>Handle only the existing JSDoc source model and modes explicitly allowing source display.</en></lang>
+  if (value.model !== 'hia-jsdoc-source' || !['all', 'include'].includes(value.mode)) return undefined
+  // <lang><zh-CN>块与声明必须属于同一闭集公开文件；低置信、未解析或异路径元数据不提升。</zh-CN><en>The block and declaration must share a closed-set public file; never promote low-confidence, unresolved or mismatched-path metadata.</en></lang>
+  const block = value.primaryBlock
+  const definedIn = value.definedIn
+  if (!block || !definedIn || block.rangeSource !== 'parser-js' || block.confidence !== 'high' || block.relativePath !== definedIn.relativePath || !SOURCE_FILES.includes(block.relativePath)) return undefined
+  // <lang><zh-CN>已具真实终点的声明保持原精度，仅修复起终相同的旧锚点或缺省范围。</zh-CN><en>Preserve declarations already carrying a real endpoint; repair only legacy coincident anchors or absent ranges.</en></lang>
+  const current = definedIn.range
+  if (current && (current.start?.line !== current.end?.line || current.start?.column !== current.end?.column)) return undefined
+  // <lang><zh-CN>保留producer原有行/列，不引入正文、额外字段或隐式列单位。</zh-CN><en>Retain producer line/column values without bodies, extra fields or implied column units.</en></lang>
+  const start = block.range?.start
+  const end = block.range?.end
+  if (![start, end].every((point) => point && Number.isSafeInteger(point.line) && point.line > 0 && (point.column === undefined || (Number.isSafeInteger(point.column) && point.column > 0))) || end.line < start.line || (end.line === start.line && start.column !== undefined && end.column !== undefined && end.column < start.column)) return undefined
+  return {
+    start: { line: start.line, ...(start.column === undefined ? {} : { column: start.column }) },
+    end: { line: end.line, ...(end.column === undefined ? {} : { column: end.column }) }
+  }
 }
 
 /**

@@ -27,6 +27,11 @@ const BUILD_COMMIT = '1234567890abcdef1234567890abcdef12345678'
 /** @lang zh-CN 当前测试模块目录用于读取将被原样发布的产品 runtime。 @lang en Current test-module directory is used to read the product runtime that is published verbatim. */
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 
+/** @lang zh-CN 模拟新版owner补全的附加字段，已投影参数与未映射备注并存。 @lang en Models additional fields completed by the current owner, combining an already-projected parameter and an unmapped remark. */
+function additionalFieldFixture() {
+  return '<section class="hia-i18n-fields"><h3>Localized Fields</h3><dl><div class="hia-i18n-field"><dt>params.name.description</dt><dd>Cookie 名称。</dd></div><div class="hia-i18n-field"><dt>remarks</dt><dd>Unmapped remark stays readable / 未映射备注仍可读。</dd></div></dl></section>'
+}
+
 /**
  * <lang><zh-CN>构造由公开 JSDoc i18n 投影而来的 fixture 字段。</zh-CN><en>Builds a fixture field projected from public JSDoc i18n.</en></lang>
  *
@@ -55,7 +60,7 @@ function writeContractFixturePage(root, route, entryIdentity) {
   fs.mkdirSync(path.dirname(pagePath), { recursive: true })
   fs.writeFileSync(
     pagePath,
-    `<!doctype html><html lang="${documentLocale}"><head><title>API</title></head><body><article id="${entryIdentity}"><details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article></body></html>`,
+    `<!doctype html><html lang="${documentLocale}"><head><title>API</title></head><body><article id="${entryIdentity}">${additionalFieldFixture()}<details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article></body></html>`,
     'utf8'
   )
 }
@@ -396,6 +401,9 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.doesNotMatch(getPresentationArticle, /Cookies\.set\(name, value/u)
   assert.match(setPage, /data-hia-topic-section="contract"[^>]* open>/u)
   assert.match(setPage, /Cookies\.set\(name, value, attributes\?\)/u)
+  // <lang><zh-CN>契约已完整承载的字段不能在签名前重复挤占正文，未映射备注仍必须保留。</zh-CN><en>Fields fully represented by the contract must not duplicate above the signature, while unmapped remarks remain readable.</en></lang>
+  assert.doesNotMatch(setPage, /<dt>params\.name\.description<\/dt>/u)
+  assert.match(setPage, /Unmapped remark stays readable/u)
   assert.match(setPage, /CookieAttributes/u)
   assert.match(setPage, /名称或值含有无法 URI 编码的输入时会抛出 URIError/u)
   assert.match(setPage, /id="hia-api-set-examples"/u)

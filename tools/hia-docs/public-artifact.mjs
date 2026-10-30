@@ -612,6 +612,23 @@ function patchPublicApiTopic(publicRoot, topicEntry) {
     }
     // <lang><zh-CN>articleHtml 限制 contract section 的正则替换范围为当前 API article。</zh-CN><en>ArticleHtml limits contract-section replacement to the current API article.</en></lang>
     let articleHtml = articleMatches[0][0]
+    // <lang><zh-CN>新版owner补全附加字段后，已在双语契约完整投影的参数/返回不应在签名前重复；未映射字段保留。</zh-CN><en>With the owner's completed additional fields, parameters/returns fully projected in the bilingual contract must not duplicate above the signature; preserve unmapped fields.</en></lang>
+    const definition = PUBLIC_API_CONTRACTS[topicEntry.symbolId]
+    const coveredFields = new Set([
+      ...definition.parameters.map((parameter) => parameter.descriptionPath),
+      definition.returnDescriptionPath
+    ])
+    articleHtml = articleHtml.replace(
+      /<div class="hia-i18n-field"><dt>([^<]+)<\/dt><dd>[\s\S]*?<\/dd><\/div>/gu,
+      (fieldHtml, fieldPath) => coveredFields.has(fieldPath) ? '' : fieldHtml
+    )
+    // <lang><zh-CN>空附加字段容器整体省略；存在未映射说明时仍使用现有组件，按当前内容语言提供标题。</zh-CN><en>Omit empty additional-field containers; keep the existing component for unmapped prose, with a heading in the current content language.</en></lang>
+    articleHtml = articleHtml.replace(
+      /<section class="hia-i18n-fields"><h3>Localized Fields<\/h3><dl>([\s\S]*?)<\/dl><\/section>/gu,
+      (sectionHtml, fieldsHtml) => fieldsHtml.trim()
+        ? sectionHtml.replace('Localized Fields', renderLocalizedText({ 'zh-CN': '附加说明', en: 'Additional documentation' }, selectedLocale))
+        : ''
+    )
     // <lang><zh-CN>sectionMatch 锁定当前 article 的 owner contract details，保留原生 summary 与 disclosure 语义。</zh-CN><en>SectionMatch locates the owner contract details in the current article while preserving its native summary and disclosure semantics.</en></lang>
     const sectionMatch = articleHtml.match(
       /(<details\b[^>]*\bdata-hia-topic-section="contract"[^>]*>)([\s\S]*?)(<\/details>)/u

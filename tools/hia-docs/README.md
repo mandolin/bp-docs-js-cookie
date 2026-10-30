@@ -24,10 +24,10 @@ Owner repositories must be clean and remain at these full commits:
 
 | Owner                            | Commit                                     | License           |
 | -------------------------------- | ------------------------------------------ | ----------------- |
-| `@mandolin/jsdoc-plugin-hia-sys` | `ac1fa5831dd33c204dd2168eed812b654eab24e4` | MIT               |
-| `@mandolin/jsdoc-theme-hia`      | `9c78b017567c5c23a212ae572e72ad36376ed78d` | MIT               |
-| `hia-jsdoc` umbrella             | `4774c9bd685f1b0ced7f0032a1208eeee2a13a5f` | MIT               |
-| HIA main Portal/CLI              | `62f4570f7f70b094f65df32a2424d28463d0415d` | MIT package train |
+| `@mandolin/jsdoc-plugin-hia-sys` | `15970dc9da0f8e120677eab7eba3e959dcf42a34` | MIT               |
+| `@mandolin/jsdoc-theme-hia`      | `0df2ca9bbf40e159d8da69aac80b3c31136b1a05` | MIT               |
+| `hia-jsdoc` umbrella             | `4890e0bf1b943a14cf247f9b413d140a43a6bb5b` | MIT               |
+| HIA main Portal/CLI              | `b13203038ebcad604904575a70055d89d6027c50` | MIT package train |
 
 JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. PrismJS `1.30.0` is MIT and is isolated in the same private
 tooling runtime solely to highlight already fetched, byte-counted and SHA-384-verified JavaScript source. The public artifact receives
@@ -52,30 +52,32 @@ remains a separate fail-closed privacy regression and is intentionally excluded 
 
 ## Install and run
 
-Node `24.12.0` and pnpm `10.34.4` are the default tools in `mise.toml`; Node `22.23.0` is the second required documentation runtime.
+Node `24.22.1` and pnpm `10.34.4` are the default tools in `mise.toml`; Node `22.23.4` is the second required documentation runtime.
 Node 20 remains an upstream-reproduction slot and is not a documentation-tool support promise.
 
 Install the two isolated npm workspaces once. Install the Portal owner through its own frozen pnpm lock when that workspace is not
 already ready:
 
 ```bash
-mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund --prefix tools/hia-docs/runtime
-mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund --prefix ../../HIA/hia-jsdoc
-mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir ../../main-repo install --frozen-lockfile
+mise exec node@24.22.1 -- npm ci --ignore-scripts --no-audit --no-fund --prefix tools/hia-docs/runtime
+mise exec node@24.22.1 -- npm --prefix ../../HIA/hia-jsdoc run prepare:owners
+mise exec node@24.22.1 -- npm ci --ignore-scripts --no-audit --no-fund --prefix ../../HIA/hia-jsdoc
+mise exec node@24.22.1 pnpm@10.34.4 -- pnpm --dir ../../main-repo install --frozen-lockfile
 ```
 
 Build and run the local gates:
 
 ```bash
-mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
-mise exec node@24.12.0 -- node --test tools/hia-docs/showcase.test.mjs
-mise exec node@24.12.0 -- node --test tools/hia-docs/public-artifact.test.mjs
-mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
-mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/build.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/showcase.test.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/public-artifact.test.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/sanitize.test.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/check.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/check-pages.mjs
 ```
 
-The Pages workflow builds once with Node `22.23.0`, stages body-free fingerprints for both artifact families, rebuilds with Node
-`24.12.0`, and runs `check-determinism.mjs`. Only a byte-identical Node 24 public result becomes the upload artifact.
+The Pages workflow builds once with Node `22.23.4`, stages body-free fingerprints for both artifact families, rebuilds with Node
+`24.22.1`, and runs `check-determinism.mjs`. Only a byte-identical Node 24 public result becomes the upload artifact.
 
 ## Outputs and privacy
 
@@ -93,6 +95,13 @@ All generated files remain ignored under `build/hia-docs/`:
 ### Source presentation modes
 
 The source presentation modes have distinct carriers:
+
+The body-free handoff retains the same authorized file's high-confidence parser range before removing `primaryBlock` and preview
+bodies. A declaration anchor alone is not widened to guessed surrounding code. Separate source-line HTML pages are inventoried
+source assets with no-execution CSP, paired with their content-addressed text assets; they are not embedded API document bodies.
+
+清洗器删除正文前保留同一授权文件的高置信解析范围，不把声明锚点扩为猜测代码。独立源码行号HTML页属于登记过的源码资产，
+须关联正文摘要资产并禁止脚本执行；API正文、导航、搜索及handoff JSON仍保持各自隐私边界。
 
 - `fetch` is the default: topic HTML contains only same-origin asset metadata; source text is content-addressed, size-bounded,
   SHA-384-described, credential-free, and loaded when the reader expands;
@@ -123,20 +132,20 @@ pinned by full commit, checkout credentials are discarded, no generated branch i
 Serve the ignored public artifact locally on loopback:
 
 ```bash
-mise exec node@24.12.0 -- node tools/hia-docs/serve.mjs 4179
+mise exec node@24.22.1 -- node tools/hia-docs/serve.mjs 4179
 ```
 
 Open `http://127.0.0.1:4179/bp-docs-js-cookie/`. The server maps directory routes only to their own `index.html` and rejects traversal,
 symbolic links, directory listings, writes, and non-loopback binding. After a deployment, run the anonymous same-origin online gate:
 
 ```bash
-mise exec node@24.12.0 -- node tools/hia-docs/check-pages-online.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/check-pages-online.mjs
 ```
 
 For local matrix debugging only, pass the explicit third argument `showcase`:
 
 ```bash
-mise exec node@24.12.0 -- node tools/hia-docs/serve.mjs 4179 showcase
+mise exec node@24.22.1 -- node tools/hia-docs/serve.mjs 4179 showcase
 ```
 
 ## Scope and rollback

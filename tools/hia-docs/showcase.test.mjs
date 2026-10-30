@@ -99,7 +99,7 @@ test('creates split-site Portal configurations without silent source fallback', 
 test('adopts the exact hia-jsdoc UI locale bridge without copying owner content', () => {
   const descriptor = {
     capability: 'documentation-ui-locale-completeness',
-    capabilityVersion: '0.1.0-draft',
+    capabilityVersion: '1.0.0',
     ownerPackage: '@hia-doc/renderer-html',
     profileId: 'hia-jsdoc.portal-bridge',
     surfaceId: 'hia-jsdoc.portal-bridge',

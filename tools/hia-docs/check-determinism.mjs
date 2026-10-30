@@ -91,14 +91,14 @@ function main() {
     'A fingerprint contract drifted.'
   )
   assert(
-    baselineShowcase.node === '22.23.0' &&
+    baselineShowcase.node === '22.23.4' &&
       baselinePublic.node === baselineShowcase.node,
-    'Baselines were not produced together by Node 22.23.0.'
+    'Baselines were not produced together by Node 22.23.4.'
   )
   assert(
-    currentShowcase.node === '24.12.0' &&
+    currentShowcase.node === '24.22.1' &&
       currentPublic.node === currentShowcase.node,
-    'Current results were not produced together by Node 24.12.0.'
+    'Current results were not produced together by Node 24.22.1.'
   )
   assert(
     baselineShowcase.buildCommit === baselinePublic.buildCommit &&
@@ -109,12 +109,12 @@ function main() {
   assert(
     JSON.stringify(baselineShowcase.output) ===
       JSON.stringify(currentShowcase.output),
-    'Node 22.23.0 and Node 24.12.0 produced different showcase fingerprints.'
+    'Node 22.23.4 and Node 24.22.1 produced different showcase fingerprints.'
   )
   assert(
     JSON.stringify(baselinePublic.output) ===
       JSON.stringify(currentPublic.output),
-    'Node 22.23.0 and Node 24.12.0 produced different public-artifact fingerprints.'
+    'Node 22.23.4 and Node 24.22.1 produced different public-artifact fingerprints.'
   )
 
   const evidence = {

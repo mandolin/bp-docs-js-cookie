@@ -63,16 +63,16 @@ export const DEFAULT_SHOWCASE_PROFILE_ID = 'unified-portal.fetch.classic'
 
 /** @lang zh-CN sibling owner 必须保持的完整 Git identity。 @lang en Full Git identities that sibling owners must retain. */
 export const OWNER_COMMITS = Object.freeze({
-  plugin: 'ac1fa5831dd33c204dd2168eed812b654eab24e4',
-  theme: '9c78b017567c5c23a212ae572e72ad36376ed78d',
-  hiaJsdoc: '4774c9bd685f1b0ced7f0032a1208eeee2a13a5f',
-  portal: '62f4570f7f70b094f65df32a2424d28463d0415d'
+  plugin: '15970dc9da0f8e120677eab7eba3e959dcf42a34',
+  theme: '0df2ca9bbf40e159d8da69aac80b3c31136b1a05',
+  hiaJsdoc: '4890e0bf1b943a14cf247f9b413d140a43a6bb5b',
+  portal: 'b13203038ebcad604904575a70055d89d6027c50'
 })
 
 /** @lang zh-CN W-P123 UI locale completeness capability 的 exact identity。 @lang en Exact identity of the W-P123 UI-locale completeness capability. */
 export const PORTAL_UI_LOCALE_CAPABILITY = Object.freeze({
   capability: 'documentation-ui-locale-completeness',
-  capabilityVersion: '0.1.0-draft',
+  capabilityVersion: '1.0.0',
   ownerPackage: '@hia-doc/renderer-html',
   reportPath: 'documentation-ui-locale-completeness.json',
   uiLocales: ['zh-CN', 'en'],
@@ -88,7 +88,7 @@ export const PAGES_SITE = Object.freeze({
 })
 
 /** @lang zh-CN 文档工具支持窗口；Node 20 只属于上游复现，不属于该集合。 @lang en Documentation-tool support window; Node 20 belongs only to upstream reproduction and is not in this set. */
-export const DOCUMENTATION_NODE_VERSIONS = Object.freeze(['22.23.0', '24.12.0'])
+export const DOCUMENTATION_NODE_VERSIONS = Object.freeze(['22.23.4', '24.22.1'])
 
 /** @lang zh-CN 公开输出强制采用的源码与隐私策略。 @lang en Source and privacy policy required for public outputs. */
 export const PRIVACY_POLICY = Object.freeze({

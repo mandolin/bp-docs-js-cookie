@@ -408,10 +408,10 @@ function checkWorkflow(workflow) {
   )
   assert(
     workflow.includes(
-      'mise exec node@22.23.0 -- node tools/hia-docs/build.mjs'
+      'mise exec node@22.23.4 -- node tools/hia-docs/build.mjs'
     ) &&
       workflow.includes(
-        'mise exec node@24.12.0 -- node tools/hia-docs/build.mjs'
+        'mise exec node@24.22.1 -- node tools/hia-docs/build.mjs'
       ),
     'Workflow lacks both deterministic Node builds.'
   )
@@ -680,7 +680,7 @@ function main() {
       immutableActionPinCount: Object.keys(ACTION_PINS).length,
       generatedBranchCommit: false,
       miseManaged: true,
-      finalArtifactRuntime: '24.12.0'
+      finalArtifactRuntime: '24.22.1'
     },
     documentationRuntime: {
       isolatedFromRootPackage: true,

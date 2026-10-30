@@ -2,8 +2,8 @@
  * <lang><zh-CN>构建 bp-docs-js-cookie 的 27-profile、36-surface 文档工程展示矩阵。</zh-CN><en>Builds the 27-profile, 36-surface documentation-engineering showcase matrix for bp-docs-js-cookie.</en></lang>
  *
  * @module bp-docs-js-cookie/hia-docs-build
- * @lang zh-CN 顶层与子级 JavaScript 命令都使用 mise 管理的 Node 22.23.0 或 24.12.0；输出只进入 ignored build/hia-docs。
- * @lang en Top-level and child JavaScript commands use mise-managed Node 22.23.0 or 24.12.0; output is confined to ignored build/hia-docs.
+ * @lang zh-CN 顶层与子级 JavaScript 命令都使用 mise 管理的 Node 22.23.4 或 24.22.1；输出只进入 ignored build/hia-docs。
+ * @lang en Top-level and child JavaScript commands use mise-managed Node 22.23.4 or 24.22.1; output is confined to ignored build/hia-docs.
  */
 
 import crypto from 'node:crypto'

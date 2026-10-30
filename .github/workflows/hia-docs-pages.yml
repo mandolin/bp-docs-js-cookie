@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/jsdoc-plugin-hia-sys
-          ref: ac1fa5831dd33c204dd2168eed812b654eab24e4
+          ref: 15970dc9da0f8e120677eab7eba3e959dcf42a34
           path: .hia-docs-owners/HIA/jsdoc-plugin-hia-sys
           persist-credentials: false
 
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/jsdoc-theme-hia
-          ref: 9c78b017567c5c23a212ae572e72ad36376ed78d
+          ref: 0df2ca9bbf40e159d8da69aac80b3c31136b1a05
           path: .hia-docs-owners/HIA/jsdoc-theme-hia
           persist-credentials: false
 
@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/hia-jsdoc
-          ref: 4774c9bd685f1b0ced7f0032a1208eeee2a13a5f
+          ref: 4890e0bf1b943a14cf247f9b413d140a43a6bb5b
           path: .hia-docs-owners/HIA/hia-jsdoc
           persist-credentials: false
 
@@ -58,7 +58,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: mandolin/HIA-Documentation
-          ref: 62f4570f7f70b094f65df32a2424d28463d0415d
+          ref: b13203038ebcad604904575a70055d89d6027c50
           path: .hia-docs-owners/main-repo
           persist-credentials: false
 
@@ -71,14 +71,20 @@ jobs:
 
       - name: Install pinned documentation runtime
         working-directory: tools/hia-docs/runtime
-        run: mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund
+        run: mise exec node@24.22.1 -- npm ci --ignore-scripts --no-audit --no-fund
+
+      # 中文：新版聚合工具的冻结锁引用相邻owner归档，先核精确来源并生成缓存，再执行普通冻结安装。
+      # English: The current umbrella lock references sibling-owner archives; verify exact sources and prepare caches before the ordinary frozen installation.
+      - name: Prepare pinned hia-jsdoc owner archives
+        working-directory: .hia-docs-owners/HIA/hia-jsdoc
+        run: mise exec node@24.22.1 -- npm run prepare:owners
 
       - name: Install hia-jsdoc owner dependencies
         working-directory: .hia-docs-owners/HIA/hia-jsdoc
-        run: mise exec node@24.12.0 -- npm ci --ignore-scripts --no-audit --no-fund
+        run: mise exec node@24.22.1 -- npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Install HIA Portal owner dependencies
-        run: mise exec node@24.12.0 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
+        run: mise exec node@24.22.1 pnpm@10.34.4 -- pnpm --dir .hia-docs-owners/main-repo install --frozen-lockfile
 
       # 中文：先由 Node 22 构建并暂存矩阵与公开产品的 body-free 指纹，再由 Node 24 重建与验收；最终只上传 Node 24 public artifact。
       # English: Build under Node 22 and stage body-free fingerprints for both the matrix and public product, then rebuild and verify under Node 24; upload only the final Node 24 public artifact.
@@ -86,7 +92,7 @@ jobs:
         env:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
-          mise exec node@22.23.0 -- node tools/hia-docs/build.mjs
+          mise exec node@22.23.4 -- node tools/hia-docs/build.mjs
           cp build/hia-docs/evidence/showcase-fingerprint.json "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json"
           cp build/hia-docs/evidence/public-fingerprint.json "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
 
@@ -94,11 +100,11 @@ jobs:
         env:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
-          mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
-          mise exec node@24.12.0 -- node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs
-          mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
-          mise exec node@24.12.0 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json" "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
-          mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
+          mise exec node@24.22.1 -- node tools/hia-docs/build.mjs
+          mise exec node@24.22.1 -- node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs tools/hia-docs/sanitize.test.mjs
+          mise exec node@24.22.1 -- node tools/hia-docs/check.mjs
+          mise exec node@24.22.1 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json" "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
+          mise exec node@24.22.1 -- node tools/hia-docs/check-pages.mjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0

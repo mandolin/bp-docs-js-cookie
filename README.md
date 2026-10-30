@@ -26,21 +26,21 @@ Documentation output is local and ignored in `build/hia-docs/`. It uses pinned s
 scripts to the upstream package manifest. With [mise](https://mise.jdx.dev/) and the documented sibling workspace layout:
 
 ```bash
-mise exec node@24.12.0 -- node tools/hia-docs/build.mjs
-mise exec node@24.12.0 -- node --test tools/hia-docs/showcase.test.mjs
-mise exec node@24.12.0 -- node --test tools/hia-docs/public-artifact.test.mjs
-mise exec node@24.12.0 -- node tools/hia-docs/check.mjs
-mise exec node@24.12.0 -- node tools/hia-docs/check-pages.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/build.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/showcase.test.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/public-artifact.test.mjs
+mise exec node@24.22.1 -- node --test tools/hia-docs/sanitize.test.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/check.mjs
+mise exec node@24.22.1 -- node tools/hia-docs/check-pages.mjs
 ```
 
 All local/CI profiles are multi-page and can switch among three owner-provided skins. `fetch` is the default source-reading mode; `embed` and
 `link` are explicit alternatives, while `none` remains a separate privacy regression. Fetch uses same-origin, content-addressed,
 digest-verified text assets and loads only on expansion. The workflow requires byte-identical local/CI and public artifacts from Node
-`22.23.0` and `24.12.0`. See [`tools/hia-docs/README.md`](tools/hia-docs/README.md) for topology, privacy, and reproducibility details.
+`22.23.4` and `24.22.1`. See [`tools/hia-docs/README.md`](tools/hia-docs/README.md) for topology, privacy, and reproducibility details.
 
-WorkZone W-P125 records a successful Pages deployment and anonymous online check for BP commit `183f508` at
-[mandolin.github.io/bp-docs-js-cookie](https://mandolin.github.io/bp-docs-js-cookie/). The current GitHub Pages settings and live site
-status have not been checked here. The Pages workflow builds from pinned HIA owners and configures the artifact to contain only the
+Public documentation is served at [mandolin.github.io/bp-docs-js-cookie](https://mandolin.github.io/bp-docs-js-cookie/).
+The Pages workflow builds from pinned HIA owners and configures the artifact to contain only the
 sanitized default Portal/fetch/classic product. The 27-profile chooser remains a local/CI test surface and is not uploaded to Pages.
 This public site is a documentation-engineering showcase, not an official js-cookie site.
 

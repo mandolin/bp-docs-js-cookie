@@ -746,6 +746,14 @@
       /** @lang zh-CN portalUrl 从站点入口与公开 identity 重建，避免动态 href 值越过路由边界。 @lang en PortalUrl is rebuilt from the site entry and public identity so a dynamic href cannot cross the route boundary. */
       const portalUrl = new URL('./', document.baseURI)
       portalUrl.hash = `entry=${encodeURIComponent(entryIdentity)}`
+      // <lang><zh-CN>标记离开的真实首页历史项，原生返回时才能恢复被owner替换的首页DOM；保留既有state字段与首页锚点。</zh-CN><en>Mark the actual landing-history entry so native back can restore landing DOM replaced by the owner, preserving existing state fields and landing anchors.</en></lang>
+      if (contentHost?.querySelector('.hia-public-landing')) {
+        window.history.replaceState(
+          { ...window.history.state, hiaPublicLanding: true },
+          '',
+          window.location.href
+        )
+      }
       window.history.pushState({ hiaPublicEntry: entryIdentity }, '', portalUrl)
       window.location.reload()
     })
@@ -973,6 +981,16 @@
     rebuildOutline()
   })
   window.addEventListener('hashchange', () => void restoreDeepLink())
+  // <lang><zh-CN>只有返回已标记首页且首页DOM确已被替换时重新加载；API内部hash或普通history状态不触发该分支。</zh-CN><en>Reload only when returning to a marked landing whose DOM has actually been replaced; internal API hashes and ordinary history states do not trigger this branch.</en></lang>
+  window.addEventListener('popstate', (event) => {
+    if (
+      event.state?.hiaPublicLanding === true &&
+      contentHost &&
+      !contentHost.querySelector('.hia-public-landing')
+    ) {
+      window.location.reload()
+    }
+  })
 
   mobileNavigationHost?.addEventListener('click', (event) => {
     /** @lang zh-CN projectedItem 用 entry id 重新定位权威树节点，不复用克隆节点的丢失监听器。 @lang en ProjectedItem uses the entry ID to relocate the authoritative tree node instead of relying on lost listeners in the clone. */

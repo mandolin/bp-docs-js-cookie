@@ -520,3 +520,11 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   )
   assert.equal(/\bfetch\s*\(/u.test(runtime), false)
 })
+
+/** @lang zh-CN 原生返回只在明确标记的首页历史项上恢复首页，不接管API内部锚点导航。 @lang en Native back restores the landing only for explicitly marked landing-history entries, without taking over internal API anchors. */
+test('marks landing history and restores it after API traversal', () => {
+  const runtime = fs.readFileSync(path.join(MODULE_DIRECTORY, 'public-product.js'), 'utf8')
+  assert.match(runtime, /hiaPublicLanding: true/u)
+  assert.match(runtime, /addEventListener\('popstate'/u)
+  assert.match(runtime, /event\.state\?\.hiaPublicLanding === true/u)
+})

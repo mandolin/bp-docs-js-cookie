@@ -612,6 +612,7 @@ pre code {
 /* <lang><zh-CN>Baseline B：公开/全部 API 与五类 topic section 都由根级 closed 状态确定性控制。</zh-CN><en>Baseline B: public/all API scope and five topic-section categories are controlled deterministically by root-level closed state.</en></lang> */
 :root[data-hia-api-scope='public'] [data-hia-api-scope-only='all'],
 :root[data-hia-show-metadata='hide'] [data-hia-topic-section='metadata'],
+:root[data-hia-show-metadata='hide'] [data-hia-content-section='metadata'],
 :root[data-hia-show-contract='hide'] [data-hia-topic-section='contract'],
 :root[data-hia-show-coverage='hide'] [data-hia-topic-section='coverage'],
 :root[data-hia-show-provenance='hide'] [data-hia-topic-section='provenance'],
@@ -1115,6 +1116,365 @@ body {
   color: var(--hia-muted);
   font-size: 0.78rem;
   margin: 0;
+}
+
+/* <lang><zh-CN>W-P130 按 baseline B 收口默认 Portal 的首页比例、API 主体密度、移动设置滚动和 no-script 可读路径。</zh-CN><en>W-P130 aligns the default Portal's home proportions, API contract density, mobile settings scrolling, and no-script reading path with Baseline B.</en></lang> */
+:root[data-hia-scheme='light'] {
+  --hia-bg: #f5f7fb;
+  --hia-surface: #fff;
+  --hia-text: #172033;
+  --hia-muted: #536078;
+  --hia-border: #dce2ec;
+  --hia-accent: #2855d9;
+  --hia-accent-soft: #e9efff;
+  --hia-color-accent-contrast: #fff;
+}
+
+@media (min-width: 1081px) {
+  .hia-public-header {
+    gap: clamp(0.8rem, 2.2vw, 2.6rem);
+    grid-template-columns: minmax(13rem, 16rem) minmax(18rem, 34rem) auto;
+  }
+
+  .hia-shell.hia-project-split-site {
+    grid-template-columns: 22.5rem minmax(0, 1fr) 19.5rem;
+    max-width: 90rem;
+  }
+}
+
+.hia-public-content-column {
+  padding: 2rem clamp(2rem, 3.333vw, 3rem) 5rem;
+}
+
+.hia-public-landing {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.hia-public-hero {
+  margin-block-end: 3.1rem;
+}
+
+.hia-public-landing h1 {
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  max-width: 11ch;
+  margin-block: 0.35rem 1rem;
+}
+
+.hia-public-landing .hia-public-eyebrow {
+  margin-block-end: 0.6rem;
+}
+
+.hia-public-landing .hia-public-lede {
+  font-size: 1.08rem;
+  line-height: 1.7;
+  max-width: 48rem;
+}
+
+.hia-public-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1.15rem;
+}
+
+.hia-public-hero-meta span {
+  background: var(--hia-accent-soft);
+  border: 1px solid var(--hia-border);
+  border-radius: 999px;
+  color: var(--hia-muted);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.hia-public-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 1.4rem;
+}
+
+.hia-public-primary-action,
+.hia-public-secondary-action {
+  align-items: center;
+  border: 1px solid var(--hia-accent);
+  border-radius: 0.6rem;
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 2.8rem;
+  padding: 0.55rem 1rem;
+  text-decoration: none;
+}
+
+.hia-public-primary-action {
+  background: var(--hia-accent);
+  color: var(--hia-color-accent-contrast);
+}
+
+.hia-public-secondary-action {
+  background: var(--hia-surface);
+  border-color: var(--hia-border);
+  color: var(--hia-text);
+}
+
+.hia-public-primary-action:hover,
+.hia-public-primary-action:focus-visible,
+.hia-public-secondary-action:hover,
+.hia-public-secondary-action:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hia-accent) 20%, transparent);
+}
+
+.hia-public-landing > section {
+  margin-block: 2rem 2.5rem;
+}
+
+.hia-public-landing > section > h2 {
+  font-size: clamp(1.45rem, 2.3vw, 1.8rem);
+  letter-spacing: -0.025em;
+  margin-block-end: 0.5rem;
+}
+
+.hia-public-landing > section > pre {
+  background: color-mix(in srgb, var(--hia-bg) 78%, var(--hia-surface));
+  border: 1px solid var(--hia-border);
+  border-radius: 0.7rem;
+  max-width: 100%;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.hia-public-landing > section > pre code {
+  white-space: pre;
+}
+
+.hia-public-card {
+  min-height: 8rem;
+  padding: 1.15rem;
+}
+
+.hia-public-api-contract {
+  display: grid;
+  gap: 1.25rem;
+  padding-block: 0.5rem;
+}
+
+.hia-public-api-contract > section {
+  min-width: 0;
+}
+
+.hia-public-api-contract h3 {
+  font-size: 1.05rem;
+  margin: 0 0 0.7rem;
+}
+
+.hia-public-api-contract pre {
+  max-width: 100%;
+  overflow: auto;
+  padding: 0.9rem 1rem;
+}
+
+.hia-public-api-contract pre code {
+  white-space: pre;
+}
+
+.hia-public-api-type {
+  margin-block-end: 0.4rem;
+}
+
+.hia-public-api-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.hia-public-api-contract table {
+  border-collapse: collapse;
+  min-width: 34rem;
+  width: 100%;
+}
+
+.hia-public-api-contract th,
+.hia-public-api-contract td {
+  border-block-end: 1px solid var(--hia-border);
+  padding: 0.65rem 0.75rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.hia-public-api-contract thead th {
+  color: var(--hia-muted);
+  font-size: 0.82rem;
+}
+
+.hia-public-api-contract tbody th[scope='row'],
+.hia-public-api-contract tbody td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.hia-public-api-optionality {
+  color: var(--hia-muted);
+  display: block;
+  font-size: 0.75rem;
+  margin-block-start: 0.25rem;
+}
+
+.hia-public-api-note {
+  color: var(--hia-muted);
+  font-size: 0.88rem;
+  margin-block: 0.45rem 0;
+}
+
+.hia-public-api-contract [data-hia-locale] {
+  overflow-wrap: anywhere;
+}
+
+/* <lang><zh-CN>Portal 使用 sticky header；entry 与契约标题保留锚点间距，避免 deep link/页内目录被顶栏遮住。</zh-CN><en>The Portal uses a sticky header; entry and contract headings keep anchor spacing so deep links and outline navigation stay visible below it.</en></lang> */
+.hia-project-entry,
+.hia-public-api-contract [id],
+.hia-public-landing [id] {
+  scroll-margin-block-start: calc(var(--hia-public-header-height) + 1rem);
+}
+
+.hia-public-settings-dialog {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: min(46rem, calc(100dvh - 2rem));
+  max-height: calc(100dvh - 2rem);
+  max-width: min(52rem, calc(100vw - 2rem));
+  overflow: hidden;
+  width: 100%;
+}
+
+.hia-public-settings-header,
+.hia-public-settings-footer {
+  min-width: 0;
+}
+
+.hia-public-settings-body {
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hia-public-settings-body fieldset,
+.hia-public-settings-field,
+.hia-public-settings-body label {
+  min-width: 0;
+}
+
+.hia-public-settings-field select,
+.hia-public-settings-body input:not([type='checkbox']):not([type='radio']),
+.hia-public-settings-body select {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.hia-public-settings-body input[type='checkbox'],
+.hia-public-settings-body input[type='radio'] {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.hia-public-settings-privacy,
+.hia-public-highlighter-note {
+  overflow-wrap: anywhere;
+}
+
+.hia-public-settings-footer > button {
+  flex: 0 0 auto;
+}
+
+html.no-js .hia-public-search-trigger,
+html.no-js .hia-public-mobile-search,
+html.no-js [data-hia-public-locale],
+html.no-js [data-hia-settings-open],
+html.no-js .hia-shell.hia-project-split-site > .hia-sidebar,
+html.no-js .hia-public-outline {
+  display: none !important;
+}
+
+html.no-js .hia-public-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+html.no-js .hia-shell.hia-project-split-site {
+  display: block;
+  max-width: none;
+  min-height: 0;
+}
+
+html.no-js .hia-public-mobile-navigation {
+  display: block;
+}
+
+html.no-js .hia-public-mobile-navigation-host nav ul {
+  display: grid;
+  gap: 0.45rem;
+  list-style: none;
+  margin-block: 0.75rem 0;
+  padding: 0;
+}
+
+html.no-js .hia-public-mobile-navigation-host a {
+  color: var(--hia-accent);
+}
+
+.hia-public-settings-dialog:not([open]),
+.hia-public-search-dialog:not([open]) {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hia-public-content-column {
+    padding-inline: 1rem;
+  }
+
+  .hia-public-hero {
+    margin-block-end: 2.2rem;
+  }
+
+  .hia-public-landing h1 {
+    font-size: clamp(2.45rem, 10vw, 3.5rem);
+    max-width: 12ch;
+  }
+
+  .hia-public-hero-actions > a {
+    flex: 1 1 8rem;
+  }
+
+  .hia-public-settings-dialog {
+    height: min(46rem, calc(100dvh - 2rem));
+    max-height: calc(100dvh - 2rem);
+    max-width: calc(100vw - 2rem);
+    width: calc(100vw - 2rem);
+  }
+
+  .hia-public-settings-header,
+  .hia-public-settings-footer {
+    gap: 0.65rem;
+    padding: 0.8rem;
+  }
+
+  .hia-public-settings-footer {
+    flex-wrap: wrap;
+  }
+
+  .hia-public-settings-footer > div {
+    min-width: 0;
+  }
+
+  .hia-public-settings-body {
+    padding: 0.8rem;
+  }
 }
 
 @media (max-width: 1080px) {

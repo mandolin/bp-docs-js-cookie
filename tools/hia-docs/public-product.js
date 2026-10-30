@@ -50,6 +50,31 @@
   const messages = Object.freeze({
     'zh-CN': {
       skip: '跳到正文',
+      landingEyebrow: '浏览器 Cookie 工具库',
+      landingTitle: '轻量、明确地管理 Cookie。',
+      landingLede:
+        'js-cookie 提供熟悉、无依赖的浏览器 API。这里从一个默认、多页、可追溯的 Portal 开始阅读。',
+      startCta: '快速开始',
+      apiCta: '浏览 API',
+      installTitle: '安装',
+      installIntro: '使用包管理器安装，或从 ESM 入口导入。',
+      quickStartTitle: '第一段代码',
+      quickStartIntro: '写入、读取，再按同一作用域删除 Cookie。',
+      apiTitle: '核心 API',
+      apiIntro: '按任务进入独立 reference 页面，在统一 Portal 中查看完整契约。',
+      setCardDescription:
+        '写入值，并显式控制 expires、path、domain、secure 与 sameSite。',
+      getCardDescription:
+        '读取指定名称，或取得当前文档可见的 Cookie 值。',
+      apiIndexTitle: '完整 API 索引',
+      apiIndexDescription:
+        '默认显示 7 个公开 API；可在设置中切换查看全部 18 个文档节点。',
+      provenanceTitle: '文档与源码溯源',
+      upstreamVersion: '上游版本',
+      publicProfile: '公开 profile',
+      sourceMode: '源码模式',
+      license: '许可证',
+      browser: '浏览器',
       home: 'js-cookie 文档首页',
       search: '搜索文档',
       openSearch: '打开文档搜索',
@@ -70,6 +95,7 @@
       backToContent: '返回正文顶部',
       switchToEnglish: '切换到英语界面',
       switchToChinese: '切换到中文界面',
+      openSettings: '打开主题与显示设置',
       settingsTitle: '主题、内容与代码设置',
       apiScope: 'API 显示范围',
       publicApi: '只显示接口 API',
@@ -113,6 +139,32 @@
     },
     en: {
       skip: 'Skip to content',
+      landingEyebrow: 'Browser Cookie library',
+      landingTitle: 'Manage Cookies with clarity and care.',
+      landingLede:
+        'js-cookie provides a familiar, dependency-free browser API. Start reading through one default, multi-page, traceable Portal.',
+      startCta: 'Quick start',
+      apiCta: 'Browse APIs',
+      installTitle: 'Install',
+      installIntro: 'Install with a package manager or import from the ESM entry.',
+      quickStartTitle: 'Quick start',
+      quickStartIntro: 'Write, read, then remove a Cookie with the same scope.',
+      apiTitle: 'Core APIs',
+      apiIntro:
+        'Open a focused reference page to read its full contract in the unified Portal.',
+      setCardDescription:
+        'Write a value and set expires, path, domain, secure, and sameSite explicitly.',
+      getCardDescription:
+        'Read a named value or the Cookie values visible to the current document.',
+      apiIndexTitle: 'Complete API index',
+      apiIndexDescription:
+        'Shows 7 public APIs by default; switch settings to view all 18 documented entries.',
+      provenanceTitle: 'Documentation and source provenance',
+      upstreamVersion: 'Upstream version',
+      publicProfile: 'Public profile',
+      sourceMode: 'Source mode',
+      license: 'License',
+      browser: 'Browser',
       home: 'js-cookie documentation home',
       search: 'Search documentation',
       openSearch: 'Open documentation search',
@@ -133,6 +185,7 @@
       backToContent: 'Back to content',
       switchToEnglish: 'Switch interface to English',
       switchToChinese: 'Switch interface to Chinese',
+      openSettings: 'Open theme and display settings',
       settingsTitle: 'Theme, content, and code settings',
       apiScope: 'API visibility',
       publicApi: 'Public APIs only',
@@ -433,6 +486,17 @@
       candidate.closest('[data-hia-content-section]')?.dataset
         .hiaContentSection ||
       ''
+    /** @lang zh-CN details 保留可见 summary；其折叠正文标题不应继续出现在本页 outline。 @lang en Details keeps its summary visible while collapsed body headings leave the page outline. */
+    const containingDetails = candidate.closest(
+      'details[data-hia-topic-section]'
+    )
+    if (
+      containingDetails &&
+      candidate.tagName !== 'SUMMARY' &&
+      !containingDetails.open
+    ) {
+      return false
+    }
     if (
       !['metadata', 'contract', 'coverage', 'provenance', 'relations'].includes(
         section
@@ -625,6 +689,69 @@
   }
 
   /**
+   * <lang><zh-CN>在启用脚本后把精选 API 链接绑定到 owner deep-link，并保留静态 fallback 供无脚本访问。</zh-CN><en>After scripts initialize, binds featured API links to owner deep links while retaining static fallbacks for no-script access.</en></lang>
+   *
+   * @returns {void} <lang><zh-CN>更新链接 href 并安装一次性委托点击处理。</zh-CN><en>Updates link hrefs and installs one delegated click handler.</en></lang>
+   * @sideEffects <lang><zh-CN>改写本页精选链接并在普通左键激活时创建本地 history entry。</zh-CN><en>Rewrites featured links on this page and creates a local history entry on an ordinary primary-button activation.</en></sideEffects>
+   */
+  function bindPublicEntryLinks() {
+    /** @lang zh-CN publicEntryLinks 是由 build-time owner manifest 标记的公开 API 链接。 @lang en PublicEntryLinks are public API anchors marked from the build-time owner manifest. */
+    const publicEntryLinks = document.querySelectorAll(
+      'a[data-hia-public-entry]'
+    )
+    for (const link of publicEntryLinks) {
+      /** @lang zh-CN entryIdentity 必须遵循 owner entry id 字符集，拒绝不安全 identity。 @lang en EntryIdentity must follow the owner entry-ID character set; unsafe identities are rejected. */
+      const entryIdentity = link.dataset.hiaPublicEntry
+      if (!/^jsdoc-integration:[A-Za-z0-9._:-]+$/u.test(entryIdentity || '')) {
+        continue
+      }
+      /** @lang zh-CN portalUrl 固定定位到当前站点根目录的 Portal 入口。 @lang en PortalUrl always targets the Portal entry at the current site's root. */
+      const portalUrl = new URL('./', document.baseURI)
+      portalUrl.hash = `entry=${encodeURIComponent(entryIdentity)}`
+      link.href = portalUrl.href
+    }
+
+    document.addEventListener('click', (event) => {
+      // <lang><zh-CN>保留修饰键、新标签页、下载和非主键操作的浏览器原生链接行为。</zh-CN><en>Preserve native link behavior for modifier keys, new tabs, downloads, and non-primary-button activations.</en></lang>
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+      /** @lang zh-CN eventTargetAnchor 只接受同页 API entry anchor。 @lang en EventTargetAnchor accepts only same-page API-entry anchors. */
+      const eventTarget = event.target
+      if (!(eventTarget instanceof Element)) return
+      const eventTargetAnchor = eventTarget.closest(
+        'a[data-hia-public-entry]'
+      )
+      if (
+        !eventTargetAnchor ||
+        (eventTargetAnchor.target && eventTargetAnchor.target !== '_self') ||
+        eventTargetAnchor.hasAttribute('download')
+      ) {
+        return
+      }
+
+      /** @lang zh-CN entryIdentity 再次校验，避免动态 DOM 修改将任意值送入 Portal hash。 @lang en EntryIdentity is checked again so dynamic DOM changes cannot inject arbitrary values into the Portal hash. */
+      const entryIdentity = eventTargetAnchor.dataset.hiaPublicEntry
+      if (!/^jsdoc-integration:[A-Za-z0-9._:-]+$/u.test(entryIdentity || '')) {
+        return
+      }
+      event.preventDefault()
+      /** @lang zh-CN portalUrl 从站点入口与公开 identity 重建，避免动态 href 值越过路由边界。 @lang en PortalUrl is rebuilt from the site entry and public identity so a dynamic href cannot cross the route boundary. */
+      const portalUrl = new URL('./', document.baseURI)
+      portalUrl.hash = `entry=${encodeURIComponent(entryIdentity)}`
+      window.history.pushState({ hiaPublicEntry: entryIdentity }, '', portalUrl)
+      window.location.reload()
+    })
+  }
+
+  /**
    * <lang><zh-CN>从当前 topic 的真实节点生成桌面与移动 outline。</zh-CN><en>Builds desktop and mobile outlines from real nodes in the current topic.</en></lang>
    *
    * @returns {void}
@@ -633,10 +760,15 @@
     if (!contentHost || !outlineHost || !mobileOutlineHost) return
     /** @lang zh-CN topicScope 优先使用当前 identity 对应的 article，避免把同容器 sibling 混入页面 outline。 @lang en TopicScope prefers the article matching the current identity so sibling entries in the same container cannot leak into the page outline. */
     const topicScope = projectActiveArticle()
-    /** @lang zh-CN candidates 优先使用语义 section summary，landing 则使用 h2。 @lang en Candidates prefer semantic section summaries and use h2 elements on the landing page. */
+    /** @lang zh-CN candidates 包含语义 section summary 和主契约 h3；landing 使用 h2。 @lang en Candidates include semantic section summaries and primary-contract h3 headings; the landing uses h2 headings. */
     const candidates = (
       topicScope
-        ? [...topicScope.querySelectorAll(':scope > details > summary')]
+        ? [
+            ...topicScope.querySelectorAll(':scope > details > summary'),
+            ...topicScope.querySelectorAll(
+              ':scope > details[data-hia-topic-section="contract"] h3[id]'
+            )
+          ]
         : [
             ...contentHost.querySelectorAll(
               ':scope > article > details > summary, :scope > article h2[id]'
@@ -656,7 +788,10 @@
       const item = document.createElement('li')
       const link = document.createElement('a')
       link.href = `#${encodeURIComponent(target.id)}`
-      link.textContent = candidate.textContent?.trim() || `Section ${index + 1}`
+      // <lang><zh-CN>outlineLabel 使用渲染后可见文本，避免把 hidden locale 的另一种语言拼进目录。</zh-CN><en>OutlineLabel uses rendered visible text so a hidden alternate locale is not concatenated into the outline.</en></lang>
+      const outlineLabel =
+        candidate.innerText?.trim() || candidate.textContent?.trim()
+      link.textContent = outlineLabel || `Section ${index + 1}`
       link.addEventListener('click', () => {
         if (target.tagName === 'DETAILS') target.open = true
       })
@@ -867,6 +1002,16 @@
   })
 
   if (contentHost) {
+    /** @lang zh-CN detailsToggleObserver 在原生折叠切换后同步页内目录。 @lang en DetailsToggleObserver synchronizes the page outline after native disclosure changes. */
+    contentHost.addEventListener(
+      'toggle',
+      (event) => {
+        /** @lang zh-CN changedDetails 只响应 owner topic 的原生 disclosure，不读取或改写 source state。 @lang en ChangedDetails responds only to native owner-topic disclosures and never reads or changes source state. */
+        const changedDetails = event.target
+        if (changedDetails instanceof HTMLDetailsElement) rebuildOutline()
+      },
+      true
+    )
     /** @lang zh-CN content observer 在 topic 替换或源码状态变化后更新 outline/高亮，不记录正文。 @lang en The content observer updates outline/highlighting after topic replacement or source-state changes and records no body content. */
     const contentObserver = new MutationObserver(() => {
       rebuildOutline()
@@ -887,4 +1032,7 @@
     })
     treeObserver.observe(treeHost, { childList: true, subtree: true })
   }
+  // <lang><zh-CN>先完成所有交互绑定，再移除 no-js 标记；初始化中断时静态导航和 API fallback 仍保持可见。</zh-CN><en>Remove the no-js marker only after every interaction is bound; if initialization aborts, static navigation and API fallbacks remain visible.</en></lang>
+  bindPublicEntryLinks()
+  root.classList.remove('no-js')
 })()

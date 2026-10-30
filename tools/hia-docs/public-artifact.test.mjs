@@ -27,6 +27,64 @@ const BUILD_COMMIT = '1234567890abcdef1234567890abcdef12345678'
 /** @lang zh-CN 当前测试模块目录用于读取将被原样发布的产品 runtime。 @lang en Current test-module directory is used to read the product runtime that is published verbatim. */
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 
+/**
+ * <lang><zh-CN>构造由公开 JSDoc i18n 投影而来的 fixture 字段。</zh-CN><en>Builds a fixture field projected from public JSDoc i18n.</en></lang>
+ *
+ * @param {string} chinese <lang><zh-CN>中文字段正文。</zh-CN><en>Chinese field text.</en></lang>
+ * @param {string} english <lang><zh-CN>英文字段正文。</zh-CN><en>English field text.</en></lang>
+ * @returns {Object} <lang><zh-CN>project-index localizedText 字段。</zh-CN><en>project-index localizedText field.</en></lang>
+ */
+function localizedFixtureField(chinese, english) {
+  return {
+    localizedText: { 'zh-CN': chinese, en: english }
+  }
+}
+
+/**
+ * <lang><zh-CN>在隔离 fixture 中写入 owner 风格的可折叠 contract 页面。</zh-CN><en>Writes an owner-style collapsible contract page into an isolated fixture.</en></lang>
+ *
+ * @param {string} root <lang><zh-CN>临时公开 artifact 根。</zh-CN><en>Temporary public-artifact root.</en></lang>
+ * @param {string} route <lang><zh-CN>相对公开根的 HTML route。</zh-CN><en>HTML route relative to the public root.</en></lang>
+ * @returns {void}
+ */
+function writeContractFixturePage(root, route, entryIdentity) {
+  // <lang><zh-CN>pagePath 由测试内固定 route 构造，只模拟公开静态 HTML。</zh-CN><en>PagePath is built from a fixed test route and simulates public static HTML only.</en></lang>
+  const pagePath = path.join(root, ...route.split('/'))
+  // <lang><zh-CN>documentLocale 模拟 owner 按静态页面 route 写入的 lang 属性。</zh-CN><en>DocumentLocale simulates the lang attribute emitted by the owner for each static page route.</en></lang>
+  const documentLocale = route.startsWith('pages/en/') ? 'en' : 'zh-CN'
+  fs.mkdirSync(path.dirname(pagePath), { recursive: true })
+  fs.writeFileSync(
+    pagePath,
+    `<!doctype html><html lang="${documentLocale}"><head><title>API</title></head><body><article id="${entryIdentity}"><details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article></body></html>`,
+    'utf8'
+  )
+}
+
+/**
+ * <lang><zh-CN>写入同一 semantic container 中的多个 API article，检验 target 投影不会更改 sibling。</zh-CN><en>Writes multiple API articles into one semantic container to verify that a target projection leaves siblings unchanged.</en></lang>
+ *
+ * @param {string} root <lang><zh-CN>临时公开 artifact 根。</zh-CN><en>Temporary public-artifact root.</en></lang>
+ * @param {string} route <lang><zh-CN>共享 presentation 的 HTML route。</zh-CN><en>HTML route for the shared presentation.</en></lang>
+ * @param {string[]} entryIdentities <lang><zh-CN>唯一 owner entry identities。</zh-CN><en>Unique owner entry identities.</en></lang>
+ * @returns {void}
+ */
+function writeSharedPresentationFixture(root, route, entryIdentities) {
+  // <lang><zh-CN>presentationPath 可以共享同一文件，页面仍以 article id 划分 owner topic。</zh-CN><en>PresentationPath may share one file while article IDs keep owner topics distinct.</en></lang>
+  const presentationPath = path.join(root, ...route.split('/'))
+  fs.mkdirSync(path.dirname(presentationPath), { recursive: true })
+  const articles = entryIdentities
+    .map(
+      (entryIdentity) =>
+        `<article id="${entryIdentity}"><details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article>`
+    )
+    .join('')
+  fs.writeFileSync(
+    presentationPath,
+    `<!doctype html><html lang="zh-CN"><head><title>API</title></head><body>${articles}</body></html>`,
+    'utf8'
+  )
+}
+
 test('creates one default-Portal publication profile without a chooser', () => {
   // <lang><zh-CN>manifest 是 build、Pages checker 与 online checker 的共同公开事实源。</zh-CN><en>The manifest is the shared public fact source for the build, Pages checker, and online checker.</en></lang>
   const manifest = createPublicArtifactManifest({ buildCommit: BUILD_COMMIT })
@@ -202,19 +260,88 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   const publicRoot = path.join(temporaryRoot, 'public')
   fs.mkdirSync(path.join(defaultRoot, 'assets'), { recursive: true })
   fs.mkdirSync(path.join(defaultRoot, 'pages'), { recursive: true })
+  fs.mkdirSync(path.join(defaultRoot, 'entries'), { recursive: true })
   fs.mkdirSync(unusedRoot, { recursive: true })
   fs.writeFileSync(
     path.join(defaultRoot, 'index.html'),
     '<!doctype html><html data-hia-scheme="system"><head><link rel="stylesheet" href="assets/hia-default.css"></head><body><div class="hia-shell hia-project-split-site"><aside class="hia-sidebar"><input data-hia-project-search></aside><main class="hia-main" data-hia-project-content><p class="hia-project-empty"><span data-hia-ui-message="portal.navigation.select">Select a documentation entry.</span></p><noscript><p>No script</p></noscript></main></div><script src="assets/hia-default.js"></script></body></html>'
   )
   fs.writeFileSync(path.join(defaultRoot, 'assets', 'site.css'), ':root{}')
-  fs.writeFileSync(
-    path.join(defaultRoot, 'pages', 'api-init-set-a1.html'),
-    'set'
+  /** @lang zh-CN featuredEntries 模拟公开 project-index 中可校验的 set/get owner identity、route 与双语 JSDoc 字段。 @lang en FeaturedEntries simulate the set/get owner identities, routes, and bilingual JSDoc fields validated from the public project index. */
+  const featuredEntries = [
+    {
+      id: 'jsdoc-integration:jsdoc-function-module-js-cookie-api-init-set',
+      symbolId: 'jsdoc:function:module:js-cookie/api~init~set',
+      presentationPath: 'semantic-containers/package.html',
+      contentPath: 'entries/set.html',
+      noScriptPagePath: 'pages/set.html',
+      noScriptLocalePages: [
+        { uiLocale: 'zh-CN', path: 'pages/zh-CN/set.html' },
+        { uiLocale: 'en', path: 'pages/en/set.html' }
+      ],
+      i18n: {
+        fields: {
+          'params.name.description': localizedFixtureField(
+            'Cookie 名称。',
+            'The Cookie name.'
+          ),
+          'params.value.description': localizedFixtureField(
+            '交给 converter 编码的值。',
+            'The value passed to the converter for encoding.'
+          ),
+          'params.attributes.description': localizedFixtureField(
+            '本次写入覆盖属性。',
+            'Per-write override attributes.'
+          ),
+          'returns.0.description': localizedFixtureField(
+            '浏览器接受的赋值字符串；无 DOM 时为 undefined。',
+            'The accepted assignment string, or undefined without a DOM.'
+          )
+        }
+      }
+    },
+    {
+      id: 'jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get',
+      symbolId: 'jsdoc:function:module:js-cookie/api~init~get',
+      presentationPath: 'semantic-containers/package.html',
+      contentPath: 'entries/get.html',
+      noScriptPagePath: 'pages/get.html',
+      noScriptLocalePages: [
+        { uiLocale: 'zh-CN', path: 'pages/zh-CN/get.html' },
+        { uiLocale: 'en', path: 'pages/en/get.html' }
+      ],
+      i18n: {
+        fields: {
+          'params.name.description': localizedFixtureField(
+            '可选 Cookie 名称。',
+            'Optional Cookie name.'
+          ),
+          'returns.0.description': localizedFixtureField(
+            '名称对应值、全部值映射或 undefined。',
+            'Named value, complete value map, or undefined.'
+          )
+        }
+      }
+    }
+  ]
+  for (const entry of featuredEntries) {
+    for (const route of [
+      entry.contentPath,
+      entry.noScriptPagePath,
+      ...entry.noScriptLocalePages.map((page) => page.path)
+    ]) {
+      writeContractFixturePage(defaultRoot, route, entry.id)
+    }
+  }
+  writeSharedPresentationFixture(
+    defaultRoot,
+    'semantic-containers/package.html',
+    featuredEntries.map((entry) => entry.id)
   )
   fs.writeFileSync(
-    path.join(defaultRoot, 'pages', 'api-init-get-a1.html'),
-    'get'
+    path.join(defaultRoot, 'project-index.json'),
+    `${JSON.stringify({ entries: featuredEntries })}\n`,
+    'utf8'
   )
   fs.writeFileSync(path.join(unusedRoot, 'chooser.html'), 'not public')
 
@@ -229,7 +356,9 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
     'utf8'
   )
   assert.match(publicHtml, /data-hia-public-product/u)
+  assert.match(publicHtml, /class="no-js" data-hia-api-scope="public"/u)
   assert.match(publicHtml, /data-hia-public-i18n-aria="home"/u)
+  assert.match(publicHtml, /data-hia-public-i18n-aria="openSettings"/u)
   assert.match(publicHtml, /data-hia-settings-dialog/u)
   assert.match(publicHtml, /data-hia-search-dialog/u)
   assert.match(publicHtml, /aria-controls="hia-public-search"/u)
@@ -240,7 +369,51 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.match(publicHtml, /assets\/prism\.js/u)
   assert.match(publicHtml, /data-hia-public-outline/u)
   assert.match(publicHtml, /data-hia-public-footer/u)
+  assert.match(publicHtml, /静态文档导航/u)
+  assert.match(publicHtml, /轻量、明确地管理 Cookie/u)
+  assert.match(publicHtml, /install js-cookie|npm install js-cookie/iu)
+  assert.match(publicHtml, /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-set"/u)
+  assert.match(publicHtml, /pages\/set\.html/u)
+  assert.match(publicHtml, /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get"/u)
   assert.equal(publicHtml.includes('candidate-status-strip'), false)
+
+  // <lang><zh-CN>setPage/getPage 验证交互 fragment 与 no-script 页面共用完整 contract。</zh-CN><en>SetPage and getPage verify that interactive fragments and no-script pages share the complete contract.</en></lang>
+  const setPage = fs.readFileSync(path.join(publicRoot, 'entries', 'set.html'), 'utf8')
+  const getPage = fs.readFileSync(path.join(publicRoot, 'pages', 'get.html'), 'utf8')
+  const presentationPage = fs.readFileSync(
+    path.join(publicRoot, 'semantic-containers', 'package.html'),
+    'utf8'
+  )
+  const setPresentationArticle = presentationPage.match(
+    /<article\b[^>]*\bid="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-set"[^>]*>[\s\S]*?<\/article>/u
+  )?.[0]
+  const getPresentationArticle = presentationPage.match(
+    /<article\b[^>]*\bid="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get"[^>]*>[\s\S]*?<\/article>/u
+  )?.[0]
+  assert.match(setPresentationArticle, /Cookies\.set\(name, value, attributes\?\)/u)
+  assert.doesNotMatch(setPresentationArticle, /Cookies\.get\(name\?\)/u)
+  assert.match(getPresentationArticle, /Cookies\.get\(name\?\)/u)
+  assert.doesNotMatch(getPresentationArticle, /Cookies\.set\(name, value/u)
+  assert.match(setPage, /data-hia-topic-section="contract"[^>]* open>/u)
+  assert.match(setPage, /Cookies\.set\(name, value, attributes\?\)/u)
+  assert.match(setPage, /CookieAttributes/u)
+  assert.match(setPage, /名称或值含有无法 URI 编码的输入时会抛出 URIError/u)
+  assert.match(setPage, /id="hia-api-set-examples"/u)
+  assert.match(getPage, /Cookies\.get\(name\?\) → string \| Object \| undefined/u)
+  assert.doesNotMatch(getPage, /Record&lt;string, string&gt;/u)
+  assert.match(getPage, /单个畸形 Cookie 的解码错误不会阻断其它可见 Cookie/u)
+  assert.match(getPage, /自定义 converter 也可能改变无参数映射中各值的类型/u)
+  assert.match(getPage, /hia-public-api-contract-host/u)
+  assert.match(getPage, /<html class="no-js" lang="zh-CN">/u)
+  assert.match(getPage, /\.\.\/assets\/hia-public-product\.css/u)
+  assert.doesNotMatch(getPage, /hia-public-product\.js/u)
+  const englishGetPage = fs.readFileSync(
+    path.join(publicRoot, 'pages', 'en', 'get.html'),
+    'utf8'
+  )
+  assert.match(englishGetPage, /\.\.\/\.\.\/assets\/hia-public-product\.css/u)
+  assert.match(englishGetPage, /data-hia-locale="en" lang="en">Name/u)
+  assert.match(englishGetPage, /data-hia-locale="zh-CN" lang="zh-CN" hidden/u)
   assert.equal(fs.existsSync(path.join(publicRoot, 'assets', 'site.css')), true)
   assert.equal(
     fs.existsSync(path.join(publicRoot, 'assets', 'hia-public-product.css')),
@@ -278,7 +451,7 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
     result.manifest
   )
   assert.equal(result.manifest.publicProfileCount, 1)
-  assert.equal(result.copiedFileCount, 4)
+  assert.equal(result.copiedFileCount, 12)
 })
 
 test('rejects a symbolic link in the default Portal source tree', (t) => {
@@ -328,6 +501,11 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   assert.match(runtime, /\[data-hia-ui-locale-control\]/u)
   assert.equal(runtime.includes('[data-hia-locale-control]'), false)
   assert.match(runtime, /BP product UI locale bundles are incomplete/u)
+  assert.match(runtime, /bindPublicEntryLinks\(\)/u)
+  assert.match(runtime, /window\.history\.pushState/u)
+  assert.match(runtime, /window\.location\.reload\(\)/u)
+  assert.match(runtime, /root\.classList\.remove\('no-js'\)/u)
+  assert.match(runtime, /data-hia-topic-section="contract"\] h3\[id\]/u)
   assert.ok(
     runtime.indexOf("nodeId.includes(':package:')") <
       runtime.indexOf("nodeId.includes(':repository:')")

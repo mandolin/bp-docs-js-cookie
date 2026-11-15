@@ -1,7 +1,7 @@
 /**
  * @file
- * @lang zh-CN 对真实默认Portal运行六项浏览器回归，覆盖来源保真、静态路由和键盘焦点。
- * @lang en Runs six browser regressions against the actual default Portal, covering source fidelity, static routes, and keyboard focus.
+ * @lang zh-CN 对真实默认Portal及第一方偏好指南运行浏览器回归，覆盖来源保真、静态路由、键盘焦点和打印。
+ * @lang en Runs browser regressions against the actual default Portal and first-party preference guide, covering source fidelity, static routes, keyboard focus, and print.
  */
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
@@ -328,16 +328,21 @@ test('mobile directory selection transfers focus to visible content after the pr
   await scenario(320, async (page) => {
     await enter(page, base)
     /** @lang zh-CN 延迟目标取自实际索引的presentationPath，等待沿浏览器默认超时限界。 @lang en The delayed target comes from the actual index presentationPath, with waiting bounded by the browser timeout. */
-    const index = JSON.parse(fs.readFileSync(path.join(publicRoot, 'project-index.json'), 'utf8'))
-    const entry = index.entries.find(item => item.name === 'get')
-    const target = new URL(entry.presentationPath || entry.contentPath, base).href
+    const index = JSON.parse(
+      fs.readFileSync(path.join(publicRoot, 'project-index.json'), 'utf8')
+    )
+    const entry = index.entries.find((item) => item.name === 'get')
+    const target = new URL(entry.presentationPath || entry.contentPath, base)
+      .href
     let release
-    const gate = new Promise(resolve => { release = resolve })
-    await page.route(target, async route => {
+    const gate = new Promise((resolve) => {
+      release = resolve
+    })
+    await page.route(target, async (route) => {
       await gate
       await route.continue()
     })
-    const arrival = page.waitForRequest(request => request.url() === target)
+    const arrival = page.waitForRequest((request) => request.url() === target)
     try {
       await seek(page, '.hia-public-mobile-navigation > summary')
       await page.keyboard.press('Enter')
@@ -436,4 +441,205 @@ test('native breadcrumb focus remains visible below the fixed header', async () 
       }))
       assert.ok(bounds.top >= bounds.header, JSON.stringify(bounds))
     })
+})
+
+/**
+ * @lang zh-CN 读取指南自然焦点的稳定节点身份和实际可见片段，不改变页面状态。
+ * @lang en Read a guide's native focus identity and actually visible fragments without changing page state.
+ * @param {import('playwright').Page} page <lang><zh-CN>指南页面。</zh-CN><en>Guide page.</en></lang>
+ * @returns {Promise<Object>} <lang><zh-CN>节点身份、命中与焦点状态。</zh-CN><en>Node identity, hit testing and focus state.</en></lang>
+ */
+async function guideFocus(page) {
+  return page.evaluate(() => {
+    /** @lang zh-CN 原生活动节点，BODY表示浏览器顺序边界。 @lang en Native active node, with BODY marking a browser traversal boundary. */
+    const element = document.activeElement
+    /** @lang zh-CN DOM路径区分相同href的不同位置，不合并重复入口。 @lang en A DOM path distinguishes positions with the same href without merging duplicate entries. */
+    const parts = []
+    for (
+      let node = element;
+      node && node !== document.body;
+      node = node.parentElement
+    ) {
+      parts.unshift(
+        node.tagName + ':' + [...node.parentElement.children].indexOf(node)
+      )
+    }
+    /** @lang zh-CN 换行链接按每段实际片段检查，包围框空白不代表可命中内容。 @lang en Check actual fragments of wrapped links because bounding-box whitespace is not hittable content. */
+    const hit = [...element.getClientRects()].some((rect) => {
+      /** @lang zh-CN 片段与视口的交集确定本次可见命中点。 @lang en The fragment's viewport intersection determines the visible hit-test point. */
+      const left = Math.max(0, rect.left)
+      const right = Math.min(innerWidth, rect.right)
+      const top = Math.max(0, rect.top)
+      const bottom = Math.min(innerHeight, rect.bottom)
+      if (right <= left || bottom <= top) return false
+      /** @lang zh-CN 覆盖层通过实际命中节点识别。 @lang en Identify occluding layers through the actual hit node. */
+      const point = document.elementFromPoint(
+        (left + right) / 2,
+        (top + bottom) / 2
+      )
+      return element === point || element.contains(point)
+    })
+    return {
+      key: element === document.body ? 'body' : parts.join('>'),
+      text: element.textContent.trim().slice(0, 100),
+      skip: element.matches('.skip-link'),
+      main: !!element.closest('main'),
+      focusVisible: element.matches(':focus-visible'),
+      hit
+    }
+  })
+}
+
+/**
+ * @lang zh-CN 在确认画布、两语言和六页真实禁脚本指南中执行同一断言。
+ * @lang en Execute the same assertion across confirmed canvases, both languages and all six actual no-script guide pages.
+ * @param {(page: import('playwright').Page, label: string) => Promise<void>} action <lang><zh-CN>实际原生操作与断言。</zh-CN><en>Actual native actions and assertions.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>全部路线完成后释放上下文。</zh-CN><en>Release contexts after all routes complete.</en></lang>
+ */
+async function guidePages(action) {
+  for (const width of [1440, 1024, 390, 320]) {
+    for (const suffix of ['', '.en']) {
+      for (const relative of [
+        `index${suffix}.html`,
+        `guides/preferences${suffix}.html`,
+        `guides/troubleshooting${suffix}.html`
+      ]) {
+        await scenario(
+          width,
+          async (page) => {
+            await page.setViewportSize({
+              width,
+              height: width === 1440 ? 900 : width === 1024 ? 768 : 844
+            })
+            await page.emulateMedia({ reducedMotion: 'reduce' })
+            await page.goto(base + 'guides/first-party-preferences/' + relative)
+            await action(page, `${width} ${relative}`)
+          },
+          true
+        )
+      }
+    }
+  }
+}
+
+test('guide skip focus is visible above the pinned header and resumes in content without scripts', async () => {
+  await guidePages(async (page, label) => {
+    await page.keyboard.press('Tab')
+    // <lang><zh-CN>首焦点改变合成层，禁脚本环境以有界等待核实际绘制完成。</zh-CN><en>Initial focus changes compositing; use a bounded wait for painted hit testing when scripts are disabled.</en></lang>
+    await page.waitForTimeout(100)
+    /** @lang zh-CN 首Tab必须同时具备原生身份、可见焦点和真实命中。 @lang en First Tab must provide native identity, visible focus and an actual hit. */
+    const first = await guideFocus(page)
+    assert.ok(
+      first.skip && first.focusVisible && first.hit,
+      label + JSON.stringify(first)
+    )
+    await page.keyboard.press('Enter')
+    await page.waitForURL('**#main-content')
+    await page.waitForTimeout(100)
+    await page.keyboard.press('Tab')
+    await page.waitForTimeout(100)
+    /** @lang zh-CN 原生片段激活后顺序从正文继续。 @lang en Sequential navigation resumes within content after native fragment activation. */
+    const after = await guideFocus(page)
+    assert.ok(after.main && after.hit, label + JSON.stringify(after))
+  })
+})
+
+test('guide complete forward and reverse focus stays visible under the pinned header without scripts', async () => {
+  await guidePages(async (page, label) => {
+    await page.keyboard.press('Tab')
+    /** @lang zh-CN 首节点只作循环边界，其层级另有独立回归。 @lang en The first node marks the cycle boundary, with stacking covered by a separate regression. */
+    const first = await guideFocus(page)
+    /** @lang zh-CN 完整前向节点身份供逆序逐项比较。 @lang en Complete forward identities support exact reverse-order comparison. */
+    const forward = []
+    for (const key of ['Tab', 'Shift+Tab']) {
+      /** @lang zh-CN 每个方向独立保存顺序与终止状态。 @lang en Each direction retains its own order and termination state. */
+      const order = []
+      let complete = false
+      for (let step = 0; step < 160; step += 1) {
+        await page.keyboard.press(key)
+        await page.waitForTimeout(25)
+        /** @lang zh-CN 首轮不可命中时再等原生滚动稳定，避免暂态误判。 @lang en Wait for native scrolling to settle when an initial hit fails, avoiding transient findings. */
+        let current = await guideFocus(page)
+        if (current.key === 'body') continue
+        if (current.key === first.key) {
+          complete = true
+          break
+        }
+        if (!current.hit) {
+          await page.waitForTimeout(200)
+          current = await guideFocus(page)
+        }
+        assert.ok(
+          current.hit && current.focusVisible,
+          label + ' ' + key + JSON.stringify(current)
+        )
+        order.push(current.key)
+      }
+      assert.ok(complete, label + ' incomplete ' + key)
+      if (key === 'Tab') forward.push(...order)
+      else assert.deepEqual(order, [...forward].reverse(), label)
+    }
+  })
+})
+
+test('guide A4 print preserves source text and fits every visible code token within its block', async () => {
+  for (const suffix of ['', '.en']) {
+    await scenario(
+      794,
+      async (page) => {
+        await page.setViewportSize({ width: 794, height: 1123 })
+        await page.goto(
+          base +
+            `guides/first-party-preferences/guides/preferences${suffix}.html`
+        )
+        /** @lang zh-CN 屏幕原文作为打印逐字符事实源，样式不能改写它。 @lang en Screen text is the character-exact source for print and must not be rewritten by styling. */
+        const before = await page.locator('pre').allTextContents()
+        await page.emulateMedia({ media: 'print' })
+        /** @lang zh-CN 使用非空白token的实际行片段核容器裁剪，避免PDF文字提取隐藏的裁切。 @lang en Check actual non-whitespace token fragments against clipping bounds rather than trusting PDF text extraction. */
+        const blocks = await page.locator('pre').evaluateAll((nodes) =>
+          nodes.map((pre) => {
+            /** @lang zh-CN 每段示例保留自己的纸面边界。 @lang en Each example retains its own paper bounds. */
+            const bounds = pre.getBoundingClientRect()
+            /** @lang zh-CN 原生文本树包含内嵌的双语注释span。 @lang en The native text tree includes embedded bilingual-comment spans. */
+            const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT)
+            const clipped = []
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              for (const match of node.textContent.matchAll(/\S+/gu)) {
+                /** @lang zh-CN 单token可能被合法折为多行，各行均应在容器内。 @lang en A token may legally wrap across lines, each of which must fit its container. */
+                const range = document.createRange()
+                range.setStart(node, match.index)
+                range.setEnd(node, match.index + match[0].length)
+                if (
+                  [...range.getClientRects()].some(
+                    (rect) =>
+                      rect.left < bounds.left - 1 ||
+                      rect.right > bounds.right + 1
+                  )
+                )
+                  clipped.push(match[0])
+              }
+            }
+            return { width: pre.clientWidth, scroll: pre.scrollWidth, clipped }
+          })
+        )
+        assert.deepEqual(await page.locator('pre').allTextContents(), before)
+        assert.ok(
+          blocks.every(
+            (block) =>
+              block.scroll <= block.width + 1 && block.clipped.length === 0
+          ),
+          JSON.stringify(blocks)
+        )
+        /** @lang zh-CN 同时走真实Chromium A4导出入口，产物仅在本测试内存中使用。 @lang en Also exercise Chromium's real A4 export, retaining output in test memory only. */
+        const pdf = await page.pdf({
+          format: 'A4',
+          printBackground: true,
+          displayHeaderFooter: false
+        })
+        assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
+        assert.ok(pdf.length > 1024)
+      },
+      true
+    )
+  }
 })

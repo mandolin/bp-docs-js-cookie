@@ -33,7 +33,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* <lang zh-CN>根滚动容器统一为固定顶栏预留原有5.5rem间距，原生焦点和片段定位共享同一可见区域。</lang>
+   <lang en>The root scroller reserves the existing 5.5rem header inset so native focus and fragment navigation share the same visible area.</lang> */
+html { scroll-behavior: smooth; scroll-padding-block-start: 5.5rem; }
 body { margin: 0; min-width: 0; }
 a { color: var(--accent-strong); text-decoration-thickness: 0.08em; text-underline-offset: 0.18em; }
 a:hover { color: var(--accent); }
@@ -43,12 +45,11 @@ code { color: #173ca9; }
 
 /* <lang zh-CN>评审识别、全局栏与跳转链接采用清晰视觉层级；评审状态条不会模拟生产功能。</lang>
    <lang en>Review identity, global navigation, and skip link use clear hierarchy; the review strip does not simulate product functionality.</lang> */
-.skip-link { position: absolute; inset-block-start: 0.5rem; inset-inline-start: 0.75rem; z-index: 10; transform: translateY(-160%); background: var(--surface); padding: 0.55rem 0.8rem; }
+/* <lang zh-CN>首Tab的跳正文链接位于顶栏之上，保留原生链接和片段行为。</lang>
+   <lang en>The first-Tab skip link stacks above the header while retaining native link and fragment behavior.</lang> */
+.skip-link { position: absolute; inset-block-start: 0.5rem; inset-inline-start: 0.75rem; z-index: 30; transform: translateY(-160%); background: var(--surface); padding: 0.55rem 0.8rem; }
 .skip-link:focus { transform: translateY(0); }
 .site-header { position: sticky; inset-block-start: 0; z-index: 20; min-height: 4.35rem; display: flex; align-items: center; gap: 1.5rem; padding: 0 1.5rem; border-bottom: 1px solid var(--line); background: var(--surface); }
-/* <lang zh-CN>片段导航和跳到正文目标为吸附栏留出空间，避免目标标题滚到栏下方。</lang>
-   <lang en>Fragment and skip-link targets reserve room for the pinned header so destination headings remain visible.</lang> */
-:target { scroll-margin-block-start: 5.5rem; }
 .brand { display: inline-flex; align-items: center; gap: 0.7rem; color: var(--text); text-decoration: none; min-width: 14rem; }
 .brand-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 0.7rem; background: var(--accent); color: white; font-weight: 800; }
 .brand-copy { display: grid; line-height: 1.15; }
@@ -132,7 +133,9 @@ h1 { max-width: 16ch; margin: 0.15rem 0 0.8rem; font-size: clamp(2.1rem, 4vw, 3.
 .step-progress a:hover, .step-progress a[aria-current="step"] { background: var(--accent-soft); color: var(--accent-strong); }
 .step-progress span { color: var(--accent-strong); font-family: var(--font-mono); font-weight: 850; }
 .guide-step { margin-top: 1.2rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 5px 18px rgb(38 53 84 / 4%); scroll-margin-top: 1rem; }
-.guide-step:target, .main-content:target { scroll-margin-block-start: 5.5rem; }
+/* <lang zh-CN>目标沿用根容器的完整顶栏留白，清除步骤卡自身间距以避免重复叠加。</lang>
+   <lang en>Targets use the root's complete header inset, clearing the step-card margin to avoid adding it twice.</lang> */
+.guide-step:target, .main-content:target { scroll-margin-block-start: 0; }
 .step-heading { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr); gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; }
 .step-number { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 0.75rem; background: var(--accent-soft); color: var(--accent-strong); font-family: var(--font-mono); font-weight: 850; }
 .reference-mark { width: auto; padding-inline: 0.45rem; font-size: 0.76rem; }
@@ -244,6 +247,11 @@ h1 { max-width: 16ch; margin: 0.15rem 0 0.8rem; font-size: clamp(2.1rem, 4vw, 3.
   .guide-step, .task-card, .branch-card { break-inside: avoid; box-shadow: none; }
   a { color: inherit; text-decoration: underline; }
   .model-note, .callout { border: 1px solid currentColor; background: transparent; }
+  /* <lang zh-CN>纸面按原文保留空白并折行长注释，所有示例文字参与正常分页。</lang>
+     <lang en>Paper preserves original whitespace while wrapping long comments, keeping all example text in normal pagination.</lang> */
+  .code-card { overflow: visible; }
+  .code-card pre { overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .code-card code { white-space: inherit; overflow-wrap: anywhere; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

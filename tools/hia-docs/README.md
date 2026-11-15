@@ -162,6 +162,8 @@ reviewed Pages workflow deploys the already-validated default Portal artifact.
 The documentation-only runtime pins Playwright 1.65.1 under Apache-2.0 for tests. The public Portal continues to load its local
 Prism 1.30.0 MIT runtime. Browser checks use the actual generated default Portal and cover localized static-source links,
 verified source line/token fidelity, mobile directory focus, source reset, section-outline focus, and fixed-header visibility.
+Three additional first-party preference-guide checks cover all six bilingual pages across the four review canvases with JavaScript
+disabled, including the visible skip link, complete forward/reverse focus order, and A4 code-token bounds with unchanged source text.
 Run after the complete build:
 
 ```bash
@@ -173,5 +175,6 @@ On Windows, tests default to installed Chrome. Set `HIA_BP_BROWSER_CHANNEL` to c
 `HIA_BP_TEST_PORT` selects the dedicated loopback port, defaulting to 4187. Every test owns and closes its browser contexts and server.
 The Pages workflow runs these checks on Node.js 22.23.4 and 24.22.1 before uploading the public artifact.
 
-文档专用测试依赖固定Playwright 1.65.1及Apache-2.0许可证。六项回归在真实生成产物上执行，Pages上传前由两个受支持Node.js版本
+文档专用测试依赖固定Playwright 1.65.1及Apache-2.0许可证。默认Portal六项与第一方偏好指南三项回归在真实生成产物上执行，Pages上传前由两个受支持Node.js版本
 验证。源码高亮沿用校验后的原生行模型，跨行令牌保留语义；原生行号和同源链接继续用于定位。按每个语言静态页的基址核全部54个来源链接。
+指南以根滚动留白承接固定顶栏下的原生焦点与片段定位。打印时示例保留原文字节并自动折行，屏幕中的长表和代码继续提供局部滚动。

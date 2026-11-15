@@ -1334,6 +1334,9 @@ body {
 }
 
 /* <lang><zh-CN>Portal 使用 sticky header；entry 与契约标题保留锚点间距，避免 deep link/页内目录被顶栏遮住。</zh-CN><en>The Portal uses a sticky header; entry and contract headings keep anchor spacing so deep links and outline navigation stay visible below it.</en></lang> */
+.hia-public-breadcrumb a,
+.hia-project-entry h1,
+.hia-project-entry h2,
 .hia-project-entry,
 .hia-public-api-contract [id],
 .hia-public-landing [id] {
@@ -1514,4 +1517,24 @@ html.no-js .hia-public-mobile-navigation-host a {
   .hia-public-landing {
     padding: 1.1rem;
   }
+}
+
+/* <lang><zh-CN>已校验源码复用原生行号，显示偏好只控制这一列。</zh-CN><en>Verified source reuses native line numbers, and display preferences control only that gutter.</en></lang> */
+[data-hia-source-fetch] .hia-source-code-line {
+  min-block-size: 1lh;
+}
+
+:root[data-hia-code-lines='hide'] [data-hia-source-fetch] .hia-source-line-number {
+  display: none !important;
+}
+
+/* <lang><zh-CN>换行在同一原生行内布局，长token仍保持正文与行号的一一关联。</zh-CN><en>Wrapping stays within each native row so long tokens retain their one-to-one source-line association.</en></lang> */
+:root[data-hia-code-wrap='wrap'] [data-hia-source-fetch] .hia-source-code-line {
+  display: flex !important;
+  min-width: 0 !important;
+}
+
+:root[data-hia-code-wrap='wrap'] .hia-public-source-line-content {
+  flex: 1 1 auto;
+  min-width: 0;
 }

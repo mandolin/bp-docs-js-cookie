@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "jsdoc": "4.0.5",
+    "playwright": "1.65.1",
     "prismjs": "1.30.0"
   }
 }

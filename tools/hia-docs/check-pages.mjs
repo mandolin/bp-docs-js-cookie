@@ -302,7 +302,9 @@ function checkPublicSurface() {
   assert(
     landingHtml.includes('id="hia-public-preference-guide"') &&
       landingHtml.includes('href="guides/first-party-preferences/"') &&
-      landingHtml.includes('href="guides/first-party-preferences/index.en.html"'),
+      landingHtml.includes(
+        'href="guides/first-party-preferences/index.en.html"'
+      ),
     'Default Portal landing lacks the bilingual preference-guide entry.'
   )
   for (const relativePage of expectedGuidePages) {
@@ -312,7 +314,10 @@ function checkPublicSurface() {
       ...preferenceGuideScope.route.split('/'),
       ...relativePage.split('/')
     )
-    assert(fs.existsSync(guidePath), `Public guide page is missing: ${relativePage}`)
+    assert(
+      fs.existsSync(guidePath),
+      `Public guide page is missing: ${relativePage}`
+    )
     // <lang><zh-CN>guideHtml 作为正文复核静态 HTML、语言身份和候选残留；外部脚本不允许进入指南。</lang><en>GuideHtml is checked for static delivery, locale identity, and candidate residue; external scripts are not allowed in guide pages.</en></lang>
     const guideHtml = fs.readFileSync(guidePath, 'utf8')
     assert(
@@ -329,7 +334,10 @@ function checkPublicSurface() {
     'assets',
     'guide-portal.css'
   )
-  assert(fs.existsSync(guideCssPath), 'Public preference-guide stylesheet is missing.')
+  assert(
+    fs.existsSync(guideCssPath),
+    'Public preference-guide stylesheet is missing.'
+  )
   const guideCss = fs.readFileSync(guideCssPath, 'utf8')
   assert(
     !/@import\s|url\(\s*['"]?(?:https?:)?\/\//iu.test(guideCss),
@@ -350,6 +358,56 @@ function checkPublicSurface() {
     preferenceGuidePageCount: expectedGuidePages.length,
     manifest
   }
+}
+
+/**
+ * @lang zh-CN 按每个静态条目的真实基址解析来源链接并核对应行锚点。
+ * @lang en Resolve source links against each static entry's actual base and verify the matching line anchor.
+ * @param {string[]} files <lang><zh-CN>已验证的公开绝对文件清单。</zh-CN><en>Verified public absolute-file inventory.</en></lang>
+ * @returns {number} <lang><zh-CN>已核来源链接数。</zh-CN><en>Number of verified source links.</en></lang>
+ */
+function checkStaticSourceLinks(files) {
+  /** @lang zh-CN 公开基址用于按浏览器规则解析相对路径。 @lang en The public base resolves relative paths using browser URL rules. */
+  const base = new URL(PAGES_SITE.canonicalUrl)
+  /** @lang zh-CN 沿现有清单的绝对路径建立站内相对集合，供URL解析与资产身份核对。 @lang en Convert the existing absolute inventory into site-relative identities for URL and asset checks. */
+  const publicFiles = new Set(files.map(file => path.relative(topology.publicArtifactRoot, file).replaceAll('\\', '/')))
+  /** @lang zh-CN 校验计数只覆盖来源行页，不把普通栏目链接混入。 @lang en Count source-line pages only, excluding ordinary navigation links. */
+  let count = 0
+  for (const relative of [...publicFiles].filter(
+    (file) => file.startsWith('pages/') && file.endsWith('.html')
+  )) {
+    const html = fs.readFileSync(
+      path.join(topology.publicArtifactRoot, relative),
+      'utf8'
+    )
+    for (const match of html.matchAll(
+      /href="([^"#]*sources\/[^"#]+\.html#L\d+)"/gu
+    )) {
+      const target = new URL(match[1], new URL(relative, base))
+      const sourcePath = target.pathname.slice(base.pathname.length)
+      assert(
+        target.origin === base.origin &&
+          target.pathname.startsWith(base.pathname),
+        'Static source link left the public base.'
+      )
+      assert(
+        /^sources\/[a-f0-9]{64}\.L\d+\.html$/u.test(sourcePath),
+        'Static source link has an incorrect relative base.'
+      )
+      assert(publicFiles.has(sourcePath), 'Static source viewer is missing.')
+      const viewer = fs.readFileSync(
+        path.join(topology.publicArtifactRoot, sourcePath),
+        'utf8'
+      )
+      assert(
+        viewer.includes(`id="${target.hash.slice(1)}"`),
+        'Static source target line is missing.'
+      )
+      count += 1
+    }
+  }
+  assert(count === 54, 'Static source link coverage drifted.')
+  return count
 }
 
 /**
@@ -425,6 +483,16 @@ function checkWorkflow(workflow) {
     'Workflow lacks one or more showcase gates.'
   )
   assert(
+    workflow.includes('playwright/cli.js install --with-deps chromium') &&
+      workflow.includes(
+        'node@22.23.4 -- node --test tools/hia-docs/browser-regression.test.mjs'
+      ) &&
+      workflow.includes(
+        'node@24.22.1 -- node --test tools/hia-docs/browser-regression.test.mjs'
+      ),
+    'Workflow lacks both actual browser regression gates.'
+  )
+  assert(
     workflow.includes('path: ./build/hia-docs/public') &&
       !workflow.includes('path: ./build/hia-docs/showcase') &&
       !workflow.includes('path: ./build/hia-docs/portal'),
@@ -448,14 +516,25 @@ function checkWorkflow(workflow) {
 }
 
 /**
- * <lang><zh-CN>验证隔离文档 runtime 的 JSDoc/Prism exact dependencies 与 lock。</zh-CN><en>Validates exact JSDoc/Prism dependencies and lock state in the isolated documentation runtime.</en></lang>
+ * <lang><zh-CN>验证隔离文档 runtime 的 JSDoc、Prism及浏览器测试精确依赖与锁。</zh-CN><en>Validates exact JSDoc, Prism, and browser-test dependencies and lock state in the isolated documentation runtime.</en></lang>
  *
- * @returns {{jsdocVersion:string,prismVersion:string,lockfileVersion:number}} <lang><zh-CN>公开安全的 runtime 摘要。</zh-CN><en>Public-safe runtime summary.</en></lang>
+ * @returns {{jsdocVersion:string,prismVersion:string,browserTestVersion:string,browserTestLicense:string,lockfileVersion:number}} <lang><zh-CN>公开安全的 runtime 摘要。</zh-CN><en>Public-safe runtime summary.</en></lang>
  */
 function checkDocumentationRuntime() {
   const runtimeRoot = path.join(repositoryRoot, 'tools', 'hia-docs', 'runtime')
   const manifest = readJson(path.join(runtimeRoot, 'package.json'))
   const lock = readJson(path.join(runtimeRoot, 'package-lock.json'))
+  /** @lang zh-CN 浏览器测试库只用于CI和本地验收，核其固定版本与宽松许可证。 @lang en The browser library serves CI/local acceptance only, with its fixed version and permissive license verified. */
+  const browserManifest = readJson(
+    path.join(runtimeRoot, 'node_modules', 'playwright', 'package.json')
+  )
+  assert(
+    manifest.devDependencies?.playwright === '1.65.1' &&
+      lock.packages?.['node_modules/playwright']?.version === '1.65.1' &&
+      browserManifest.version === '1.65.1' &&
+      browserManifest.license === 'Apache-2.0',
+    'Documentation browser test dependency drifted.'
+  )
   /** @lang zh-CN prismManifest 用于核对包内声明的许可证；npm lock v3 不重复记录该字段。 @lang en PrismManifest checks the package-declared license because npm lock v3 does not repeat that field. */
   const prismManifest = readJson(
     path.join(runtimeRoot, 'node_modules', 'prismjs', 'package.json')
@@ -489,6 +568,8 @@ function checkDocumentationRuntime() {
   return {
     jsdocVersion: '4.0.5',
     prismVersion: '1.30.0',
+    browserTestVersion: '1.65.1',
+    browserTestLicense: 'Apache-2.0',
     lockfileVersion: lock.lockfileVersion
   }
 }
@@ -580,9 +661,9 @@ function main() {
     productJs.includes("'hia.bp-docs-js-cookie.display.v3'") &&
       productJs.includes('localStorage.setItem') &&
       productJs.includes("details.dataset.hiaSourceState !== 'ready'") &&
-      productJs.includes('pre.dataset.start = String(startLine)') &&
+      productJs.includes('hia-public-source-line-content') &&
       productJs.includes('ensureOverviewTreeItem()') &&
-      productJs.includes('globalThis.Prism.highlightElement(code)') &&
+      /globalThis\.Prism\.tokenize\(\s*text/u.test(productJs) &&
       !/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\s*\(/u.test(
         productJs
       ),
@@ -670,6 +751,7 @@ function main() {
       localCiCoverageProfileCount: offlineEvidence.matrix.profileCount,
       surfaceCount: publicSurface.surfaceCount,
       verifiedSourceAssetCount: publicSurface.sourceAssetCount,
+      verifiedStaticSourceLinkCount: checkStaticSourceLinks(artifact.files),
       preferenceGuidePageCount: publicSurface.preferenceGuidePageCount,
       chooserIncluded: false,
       unusedProfilesIncluded: false

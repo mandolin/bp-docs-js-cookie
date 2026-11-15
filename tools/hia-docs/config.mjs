@@ -66,7 +66,7 @@ export const OWNER_COMMITS = Object.freeze({
   plugin: '15970dc9da0f8e120677eab7eba3e959dcf42a34',
   theme: '0df2ca9bbf40e159d8da69aac80b3c31136b1a05',
   hiaJsdoc: '4890e0bf1b943a14cf247f9b413d140a43a6bb5b',
-  portal: 'b13203038ebcad604904575a70055d89d6027c50'
+  portal: 'ea6482f18581d960c441821b0235dd37aa5ab3a2'
 })
 
 /** @lang zh-CN W-P123 UI locale completeness capability 的 exact identity。 @lang en Exact identity of the W-P123 UI-locale completeness capability. */

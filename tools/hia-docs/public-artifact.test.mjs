@@ -499,12 +499,13 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   assert.match(runtime, /while \(performance\.now\(\) < deadline\)/u)
   assert.match(runtime, /activeEntryIdentity\(\) !== identity/u)
   assert.match(runtime, /details\.dataset\.hiaSourceState !== 'ready'/u)
-  assert.match(runtime, /globalThis\.Prism\.highlightElement\(code\)/u)
+  assert.match(runtime, /globalThis\.Prism\.tokenize\(\s*text/u)
   assert.match(
     runtime,
     /const storageKey = 'hia\.bp-docs-js-cookie\.display\.v3'/u
   )
-  assert.match(runtime, /pre\.dataset\.start = String\(startLine\)/u)
+  assert.match(runtime, /hia-source-line-number/u)
+  assert.match(runtime, /hia-public-source-line-content/u)
   assert.match(runtime, /ensureOverviewTreeItem\(\)/u)
   assert.match(runtime, /\[data-hia-ui-locale-control\]/u)
   assert.equal(runtime.includes('[data-hia-locale-control]'), false)

@@ -156,3 +156,22 @@ local generated output; reverting the focused documentation commit removes the a
 
 The local commands do not enable Pages, publish packages, use BrowserStack, read credentials, or access target projects. Only the
 reviewed Pages workflow deploys the already-validated default Portal artifact.
+
+## Browser regression tests
+
+The documentation-only runtime pins Playwright 1.65.1 under Apache-2.0 for tests. The public Portal continues to load its local
+Prism 1.30.0 MIT runtime. Browser checks use the actual generated default Portal and cover localized static-source links,
+verified source line/token fidelity, mobile directory focus, source reset, section-outline focus, and fixed-header visibility.
+Run after the complete build:
+
+```bash
+mise exec node@24.22.1 -- node tools/hia-docs/runtime/node_modules/playwright/cli.js install --with-deps chromium
+mise exec node@24.22.1 -- node --test tools/hia-docs/browser-regression.test.mjs
+```
+
+On Windows, tests default to installed Chrome. Set `HIA_BP_BROWSER_CHANNEL` to choose another installed Playwright channel.
+`HIA_BP_TEST_PORT` selects the dedicated loopback port, defaulting to 4187. Every test owns and closes its browser contexts and server.
+The Pages workflow runs these checks on Node.js 22.23.4 and 24.22.1 before uploading the public artifact.
+
+文档专用测试依赖固定Playwright 1.65.1及Apache-2.0许可证。六项回归在真实生成产物上执行，Pages上传前由两个受支持Node.js版本
+验证。源码高亮沿用校验后的原生行模型，跨行令牌保留语义；原生行号和同源链接继续用于定位。按每个语言静态页的基址核全部54个来源链接。

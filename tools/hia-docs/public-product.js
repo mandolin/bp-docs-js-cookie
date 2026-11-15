@@ -64,8 +64,7 @@
       apiIntro: '按任务进入独立 reference 页面，在统一 Portal 中查看完整契约。',
       setCardDescription:
         '写入值，并显式控制 expires、path、domain、secure 与 sameSite。',
-      getCardDescription:
-        '读取指定名称，或取得当前文档可见的 Cookie 值。',
+      getCardDescription: '读取指定名称，或取得当前文档可见的 Cookie 值。',
       apiIndexTitle: '完整 API 索引',
       apiIndexDescription:
         '默认显示 7 个公开 API；可在设置中切换查看全部 18 个文档节点。',
@@ -146,7 +145,8 @@
       startCta: 'Quick start',
       apiCta: 'Browse APIs',
       installTitle: 'Install',
-      installIntro: 'Install with a package manager or import from the ESM entry.',
+      installIntro:
+        'Install with a package manager or import from the ESM entry.',
       quickStartTitle: 'Quick start',
       quickStartIntro: 'Write, read, then remove a Cookie with the same scope.',
       apiTitle: 'Core APIs',
@@ -240,9 +240,7 @@
   /** @lang zh-CN 根元素承载所有无脚本可忽略的显示状态。 @lang en Root element carries all display state that can be ignored without scripts. */
   const root = document.documentElement
   /** @lang zh-CN Portal UI locale 控件是产品 chrome 的唯一语言事实源；正文 locale 保持独立。 @lang en The Portal UI-locale control is the sole language source for product chrome; content locale remains independent. */
-  const uiLocaleControl = document.querySelector(
-    '[data-hia-ui-locale-control]'
-  )
+  const uiLocaleControl = document.querySelector('[data-hia-ui-locale-control]')
   /** @lang zh-CN 产品设置对话框使用原生 dialog 语义。 @lang en Product settings use native dialog semantics. */
   const settingsDialog = document.querySelector('[data-hia-settings-dialog]')
   /** @lang zh-CN 产品搜索对话框保持确认稿的焦点约束与 Escape 行为。 @lang en The product search dialog preserves the confirmed focus containment and Escape behavior. */
@@ -636,38 +634,95 @@
     for (const details of scope.querySelectorAll(
       'details[data-hia-source-fetch]'
     )) {
-      /** @lang zh-CN code 是 owner 以 textContent 写入的不可执行源码节点。 @lang en Code is the non-executable source node written by the owner via textContent. */
+      /** @lang zh-CN 原生源码节点仅在owner校验通过后进入高亮流程。 @lang en Native source nodes enter highlighting only after owner verification. */
       const code = details.querySelector('code')
       if (!code) continue
       if (details.dataset.hiaSourceState !== 'ready') {
         delete code.dataset.hiaPrismIntegrity
         continue
       }
-      /** @lang zh-CN integrity 同时是 owner 已验证内容的稳定本地标记。 @lang en Integrity also serves as the stable local marker for owner-verified content. */
+      /** @lang zh-CN 已验证摘要限定一次高亮，重置会清除此标记。 @lang en The verified digest bounds highlighting to one pass, with reset clearing this marker. */
       const integrity = details.dataset.hiaSourceIntegrity || ''
       if (code.dataset.hiaPrismIntegrity === integrity) continue
-      code.classList.add('language-javascript')
-      /** @lang zh-CN pre 是 Prism line-numbers 插件读取 data-start 的宿主；起始行来自 owner 已生成的源码定位摘要。</zh-CN><en>Pre is the host from which Prism's line-numbers plugin reads data-start; the starting line comes from the owner-generated source-location summary.</en></lang> */
-      const pre = code.parentElement
-      pre?.classList.add('line-numbers')
-      /** @lang zh-CN sourceLocationMatch 只接受摘要末尾的正整数，不解析路径或构造请求。</zh-CN><en>SourceLocationMatch accepts only a trailing positive integer and neither parses a path nor constructs a request.</en></lang> */
-      const sourceLocationMatch = (
-        details.querySelector(':scope > summary')?.textContent || ''
+      /** @lang zh-CN 原生行保留真实起始行与同源锚点，标签不参与源码分词。 @lang en Native rows retain original positions and same-origin anchors, with labels excluded from tokenization. */
+      const rows = [...code.querySelectorAll(':scope > .hia-source-code-line')]
+      if (!rows.length || !globalThis.Prism?.tokenize) continue
+      /** @lang zh-CN 每行的原始正文排除既有行号列，换行按owner的行模型连接。 @lang en Original row content excludes the existing gutter and joins with the owner's line-model separators. */
+      const sourceLines = rows.map((row) =>
+        [...row.childNodes]
+          .filter(
+            (node) => node !== row.querySelector('.hia-source-line-number')
+          )
+          .map((node) => node.textContent)
+          .join('')
       )
-        .trim()
-        .match(/:(\d+)$/u)
-      if (pre && sourceLocationMatch) {
-        const startLine = Number(sourceLocationMatch[1])
-        if (Number.isSafeInteger(startLine) && startLine > 0) {
-          pre.dataset.start = String(startLine)
+      /** @lang zh-CN 完整文本一次分词，保留跨行注释、字符串及模板字面量的语义。 @lang en Tokenize complete text once to retain multiline comment, string, and template-literal semantics. */
+      const text = sourceLines.join('\n')
+      /** @lang zh-CN 未挂载的正文列在全部保真检查通过后才替换可见文本。 @lang en Detached content columns replace visible text only after every fidelity check passes. */
+      const columns = rows.map(() => {
+        const column = document.createElement('span')
+        column.className = 'hia-public-source-line-content'
+        return column
+      })
+      /** @lang zh-CN 当前投影行索引从零开始，只随原文换行前进。 @lang en The zero-based projection index advances only on original newlines. */
+      let lineIndex = 0
+      /**
+       * @lang zh-CN 将Prism递归令牌投影到原生行，只为令牌实际跨越的行创建span。
+       * @lang en Project recursive Prism tokens onto native rows, creating spans only on lines actually touched by each token.
+       * @param {string | Object | Array} value <lang><zh-CN>固定Prism语法产生的令牌或文本。</zh-CN><en>Token or text produced by the pinned Prism grammar.</en></lang>
+       * @param {(line: number) => Node} parent <lang><zh-CN>当前令牌所在行的父节点。</zh-CN><en>Parent node for the current token on a given line.</en></lang>
+       * @returns {void}
+       */
+      function appendToken(value, parent) {
+        if (typeof value === 'string') {
+          // <lang><zh-CN>空片段仍推进空行，原始文字只通过Text节点进入DOM。</zh-CN><en>Empty fragments still advance blank lines, and original text enters the DOM only as Text nodes.</en></lang>
+          value.split('\n').forEach((part, index) => {
+            if (index) lineIndex += 1
+            if (part) parent(lineIndex).append(document.createTextNode(part))
+          })
+          return
         }
+        if (Array.isArray(value)) {
+          for (const token of value) appendToken(token, parent)
+          return
+        }
+        /** @lang zh-CN 每个语法令牌按实际触及行缓存其包裹节点，避免行数乘令牌数的空DOM。 @lang en Cache each token wrapper only on touched lines, avoiding empty DOM proportional to lines times tokens. */
+        const wrappers = new Map()
+        appendToken(value.content, (line) => {
+          if (!wrappers.has(line)) {
+            const span = document.createElement('span')
+            span.classList.add('token', value.type)
+            if (value.alias) span.classList.add(...[value.alias].flat())
+            parent(line).append(span)
+            wrappers.set(line, span)
+          }
+          return wrappers.get(line)
+        })
       }
       try {
-        if (!globalThis.Prism?.highlightElement) return
+        appendToken(
+          globalThis.Prism.tokenize(
+            text,
+            globalThis.Prism.languages.javascript
+          ),
+          (line) => columns[line]
+        )
+        if (
+          lineIndex !== rows.length - 1 ||
+          columns.map((column) => column.textContent).join('\n') !== text
+        ) {
+          throw new Error('Verified source token projection changed text.')
+        }
+        // <lang><zh-CN>标记先于DOM修改，观察器重入时复用同一次投影；原生行号链接保持在原位置。</zh-CN><en>Mark before DOM mutation so observer reentry reuses this projection, while native line links remain in place.</en></lang>
         code.dataset.hiaPrismIntegrity = integrity
-        globalThis.Prism.highlightElement(code)
+        rows.forEach((row, index) => {
+          const label = row.querySelector('.hia-source-line-number')
+          for (const node of [...row.childNodes])
+            if (node !== label) node.remove()
+          row.append(columns[index])
+        })
       } catch {
-        // <lang><zh-CN>高亮失败只降级为已校验纯文本，不改变源码状态或发起备用请求。</zh-CN><en>Highlighting failure degrades only to verified plain text and changes neither source state nor network behavior.</en></lang>
+        // <lang><zh-CN>分词或保真失败保留既有校验文本及行号，不改变来源状态。</zh-CN><en>Tokenization or fidelity failure retains existing verified text and line numbers without changing source state.</en></lang>
         delete code.dataset.hiaPrismIntegrity
       }
     }
@@ -726,9 +781,7 @@
       /** @lang zh-CN eventTargetAnchor 只接受同页 API entry anchor。 @lang en EventTargetAnchor accepts only same-page API-entry anchors. */
       const eventTarget = event.target
       if (!(eventTarget instanceof Element)) return
-      const eventTargetAnchor = eventTarget.closest(
-        'a[data-hia-public-entry]'
-      )
+      const eventTargetAnchor = eventTarget.closest('a[data-hia-public-entry]')
       if (
         !eventTargetAnchor ||
         (eventTargetAnchor.target && eventTargetAnchor.target !== '_self') ||
@@ -800,9 +853,6 @@
       const outlineLabel =
         candidate.innerText?.trim() || candidate.textContent?.trim()
       link.textContent = outlineLabel || `Section ${index + 1}`
-      link.addEventListener('click', () => {
-        if (target.tagName === 'DETAILS') target.open = true
-      })
       item.append(link)
       list.append(item)
     })
@@ -816,6 +866,72 @@
         heading?.textContent?.trim() || translate('breadcrumb')
     }
   }
+
+  /**
+   * @lang zh-CN 由稳定目录容器接管锚点焦点，移动克隆与桌面共享同一路径。
+   * @lang en Stable outline containers own anchor focus, sharing the same path across desktop and mobile clones.
+   * @param {MouseEvent} event <lang><zh-CN>真实链接激活事件。</zh-CN><en>Actual link activation event.</en></lang>
+   * @returns {void}
+   */
+  function focusOutlineTarget(event) {
+    /** @lang zh-CN 链接只定位当前正文中的既有片段。 @lang en Links address only existing fragments in current content. */
+    const link = event.target.closest('a[href^="#"]')
+    if (!link) return
+    const target = document.getElementById(
+      decodeURIComponent(link.hash.slice(1))
+    )
+    if (!target || !contentHost?.contains(target)) return
+    // <lang><zh-CN>先展开祖先disclosure，再聚焦标题或自然summary，保留details自身的键盘范围。</zh-CN><en>Open ancestor disclosures before focusing a heading or native summary, retaining the details keyboard scope.</en></lang>
+    for (
+      let ancestor = target.closest('details');
+      ancestor;
+      ancestor = ancestor.parentElement?.closest('details')
+    )
+      ancestor.open = true
+    const focusTarget = target.matches('details')
+      ? target.querySelector(':scope > summary')
+      : target
+    if (!focusTarget) return
+    if (!focusTarget.matches('summary')) focusTarget.tabIndex = -1
+    focusTarget.focus()
+  }
+  outlineHost?.addEventListener('click', focusOutlineTarget)
+  mobileOutlineHost?.addEventListener('click', focusOutlineTarget)
+
+  /** @lang zh-CN 只保存当前移动选择的焦点归属和稳定条目身份。 @lang en Retain only focus ownership and stable identity for the current mobile selection. */
+  let pendingMobileFocus = null
+
+  /** @lang zh-CN 正文到达后恢复本次选择的阅读焦点，读者主动移焦后保留其选择。 @lang en Restore reading focus when selected content arrives, retaining any focus deliberately moved by the reader. */
+  function restoreMobileReadingFocus() {
+    if (!pendingMobileFocus) return
+    const article = [...contentHost.querySelectorAll('article[id]')].find(
+      (node) => node.id === pendingMobileFocus.entryId
+    )
+    if (!article) return
+    if (document.activeElement === pendingMobileFocus.owner) {
+      const heading = article.querySelector('h1, h2')
+      if (heading) {
+        heading.tabIndex = -1
+        heading.focus()
+        heading.scrollIntoView({ block: 'start' })
+      }
+    }
+    pendingMobileFocus = null
+  }
+
+  document
+    .querySelector('.hia-public-breadcrumb')
+    ?.addEventListener('focusin', (event) => {
+      /** @lang zh-CN 原生Tab滚动可能让链接停在固定顶部之后，只在实际被遮挡时揭示焦点。 @lang en Native Tab scrolling may leave the link behind the fixed header; reveal focus only when actually occluded. */
+      const target = event.target
+      const header = document.querySelector('.hia-public-header')
+      if (
+        target.matches('a') &&
+        target.getBoundingClientRect().top <
+          header.getBoundingClientRect().bottom
+      )
+        target.scrollIntoView({ block: 'start' })
+    })
 
   /**
    * <lang><zh-CN>把已加载的权威树投影到窄屏原生 disclosure。</zh-CN><en>Projects the loaded authoritative tree into the narrow-screen native disclosure.</en></lang>
@@ -1011,11 +1127,23 @@
       ':scope > button, :scope > details > summary > button'
     )
     if (originalButton) {
+      // <lang><zh-CN>只为当前投影控件的真实焦点交接；加载期间main接管焦点，用户后移时不再恢复。</zh-CN><en>Transfer only focus owned by the current projected control; main owns it during loading and restoration stops after a user move.</en></lang>
+      const ownsFocus = projectedItem.contains(document.activeElement)
+      pendingMobileFocus = ownsFocus
+        ? {
+            entryId: originalItem.dataset.hiaProjectEntryId,
+            owner: contentHost
+          }
+        : null
       originalButton.click()
       const mobileNavigation = document.querySelector(
         '[data-hia-public-mobile-navigation]'
       )
       if (mobileNavigation) mobileNavigation.open = false
+      if (ownsFocus && contentHost) {
+        contentHost.tabIndex = -1
+        contentHost.focus()
+      }
     }
   })
 
@@ -1032,6 +1160,7 @@
     )
     /** @lang zh-CN content observer 在 topic 替换或源码状态变化后更新 outline/高亮，不记录正文。 @lang en The content observer updates outline/highlighting after topic replacement or source-state changes and records no body content. */
     const contentObserver = new MutationObserver(() => {
+      restoreMobileReadingFocus()
       rebuildOutline()
       highlightVerifiedSources()
     })

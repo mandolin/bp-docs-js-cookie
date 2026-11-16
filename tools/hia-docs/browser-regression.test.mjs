@@ -556,7 +556,8 @@ test('guide complete forward and reverse focus stays visible under the pinned he
       const order = []
       let complete = false
       for (let step = 0; step < 160; step += 1) {
-        await page.keyboard.press(key)
+        // <lang><zh-CN>保持真实按下阶段，让原生滚动在keyup前推进；瞬时按下/释放在Windows禁脚本宿主可留下屏外焦点。</zh-CN><en>Hold the key-down phase so native scrolling advances before keyup; instantaneous press/release can leave focus offscreen in Windows script-disabled hosts.</en></lang>
+        await page.keyboard.press(key, { delay: 50 })
         await page.waitForTimeout(25)
         /** @lang zh-CN 首轮不可命中时再等原生滚动稳定，避免暂态误判。 @lang en Wait for native scrolling to settle when an initial hit fails, avoiding transient findings. */
         let current = await guideFocus(page)

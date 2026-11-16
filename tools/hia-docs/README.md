@@ -41,6 +41,10 @@ pipeline does not copy owner theme implementations into this repository.
 
 Known API deep links use a viewport-sized loading region at first paint until actual prose takes over. Unknown or malformed fragments retain the overview. Static landing content and native API links remain available with scripts disabled or failed initialization.
 
+指南键盘回归以 50ms 保持每次 Tab／Shift+Tab 的按下阶段，并检查实际可见命中及完整往返顺序。
+
+Guide keyboard regressions hold each Tab or Shift+Tab key-down phase for 50ms and check actual visible hit targets and complete traversal order.
+
 The generated site combines three closed dimensions:
 
 | Dimension         | Values                                     |

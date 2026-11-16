@@ -81,7 +81,8 @@ const PUBLIC_API_CONTRACTS = Object.freeze({
   secure: true
 })`,
     behavior: Object.freeze({
-      'zh-CN': '调用会写入 document.cookie。浏览器可依据 domain、path、安全上下文与 Cookie policy 拒绝或调整结果；客户端 JavaScript 无法读取 HttpOnly Cookie，也不能创建带 HttpOnly 属性的 Cookie。',
+      'zh-CN':
+        '调用会写入 document.cookie。浏览器可依据 domain、path、安全上下文与 Cookie policy 拒绝或调整结果；客户端 JavaScript 无法读取 HttpOnly Cookie，也不能创建带 HttpOnly 属性的 Cookie。',
       en: 'The call writes document.cookie. The browser may reject or adjust the result according to domain, path, secure context, and Cookie policy; client-side JavaScript cannot read an HttpOnly Cookie or create one with the HttpOnly attribute.'
     })
   }),
@@ -101,7 +102,8 @@ const PUBLIC_API_CONTRACTS = Object.freeze({
     example: `Cookies.get('theme') // → 'dark'
 Cookies.get() // → { theme: 'dark', locale: 'zh-CN' }`,
     behavior: Object.freeze({
-      'zh-CN': '只读取当前文档通过 document.cookie 可见的 Cookie；HttpOnly、其它 domain/path 或被浏览器策略隐藏的 Cookie 不会出现。单个畸形 Cookie 的解码错误不会阻断其它可见 Cookie；自定义 converter 也可能改变无参数映射中各值的类型。',
+      'zh-CN':
+        '只读取当前文档通过 document.cookie 可见的 Cookie；HttpOnly、其它 domain/path 或被浏览器策略隐藏的 Cookie 不会出现。单个畸形 Cookie 的解码错误不会阻断其它可见 Cookie；自定义 converter 也可能改变无参数映射中各值的类型。',
       en: 'Reads only Cookies visible through document.cookie to the current document; HttpOnly, other-domain/path, and browser-hidden Cookies do not appear. A malformed Cookie decoding error does not block other visible Cookies; a custom converter may also change the value types in the no-argument map.'
     })
   })
@@ -153,10 +155,7 @@ export function createPublicArtifactManifest({ buildCommit }) {
         profileId: 'portal.default',
         surfaceId: 'portal.split-site',
         reportPath: 'documentation-ui-locale-completeness.json',
-        noScriptLocaleIndexes: [
-          'pages/zh-CN/index.html',
-          'pages/en/index.html'
-        ]
+        noScriptLocaleIndexes: ['pages/zh-CN/index.html', 'pages/en/index.html']
       }
     },
     informationArchitecture: [
@@ -463,8 +462,13 @@ function resolvePublicHtmlRoute(publicRoot, route) {
   // <lang><zh-CN>candidatePath 由已验证分段解析，并再次校验绝对路径边界。</zh-CN><en>CandidatePath resolves validated segments and is checked again against the absolute path boundary.</en></lang>
   const candidatePath = path.resolve(publicRoot, ...route.split('/'))
   const publicBoundary = `${path.resolve(publicRoot)}${path.sep}`
-  if (!candidatePath.startsWith(publicBoundary) || !fs.existsSync(candidatePath)) {
-    throw new Error('Default Portal HTML route escaped its public root or is missing.')
+  if (
+    !candidatePath.startsWith(publicBoundary) ||
+    !fs.existsSync(candidatePath)
+  ) {
+    throw new Error(
+      'Default Portal HTML route escaped its public root or is missing.'
+    )
   }
   return candidatePath
 }
@@ -514,7 +518,9 @@ function readLocalizedProjectField(topicEntry, fieldPath) {
     !localizedText['zh-CN'].trim() ||
     !localizedText.en.trim()
   ) {
-    throw new Error(`Default Portal bilingual contract field is missing: ${fieldPath}`)
+    throw new Error(
+      `Default Portal bilingual contract field is missing: ${fieldPath}`
+    )
   }
   return localizedText
 }
@@ -531,7 +537,9 @@ function renderPublicApiContract(topicEntry, selectedLocale = 'zh-CN') {
   // <lang><zh-CN>definition 仅允许本产品首页精选的 set/get API contract。</zh-CN><en>Definition permits only the set/get API contracts featured on this product landing.</en></lang>
   const definition = PUBLIC_API_CONTRACTS[topicEntry.symbolId]
   if (!definition) {
-    throw new Error(`Default Portal API contract is not registered: ${topicEntry.symbolId}`)
+    throw new Error(
+      `Default Portal API contract is not registered: ${topicEntry.symbolId}`
+    )
   }
 
   // <lang><zh-CN>parameterRows 将类型/可选性来自 JSDoc 声明，参数说明来自实际生成的双语 project index。</zh-CN><en>ParameterRows uses JSDoc declarations for types/optionality and bilingual descriptions from the generated project index.</en></lang>
@@ -620,14 +628,21 @@ function patchPublicApiTopic(publicRoot, topicEntry) {
     ])
     articleHtml = articleHtml.replace(
       /<div class="hia-i18n-field"><dt>([^<]+)<\/dt><dd>[\s\S]*?<\/dd><\/div>/gu,
-      (fieldHtml, fieldPath) => coveredFields.has(fieldPath) ? '' : fieldHtml
+      (fieldHtml, fieldPath) => (coveredFields.has(fieldPath) ? '' : fieldHtml)
     )
     // <lang><zh-CN>空附加字段容器整体省略；存在未映射说明时仍使用现有组件，按当前内容语言提供标题。</zh-CN><en>Omit empty additional-field containers; keep the existing component for unmapped prose, with a heading in the current content language.</en></lang>
     articleHtml = articleHtml.replace(
       /<section class="hia-i18n-fields"><h3>Localized Fields<\/h3><dl>([\s\S]*?)<\/dl><\/section>/gu,
-      (sectionHtml, fieldsHtml) => fieldsHtml.trim()
-        ? sectionHtml.replace('Localized Fields', renderLocalizedText({ 'zh-CN': '附加说明', en: 'Additional documentation' }, selectedLocale))
-        : ''
+      (sectionHtml, fieldsHtml) =>
+        fieldsHtml.trim()
+          ? sectionHtml.replace(
+              'Localized Fields',
+              renderLocalizedText(
+                { 'zh-CN': '附加说明', en: 'Additional documentation' },
+                selectedLocale
+              )
+            )
+          : ''
     )
     // <lang><zh-CN>sectionMatch 锁定当前 article 的 owner contract details，保留原生 summary 与 disclosure 语义。</zh-CN><en>SectionMatch locates the owner contract details in the current article while preserving its native summary and disclosure semantics.</en></lang>
     const sectionMatch = articleHtml.match(
@@ -730,6 +745,46 @@ function renderPublicLanding(setTopic, getTopic) {
 }
 
 /**
+ * @lang zh-CN 在正文解析前选择真实深链的已有加载布局，保留未知片段、禁脚本和初始化故障的静态首页。
+ * @lang en Selects the existing loading layout for actual deep links before prose parsing, retaining the static landing for unknown fragments, disabled scripts and initialization failures.
+ * @param {Object} projectIndex <lang><zh-CN>本次已校验公开条目索引，不含源码读取许可。</zh-CN><en>Validated public entry index for this build, without source-read authority.</en></lang>
+ * @returns {string} <lang><zh-CN>只修改本页布局标记的同步脚本，无网络、存储或动态代码执行。</zh-CN><en>Synchronous script changing only this page's layout marker, without network, storage or dynamic code execution.</en></lang>
+ */
+function renderPublicEntryBootstrap(projectIndex) {
+  // <lang><zh-CN>身份仅用作精确集合比较，转义小于号使输入不能结束脚本标签。</zh-CN><en>Identities participate only in exact set comparison, escaping less-than characters so input cannot terminate the script element.</en></lang>
+  const ids = JSON.stringify(
+    projectIndex.entries.map((entry) => entry.id)
+  ).replaceAll('<', '\\u003c')
+  return `<script data-hia-public-entry-init>
+(() => {
+  // <lang><zh-CN>公开身份与既有入口解码一致，损坏或未知片段沿首页回退。</zh-CN><en>Public identities use existing entry decoding; malformed and unknown fragments retain the landing.</en></lang>
+  let entry;
+  try { entry = location.hash.startsWith('#entry=') ? decodeURIComponent(location.hash.slice(7)) : undefined; } catch { return; }
+  if (!${ids}.includes(entry)) return;
+  const root = document.documentElement;
+  let observer;
+  /** @lang zh-CN 正常加载或故障后移除初始标记及观察器，静态首页仍保存在DOM。 @lang en Remove the initial marker and observer after normal loading or failure, retaining the static landing in the DOM. */
+  function release() {
+    root.removeAttribute('data-hia-public-entry-route');
+    observer?.disconnect();
+    window.removeEventListener('error', release, true);
+    window.removeEventListener('unhandledrejection', release);
+  }
+  root.setAttribute('data-hia-public-entry-route', '');
+  window.addEventListener('error', release, true);
+  window.addEventListener('unhandledrejection', release);
+  // <lang><zh-CN>实际加载占位或条目接管后沿已有样式；导航故障恢复静态首页，不等待任意超时。</zh-CN><en>Existing styles take over when the actual placeholder or entry arrives; navigation failures restore the landing without an arbitrary timeout.</en></lang>
+  document.addEventListener('DOMContentLoaded', () => {
+    const settled = () => { if (!document.querySelector('.hia-public-landing') || document.querySelector('.hia-project-loading[role="alert"]')) release(); };
+    observer = new MutationObserver(settled);
+    observer.observe(document.body, { childList: true, subtree: true });
+    settled();
+  }, { once: true });
+})();
+</script>`
+}
+
+/**
  * <lang><zh-CN>生成主内容外围的移动 disclosure、breadcrumb、outline 与 footer。</zh-CN><en>Generates mobile disclosures, breadcrumb, outline, and footer around main content.</en></lang>
  *
  * @returns {{beforeMain:string,afterMain:string}} <lang><zh-CN>主节点前后 fragments。</zh-CN><en>Fragments before and after the main node.</en></lang>
@@ -800,7 +855,9 @@ function enhancePublicPortal(publicRoot) {
   const emptyStatePattern =
     /<p class="hia-project-empty">(?:<span data-hia-ui-message="portal\.navigation\.select">[^<]*<\/span>|[^<]*)<\/p>/u
   if (!emptyStatePattern.test(html)) {
-    throw new Error('Default Portal output lacks the supported empty-state shape.')
+    throw new Error(
+      'Default Portal output lacks the supported empty-state shape.'
+    )
   }
 
   // <lang><zh-CN>先确定性改写导航 shard，使 public/all scope 在首屏树加载前已成立。</zh-CN><en>Rewrite the navigation shard deterministically first so public/all scope exists before the initial tree load.</en></lang>
@@ -830,17 +887,14 @@ function enhancePublicPortal(publicRoot) {
     .replace('data-hia-scheme="system"', 'data-hia-scheme="light"')
     .replace(
       '</head>',
-      '<link rel="stylesheet" href="assets/hia-public-product.css"></head>'
+      `<link rel="stylesheet" href="assets/hia-public-product.css">${renderPublicEntryBootstrap(projectIndex)}</head>`
     )
     .replace('<body>', `<body>${renderPublicHeader()}`)
     .replace(
       /(<main\b[^>]*data-hia-project-content[^>]*)(>)/u,
       `${structure.beforeMain}$1 id="hia-public-main"$2`
     )
-    .replace(
-      emptyStatePattern,
-      renderPublicLanding(setTopic, getTopic)
-    )
+    .replace(emptyStatePattern, renderPublicLanding(setTopic, getTopic))
     .replace(
       '</main></div><script src="assets/hia-default.js"',
       `</main>${structure.afterMain}</div>${renderSettingsDialog()}${renderSearchDialog(setTopic, getTopic)}<script src="assets/hia-default.js"`

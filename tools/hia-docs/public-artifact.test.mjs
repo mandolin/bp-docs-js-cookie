@@ -12,6 +12,7 @@ import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
 
 import {
   PUBLICATION_BASELINE_ID,
@@ -108,10 +109,7 @@ test('creates one default-Portal publication profile without a chooser', () => {
     profileId: 'portal.default',
     surfaceId: 'portal.split-site',
     reportPath: 'documentation-ui-locale-completeness.json',
-    noScriptLocaleIndexes: [
-      'pages/zh-CN/index.html',
-      'pages/en/index.html'
-    ]
+    noScriptLocaleIndexes: ['pages/zh-CN/index.html', 'pages/en/index.html']
   })
   assert.equal(manifest.rootIsProfileChooser, false)
   assert.equal(manifest.reviewOnlyElementsIncluded, false)
@@ -374,17 +372,77 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.match(publicHtml, /assets\/prism\.js/u)
   assert.match(publicHtml, /data-hia-public-outline/u)
   assert.match(publicHtml, /data-hia-public-footer/u)
+  // <lang><zh-CN>深链启动在首绘前识别实际公开条目，未知/损坏片段继续保留首页，初始化故障恢复首页。</zh-CN><en>Before first paint, recognize actual public deep-link entries, retain the landing for unknown/malformed fragments, and restore it on initialization failure.</en></lang>
+  const initialScript = publicHtml.match(
+    /<script data-hia-public-entry-init>([\s\S]*?)<\/script>/u
+  )?.[1]
+  assert.ok(initialScript)
+  assert.ok(
+    publicHtml.indexOf('data-hia-public-entry-init') <
+      publicHtml.indexOf('<body>')
+  )
+  for (const hash of [
+    '',
+    '#entry=unknown',
+    '#entry=%E0%A4%A',
+    '#entry=' + encodeURIComponent(featuredEntries[0].id)
+  ]) {
+    const attributes = new Set()
+    const events = new Map()
+    const root = {
+      setAttribute(name) {
+        attributes.add(name)
+      },
+      removeAttribute(name) {
+        attributes.delete(name)
+      }
+    }
+    runInNewContext(initialScript, {
+      location: { hash },
+      document: {
+        documentElement: root,
+        addEventListener(name, handler) {
+          events.set(name, handler)
+        }
+      },
+      window: {
+        addEventListener(name, handler) {
+          events.set(name, handler)
+        },
+        removeEventListener() {}
+      },
+      MutationObserver: class {}
+    })
+    const known = hash.endsWith(encodeURIComponent(featuredEntries[0].id))
+    assert.equal(attributes.has('data-hia-public-entry-route'), known)
+    if (known) {
+      events.get('error')()
+      assert.equal(attributes.has('data-hia-public-entry-route'), false)
+    }
+  }
   assert.match(publicHtml, /静态文档导航/u)
   assert.match(publicHtml, /轻量、明确地管理 Cookie/u)
   assert.match(publicHtml, /install js-cookie|npm install js-cookie/iu)
-  assert.match(publicHtml, /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-set"/u)
+  assert.match(
+    publicHtml,
+    /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-set"/u
+  )
   assert.match(publicHtml, /pages\/set\.html/u)
-  assert.match(publicHtml, /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get"/u)
+  assert.match(
+    publicHtml,
+    /data-hia-public-entry="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get"/u
+  )
   assert.equal(publicHtml.includes('candidate-status-strip'), false)
 
   // <lang><zh-CN>setPage/getPage 验证交互 fragment 与 no-script 页面共用完整 contract。</zh-CN><en>SetPage and getPage verify that interactive fragments and no-script pages share the complete contract.</en></lang>
-  const setPage = fs.readFileSync(path.join(publicRoot, 'entries', 'set.html'), 'utf8')
-  const getPage = fs.readFileSync(path.join(publicRoot, 'pages', 'get.html'), 'utf8')
+  const setPage = fs.readFileSync(
+    path.join(publicRoot, 'entries', 'set.html'),
+    'utf8'
+  )
+  const getPage = fs.readFileSync(
+    path.join(publicRoot, 'pages', 'get.html'),
+    'utf8'
+  )
   const presentationPage = fs.readFileSync(
     path.join(publicRoot, 'semantic-containers', 'package.html'),
     'utf8'
@@ -395,7 +453,10 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   const getPresentationArticle = presentationPage.match(
     /<article\b[^>]*\bid="jsdoc-integration:jsdoc-function-module-js-cookie-api-init-get"[^>]*>[\s\S]*?<\/article>/u
   )?.[0]
-  assert.match(setPresentationArticle, /Cookies\.set\(name, value, attributes\?\)/u)
+  assert.match(
+    setPresentationArticle,
+    /Cookies\.set\(name, value, attributes\?\)/u
+  )
   assert.doesNotMatch(setPresentationArticle, /Cookies\.get\(name\?\)/u)
   assert.match(getPresentationArticle, /Cookies\.get\(name\?\)/u)
   assert.doesNotMatch(getPresentationArticle, /Cookies\.set\(name, value/u)
@@ -407,7 +468,10 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.match(setPage, /CookieAttributes/u)
   assert.match(setPage, /名称或值含有无法 URI 编码的输入时会抛出 URIError/u)
   assert.match(setPage, /id="hia-api-set-examples"/u)
-  assert.match(getPage, /Cookies\.get\(name\?\) → string \| Object \| undefined/u)
+  assert.match(
+    getPage,
+    /Cookies\.get\(name\?\) → string \| Object \| undefined/u
+  )
   assert.doesNotMatch(getPage, /Record&lt;string, string&gt;/u)
   assert.match(getPage, /单个畸形 Cookie 的解码错误不会阻断其它可见 Cookie/u)
   assert.match(getPage, /自定义 converter 也可能改变无参数映射中各值的类型/u)
@@ -524,7 +588,10 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
 
 /** @lang zh-CN 原生返回只在明确标记的首页历史项上恢复首页，不接管API内部锚点导航。 @lang en Native back restores the landing only for explicitly marked landing-history entries, without taking over internal API anchors. */
 test('marks landing history and restores it after API traversal', () => {
-  const runtime = fs.readFileSync(path.join(MODULE_DIRECTORY, 'public-product.js'), 'utf8')
+  const runtime = fs.readFileSync(
+    path.join(MODULE_DIRECTORY, 'public-product.js'),
+    'utf8'
+  )
   assert.match(runtime, /hiaPublicLanding: true/u)
   assert.match(runtime, /addEventListener\('popstate'/u)
   assert.match(runtime, /event\.state\?\.hiaPublicLanding === true/u)

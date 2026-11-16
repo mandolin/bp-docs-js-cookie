@@ -37,6 +37,10 @@ pipeline does not copy owner theme implementations into this repository.
 
 ## Matrix and defaults
 
+已知 API 深链在首绘使用加载区并预留一屏高度，随后由真实正文接管。未知或损坏片段保留概览，脚本关闭或初始化故障时仍可使用静态首页和原生 API 链接。
+
+Known API deep links use a viewport-sized loading region at first paint until actual prose takes over. Unknown or malformed fragments retain the overview. Static landing content and native API links remain available with scripts disabled or failed initialization.
+
 The generated site combines three closed dimensions:
 
 | Dimension         | Values                                     |

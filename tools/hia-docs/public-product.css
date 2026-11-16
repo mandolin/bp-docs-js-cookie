@@ -216,6 +216,18 @@ pre code {
   padding: 0;
 }
 
+/* <lang><zh-CN>已知深链在首绘直接使用已有加载区，避免先画首页再清空；禁脚本和故障回退继续显示首页。</zh-CN><en>Known deep links use the existing loading region at first paint, avoiding a landing flash followed by clearing; script-free and failed initialization retain the landing.</en></lang> */
+html[data-hia-public-entry-route] .hia-public-landing {
+  display: none;
+}
+
+/* <lang><zh-CN>初始深链与真实加载占位预留一屏，正文到达前页脚保持在首屏之外；正常正文继续使用原高度。</zh-CN><en>Reserve one viewport for initial deep links and actual loading placeholders, keeping the footer below the fold until prose arrives; normal prose retains its existing height.</en></lang> */
+.hia-public-content-column > .hia-main:has(> .hia-project-loading),
+html[data-hia-public-entry-route] .hia-main:has(> .hia-public-landing) {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .hia-public-breadcrumb {
   color: var(--hia-muted);
   display: flex;
@@ -1524,7 +1536,9 @@ html.no-js .hia-public-mobile-navigation-host a {
   min-block-size: 1lh;
 }
 
-:root[data-hia-code-lines='hide'] [data-hia-source-fetch] .hia-source-line-number {
+:root[data-hia-code-lines='hide']
+  [data-hia-source-fetch]
+  .hia-source-line-number {
   display: none !important;
 }
 

@@ -526,6 +526,17 @@ function readLocalizedProjectField(topicEntry, fieldPath) {
 }
 
 /**
+ * @lang zh-CN 为构建期公开代码生成保留原文的代码块和渐进增强复制入口。
+ * @lang en Renders build-time public code verbatim with a progressively enhanced copy control.
+ * @param {string} text <lang><zh-CN>公开代码原文，HTML转义后保存。</zh-CN><en>Public code text preserved after HTML escaping.</en></lang>
+ * @param {string} id <lang><zh-CN>调用者分配的页面内唯一ID。</zh-CN><en>Caller-assigned ID unique within the page.</en></lang>
+ * @returns {string} <lang><zh-CN>禁脚本时仅显示代码的HTML，不执行其中正文。</zh-CN><en>HTML showing only code without scripts, never executing that code.</en></lang>
+ */
+function renderPublicCodeBlock(text, id) {
+  return `<div class="hia-public-code"><button type="button" data-hia-public-copy="${escapePublicHtml(id)}" data-hia-public-i18n="copy" aria-live="polite">复制</button><pre><code id="${escapePublicHtml(id)}">${escapePublicHtml(text)}</code></pre></div>`
+}
+
+/**
  * <lang><zh-CN>生成 API 主契约正文；metadata、coverage、relations 与 source 仍由独立 section 控制。</zh-CN><en>Generates the primary API contract while metadata, coverage, relations, and source remain independently controlled sections.</en></lang>
  *
  * @param {Object} topicEntry <lang><zh-CN>由公开 project-index 定位的 API entry。</zh-CN><en>API entry resolved from the public project index.</en></lang>
@@ -569,7 +580,7 @@ function renderPublicApiContract(topicEntry, selectedLocale = 'zh-CN') {
   )
   const pageId = escapePublicHtml(definition.pageId)
 
-  return `<div class="hia-public-api-contract"><section aria-labelledby="hia-api-${pageId}-signature"><h3 id="hia-api-${pageId}-signature">${renderLocalizedText({ 'zh-CN': '签名', en: 'Signature' }, selectedLocale)}</h3><pre><code>${escapePublicHtml(definition.signature)}</code></pre></section><section aria-labelledby="hia-api-${pageId}-parameters"><h3 id="hia-api-${pageId}-parameters">${renderLocalizedText({ 'zh-CN': '参数', en: 'Parameters' }, selectedLocale)}</h3><div class="hia-public-api-table-scroll"><table><thead><tr><th scope="col">${renderLocalizedText({ 'zh-CN': '名称', en: 'Name' }, selectedLocale)}</th><th scope="col">${renderLocalizedText({ 'zh-CN': '类型', en: 'Type' }, selectedLocale)}</th><th scope="col">${renderLocalizedText({ 'zh-CN': '说明', en: 'Description' }, selectedLocale)}</th></tr></thead><tbody>${parameterRows}</tbody></table></div></section><section aria-labelledby="hia-api-${pageId}-returns"><h3 id="hia-api-${pageId}-returns">${renderLocalizedText({ 'zh-CN': '返回值', en: 'Returns' }, selectedLocale)}</h3><p class="hia-public-api-type"><code>${escapePublicHtml(definition.returnType)}</code></p><p>${renderLocalizedText(returnDescription, selectedLocale)}</p></section><section aria-labelledby="hia-api-${pageId}-examples"><h3 id="hia-api-${pageId}-examples">${renderLocalizedText({ 'zh-CN': '示例', en: 'Examples' }, selectedLocale)}</h3><pre><code>${escapePublicHtml(definition.example)}</code></pre></section><section aria-labelledby="hia-api-${pageId}-behavior"><h3 id="hia-api-${pageId}-behavior">${renderLocalizedText({ 'zh-CN': '行为与边界', en: 'Behavior and boundaries' }, selectedLocale)}</h3><p>${renderLocalizedText(definition.behavior, selectedLocale)}</p></section></div>`
+  return `<div class="hia-public-api-contract"><section aria-labelledby="hia-api-${pageId}-signature"><h2 id="hia-api-${pageId}-signature">${renderLocalizedText({ 'zh-CN': '签名', en: 'Signature' }, selectedLocale)}</h2>${renderPublicCodeBlock(definition.signature, `hia-api-${pageId}-signature-code`)}</section><section aria-labelledby="hia-api-${pageId}-parameters"><h2 id="hia-api-${pageId}-parameters">${renderLocalizedText({ 'zh-CN': '参数', en: 'Parameters' }, selectedLocale)}</h2><div class="hia-public-api-table-scroll"><table><thead><tr><th scope="col">${renderLocalizedText({ 'zh-CN': '名称', en: 'Name' }, selectedLocale)}</th><th scope="col">${renderLocalizedText({ 'zh-CN': '类型', en: 'Type' }, selectedLocale)}</th><th scope="col">${renderLocalizedText({ 'zh-CN': '说明', en: 'Description' }, selectedLocale)}</th></tr></thead><tbody>${parameterRows}</tbody></table></div></section><section aria-labelledby="hia-api-${pageId}-returns"><h2 id="hia-api-${pageId}-returns">${renderLocalizedText({ 'zh-CN': '返回值', en: 'Returns' }, selectedLocale)}</h2><p class="hia-public-api-type"><code>${escapePublicHtml(definition.returnType)}</code></p><p>${renderLocalizedText(returnDescription, selectedLocale)}</p></section><section aria-labelledby="hia-api-${pageId}-examples"><h2 id="hia-api-${pageId}-examples">${renderLocalizedText({ 'zh-CN': '示例', en: 'Examples' }, selectedLocale)}</h2>${renderPublicCodeBlock(definition.example, `hia-api-${pageId}-example-code`)}</section><section aria-labelledby="hia-api-${pageId}-behavior"><h2 id="hia-api-${pageId}-behavior">${renderLocalizedText({ 'zh-CN': '行为与边界', en: 'Behavior and boundaries' }, selectedLocale)}</h2><p>${renderLocalizedText(definition.behavior, selectedLocale)}</p></section></div>`
 }
 
 /**
@@ -620,6 +631,11 @@ function patchPublicApiTopic(publicRoot, topicEntry) {
     }
     // <lang><zh-CN>articleHtml 限制 contract section 的正则替换范围为当前 API article。</zh-CN><en>ArticleHtml limits contract-section replacement to the current API article.</en></lang>
     let articleHtml = articleMatches[0][0]
+    // <lang><zh-CN>产品排版标记局限于两个精选API，原始ID继续供深链、查询和来源读取。</zh-CN><en>The presentation marker is limited to the two featured APIs; original IDs continue serving deep links, queries, and source access.</en></lang>
+    articleHtml = articleHtml.replace(
+      /^<article\b/u,
+      '<article data-hia-public-api-topic'
+    )
     // <lang><zh-CN>新版owner补全附加字段后，已在双语契约完整投影的参数/返回不应在签名前重复；未映射字段保留。</zh-CN><en>With the owner's completed additional fields, parameters/returns fully projected in the bilingual contract must not duplicate above the signature; preserve unmapped fields.</en></lang>
     const definition = PUBLIC_API_CONTRACTS[topicEntry.symbolId]
     const coveredFields = new Set([
@@ -632,18 +648,36 @@ function patchPublicApiTopic(publicRoot, topicEntry) {
     )
     // <lang><zh-CN>空附加字段容器整体省略；存在未映射说明时仍使用现有组件，按当前内容语言提供标题。</zh-CN><en>Omit empty additional-field containers; keep the existing component for unmapped prose, with a heading in the current content language.</en></lang>
     articleHtml = articleHtml.replace(
-      /<section class="hia-i18n-fields"><h3>Localized Fields<\/h3><dl>([\s\S]*?)<\/dl><\/section>/gu,
+      /<section class="hia-i18n-fields"><h3(?:\s[^>]*)?>[\s\S]*?<\/h3><dl>([\s\S]*?)<\/dl><\/section>/gu,
       (sectionHtml, fieldsHtml) =>
         fieldsHtml.trim()
           ? sectionHtml.replace(
-              'Localized Fields',
-              renderLocalizedText(
+              /<h3(?:\s[^>]*)?>[\s\S]*?<\/h3>/u,
+              `<h2>${renderLocalizedText(
                 { 'zh-CN': '附加说明', en: 'Additional documentation' },
                 selectedLocale
-              )
+              )}</h2>`
             )
           : ''
     )
+    // <lang><zh-CN>确认稿的API导语复用真实summary正文，保全未映射备注；仅将层级从摘要折叠区移入页首。</zh-CN><en>The confirmed API lead reuses actual summary content and unmapped remarks, moving only its hierarchy from the summary disclosure into the page heading.</en></lang>
+    const summarySection = articleHtml.match(
+      /<details\b[^>]*\bdata-hia-topic-section="summary"[^>]*>[\s\S]*?<\/details>/u
+    )?.[0]
+    const lead = summarySection
+      ? summarySection
+          .replace(
+            /^<details\b[^>]*><summary\b[^>]*>[\s\S]*?<\/summary><div class="hia-project-topic-section-body">/u,
+            ''
+          )
+          .replace(/<\/div><\/details>$/u, '')
+      : ''
+    // <lang><zh-CN>稳定pageId只来自已登记set/get契约，限定名称不修改owner identity或地图。</zh-CN><en>The stable pageId comes only from registered set/get contracts; the qualified name changes neither owner identities nor maps.</en></lang>
+    articleHtml = articleHtml.replace(
+      /<header class="hia-project-topic-header">[\s\S]*?<\/header>/u,
+      `<header class="hia-project-topic-header hia-public-api-heading"><p class="hia-public-eyebrow">${renderLocalizedText({ 'zh-CN': 'API 参考', en: 'API reference' }, selectedLocale)}</p><h1>Cookies.${escapePublicHtml(definition.pageId)}()</h1><div class="hia-public-api-lead">${lead}</div><div data-hia-content-section="metadata"><span class="hia-kind">function</span><span class="hia-kind">JS</span></div></header>`
+    )
+    if (summarySection) articleHtml = articleHtml.replace(summarySection, '')
     // <lang><zh-CN>sectionMatch 锁定当前 article 的 owner contract details，保留原生 summary 与 disclosure 语义。</zh-CN><en>SectionMatch locates the owner contract details in the current article while preserving its native summary and disclosure semantics.</en></lang>
     const sectionMatch = articleHtml.match(
       /(<details\b[^>]*\bdata-hia-topic-section="contract"[^>]*>)([\s\S]*?)(<\/details>)/u
@@ -720,7 +754,7 @@ function renderPublicLanding(setTopic, getTopic) {
   <section aria-labelledby="hia-public-start-title">
     <h2 id="hia-public-start-title" data-hia-public-i18n="installTitle">安装</h2>
     <p data-hia-public-i18n="installIntro">使用包管理器安装，或从 ESM 入口导入。</p>
-    <pre><code>npm install js-cookie</code></pre>
+    ${renderPublicCodeBlock('npm install js-cookie', 'hia-public-install-code')}
     <p><code>import Cookies from 'js-cookie'</code></p>
   </section>
   <section aria-labelledby="hia-public-quickstart-title">
@@ -793,7 +827,7 @@ function renderPublicStructure(setTopic, getTopic) {
   // <lang><zh-CN>staticNavigation 让无脚本首页保留概览、set 与 get 原生链接。</zh-CN><en>StaticNavigation preserves native overview, set, and get links on the no-script landing.</en></lang>
   const staticNavigation = `<nav aria-label="静态文档导航"><ul><li><a href="./">概览</a></li><li><a href="${escapePublicHtml(setTopic.noScriptPagePath)}" data-hia-public-entry="${escapePublicHtml(setTopic.id)}">Cookies.set()</a></li><li><a href="${escapePublicHtml(getTopic.noScriptPagePath)}" data-hia-public-entry="${escapePublicHtml(getTopic.id)}">Cookies.get()</a></li></ul></nav>`
   return {
-    beforeMain: `<div class="hia-public-content-column"><details class="hia-public-mobile-navigation" data-hia-public-mobile-navigation><summary data-hia-public-i18n="nav">文档目录</summary><div data-hia-public-mobile-navigation-host>${staticNavigation}</div></details><nav class="hia-public-breadcrumb" aria-label="面包屑" data-hia-public-i18n-aria="breadcrumbAccessible"><a href="./">js-cookie</a><span aria-hidden="true">/</span><span data-hia-public-breadcrumb-current data-hia-public-i18n="breadcrumb">概览</span></nav><details class="hia-public-mobile-outline"><summary data-hia-public-i18n="outline">本页内容</summary><nav data-hia-public-mobile-outline-list></nav></details>`,
+    beforeMain: `<div class="hia-public-content-column"><details class="hia-public-mobile-navigation" data-hia-public-mobile-navigation><summary data-hia-public-i18n="nav">文档目录</summary><div data-hia-public-mobile-navigation-host>${staticNavigation}</div></details><nav class="hia-public-breadcrumb" aria-label="面包屑" data-hia-public-i18n-aria="breadcrumbAccessible"><a href="./">js-cookie</a><span aria-hidden="true">/</span><span data-hia-public-api-breadcrumb hidden><span data-hia-public-i18n="apiReference">API 参考</span><span aria-hidden="true">/</span></span><span data-hia-public-breadcrumb-current data-hia-public-i18n="breadcrumb">概览</span></nav><details class="hia-public-mobile-outline"><summary data-hia-public-i18n="mobileOutline">本页目录</summary><nav data-hia-public-mobile-outline-list></nav></details>`,
     afterMain: `<footer class="hia-public-footer" data-hia-public-footer><a href="pages/index.html" data-hia-public-i18n="pageIndex">完整页面索引</a><a href="#hia-public-main" data-hia-public-i18n="backToContent">返回正文顶部</a></footer></div><aside class="hia-public-outline" data-hia-public-outline aria-label="本页内容" data-hia-public-i18n-aria="outline"><p class="hia-public-outline-label" data-hia-public-i18n="outline">本页内容</p><nav data-hia-public-outline-list></nav></aside>`
   }
 }
@@ -805,12 +839,31 @@ function renderPublicStructure(setTopic, getTopic) {
  */
 function renderSettingsDialog() {
   return `<dialog class="hia-public-settings-dialog" id="hia-public-settings" data-hia-settings-dialog aria-labelledby="hia-public-settings-title">
-  <div class="hia-public-settings-header"><div><small>js-cookie · Portal</small><h2 id="hia-public-settings-title" data-hia-public-i18n="settingsTitle">主题、内容与代码设置</h2></div><button class="hia-public-quiet-button" type="button" data-hia-settings-close><span data-hia-public-i18n="close">关闭</span></button></div>
+  <div class="hia-public-settings-header"><div><small>js-cookie · Portal</small><h2 id="hia-public-settings-title" data-hia-public-i18n="settingsTitle">显示与代码设置</h2></div><button class="hia-public-quiet-button" type="button" data-hia-settings-close data-hia-public-i18n-aria="close" aria-label="关闭"><span aria-hidden="true">×</span></button></div>
   <div class="hia-public-settings-body">
-    <fieldset><legend data-hia-public-i18n="apiScope">API 显示范围</legend><div class="hia-public-theme-choices"><label><input type="radio" name="api-scope" value="public" data-hia-preference="apiScope"> <span data-hia-public-i18n="publicApi">只显示接口 API</span></label><label><input type="radio" name="api-scope" value="all" data-hia-preference="apiScope"> <span data-hia-public-i18n="allApi">显示全部 API</span></label></div></fieldset>
-    <fieldset><legend data-hia-public-i18n="contentVisibility">内容显隐</legend><div class="hia-public-visibility-grid"><label><input type="checkbox" data-hia-preference="metadata"> <span data-hia-public-i18n="metadata">元数据</span></label><label><input type="checkbox" data-hia-preference="contract"> <span data-hia-public-i18n="contract">契约</span></label><label><input type="checkbox" data-hia-preference="coverage"> <span data-hia-public-i18n="coverage">覆盖情况</span></label><label><input type="checkbox" data-hia-preference="provenance"> <span data-hia-public-i18n="provenance">溯源</span></label><label><input type="checkbox" data-hia-preference="relations"> <span data-hia-public-i18n="relations">项目关系</span></label></div></fieldset>
-    <fieldset><legend data-hia-public-i18n="siteTheme">站点主题</legend><div class="hia-public-theme-choices"><label><input type="radio" name="site-theme" value="system" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeSystem">跟随系统</span></label><label><input type="radio" name="site-theme" value="light" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeLight">浅色</span></label><label><input type="radio" name="site-theme" value="dark" data-hia-preference="siteTheme"> <span data-hia-public-i18n="themeDark">深色</span></label></div></fieldset>
-    <fieldset><legend data-hia-public-i18n="codeSettings">代码区域 / 编辑器设置</legend><div class="hia-public-settings-grid"><label class="hia-public-settings-field"><span data-hia-public-i18n="codeTheme">代码主题</span><select data-hia-preference="codeTheme"><option value="site" data-hia-public-i18n="codeThemeSite">跟随站点</option><option value="paper-light">Paper Light</option><option value="midnight">Midnight</option><option value="solarized-light">Solarized Light</option><option value="solarized-dark">Solarized Dark</option><option value="high-contrast" data-hia-public-i18n="codeThemeContrast">高对比度</option></select></label><label class="hia-public-settings-field"><span data-hia-public-i18n="codeSize">代码字号</span><select data-hia-preference="codeFontSize"><option value="small" data-hia-public-i18n="sizeSmall">小</option><option value="default" data-hia-public-i18n="sizeDefault">默认</option><option value="large" data-hia-public-i18n="sizeLarge">大</option></select></label></div><div class="hia-public-toggle-row"><label><span data-hia-public-i18n="codeWrap">长行换行</span><select data-hia-preference="codeWrap"><option value="scroll" data-hia-public-i18n="wrapScroll">横向滚动</option><option value="wrap" data-hia-public-i18n="wrapAutomatic">自动换行</option></select></label><label><span data-hia-public-i18n="lineNumbers">行号</span><select data-hia-preference="codeLines"><option value="hide" data-hia-public-i18n="hide">隐藏</option><option value="show" data-hia-public-i18n="show">显示</option></select></label></div><pre class="hia-public-settings-preview line-numbers"><code class="language-javascript">const cookie = Cookies.get('theme')\nCookies.set('theme', cookie ?? 'system')</code></pre><p class="hia-public-highlighter-note" data-hia-public-i18n="highlighterNote">源码须先通过字节数与 SHA-384 校验，再进行本地语法高亮；失败时保留纯文本。</p></fieldset>
+    <fieldset><legend data-hia-public-i18n="siteTheme">站点主题</legend><div class="hia-public-theme-choices">
+      <label><input type="radio" name="site-theme" value="system" data-hia-preference="siteTheme"><span class="hia-public-theme-swatch hia-public-theme-swatch-system" aria-hidden="true"></span><span data-hia-public-i18n="themeSystem">跟随系统</span></label>
+      <label><input type="radio" name="site-theme" value="light" data-hia-preference="siteTheme"><span class="hia-public-theme-swatch hia-public-theme-swatch-light" aria-hidden="true"></span><span data-hia-public-i18n="themeLight">浅色</span></label>
+      <label><input type="radio" name="site-theme" value="dark" data-hia-preference="siteTheme"><span class="hia-public-theme-swatch hia-public-theme-swatch-dark" aria-hidden="true"></span><span data-hia-public-i18n="themeDark">深色</span></label>
+    </div></fieldset>
+    <fieldset><legend data-hia-public-i18n="apiScope">API 显示范围</legend><div class="hia-public-scope-choices">
+      <label><input type="radio" name="api-scope" value="public" data-hia-preference="apiScope"><span><strong data-hia-public-i18n="publicApi">只显示公开接口 API</strong><small data-hia-public-i18n="scopePublic">仅公开</small></span></label>
+      <label><input type="radio" name="api-scope" value="all" data-hia-preference="apiScope"><span><strong data-hia-public-i18n="allApi">显示全部 API</strong><small data-hia-public-i18n="scopeAll">全部</small></span></label>
+    </div><p class="hia-public-preference-note" data-hia-public-i18n="scopeNote">“接口 API”指面向使用者的公开/导出 API；全部模式会补充内部实现节点。</p></fieldset>
+    <fieldset><legend data-hia-public-i18n="contentVisibility">内容显示</legend><div class="hia-public-visibility-grid">
+      <label><input type="checkbox" data-hia-preference="metadata"><span data-hia-public-i18n="showMetadata">显示元数据</span></label>
+      <label><input type="checkbox" data-hia-preference="contract"><span data-hia-public-i18n="showContract">显示契约</span></label>
+      <label><input type="checkbox" data-hia-preference="coverage"><span data-hia-public-i18n="showCoverage">显示覆盖情况</span></label>
+      <label><input type="checkbox" data-hia-preference="provenance"><span data-hia-public-i18n="showProvenance">显示溯源</span></label>
+      <label><input type="checkbox" data-hia-preference="relations"><span data-hia-public-i18n="showRelations">显示项目关系</span></label>
+    </div></fieldset>
+    <fieldset><legend data-hia-public-i18n="codeSettings">代码区域 / 编辑器设置</legend><div class="hia-public-settings-grid">
+      <label class="hia-public-settings-field"><span data-hia-public-i18n="codeTheme">代码主题</span><select data-hia-preference="codeTheme"><option value="site" data-hia-public-i18n="codeThemeSite">跟随站点</option><option value="paper-light" data-hia-public-i18n="codeThemePaper">纸张浅色</option><option value="midnight" data-hia-public-i18n="codeThemeMidnight">午夜深色</option><option value="solarized-light">Solarized Light</option><option value="solarized-dark">Solarized Dark</option><option value="high-contrast" data-hia-public-i18n="codeThemeContrast">高对比度</option></select></label>
+      <label class="hia-public-settings-field"><span data-hia-public-i18n="codeSize">代码字号</span><select data-hia-preference="codeFontSize"><option value="small" data-hia-public-i18n="sizeSmall">小</option><option value="default" data-hia-public-i18n="sizeDefault">默认</option><option value="large" data-hia-public-i18n="sizeLarge">大</option></select></label>
+    </div><div class="hia-public-toggle-row">
+      <label><input type="checkbox" data-hia-preference="codeWrap" data-hia-checked-value="wrap" data-hia-unchecked-value="scroll"><span data-hia-public-i18n="wrapAutomatic">长行自动换行</span></label>
+      <label><input type="checkbox" data-hia-preference="codeLines"><span data-hia-public-i18n="showLines">显示行号</span></label>
+    </div><pre class="hia-public-settings-preview line-numbers"><code class="language-javascript">const cookie = Cookies.get('theme')\nCookies.set('theme', cookie ?? 'system')</code></pre><p class="hia-public-highlighter-note" data-hia-public-i18n="highlighterNote">源码须先通过字节数与 SHA-384 校验，再进行本地语法高亮；失败时保留纯文本。</p></fieldset>
     <fieldset><legend data-hia-public-i18n="reading">阅读设置</legend><label class="hia-public-settings-field"><span data-hia-public-i18n="contentWidth">正文宽度</span><select data-hia-preference="contentWidth"><option value="comfortable" data-hia-public-i18n="widthComfortable">舒适</option><option value="wide" data-hia-public-i18n="widthWide">宽幅</option></select></label></fieldset>
   </div>
   <div class="hia-public-settings-footer"><div><p class="hia-public-settings-privacy" data-hia-public-i18n="privacy">仅保存显示偏好；不关联账号、不发送分析数据。</p><span data-hia-settings-status aria-live="polite"></span></div><button class="hia-public-secondary-button" type="button" data-hia-settings-reset><span data-hia-public-i18n="reset">恢复默认</span></button></div>
@@ -893,6 +946,10 @@ function enhancePublicPortal(publicRoot) {
     .replace(
       /(<main\b[^>]*data-hia-project-content[^>]*)(>)/u,
       `${structure.beforeMain}$1 id="hia-public-main"$2`
+    )
+    .replace(
+      /<h2><span data-hia-ui-message="portal\.navigation\.hierarchy">[^<]*<\/span><\/h2>/u,
+      '<div class="hia-public-tree-heading"><span data-hia-public-i18n="treeHeading">文档</span><span class="hia-public-scope-chip" data-hia-public-scope-label>仅公开</span></div>'
     )
     .replace(emptyStatePattern, renderPublicLanding(setTopic, getTopic))
     .replace(

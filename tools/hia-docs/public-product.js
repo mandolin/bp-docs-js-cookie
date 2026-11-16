@@ -88,6 +88,7 @@
       settings: '主题与设置',
       nav: '文档目录',
       outline: '本页内容',
+      mobileOutline: '本页目录',
       breadcrumb: '概览',
       breadcrumbAccessible: '面包屑',
       pageIndex: '完整页面索引',
@@ -95,13 +96,30 @@
       switchToEnglish: '切换到英语界面',
       switchToChinese: '切换到中文界面',
       openSettings: '打开主题与显示设置',
-      settingsTitle: '主题、内容与代码设置',
+      settingsTitle: '显示与代码设置',
       apiScope: 'API 显示范围',
-      publicApi: '只显示接口 API',
+      publicApi: '只显示公开接口 API',
       allApi: '显示全部 API',
       publicApiGroup: '公开接口 API',
       internalApiGroup: '内部实现',
-      contentVisibility: '内容显隐',
+      contentVisibility: '内容显示',
+      treeHeading: '文档',
+      scopePublic: '仅公开',
+      scopeAll: '全部',
+      scopeNote:
+        '“接口 API”指面向使用者的公开/导出 API；全部模式会补充内部实现节点。',
+      apiReference: 'API 参考',
+      showMetadata: '显示元数据',
+      showContract: '显示契约',
+      showCoverage: '显示覆盖情况',
+      showProvenance: '显示溯源',
+      showRelations: '显示项目关系',
+      showLines: '显示行号',
+      codeThemePaper: '纸张浅色',
+      codeThemeMidnight: '午夜深色',
+      copy: '复制',
+      copied: '已复制',
+      copyFailed: '复制失败',
       metadata: '元数据',
       contract: '契约',
       coverage: '覆盖情况',
@@ -121,7 +139,7 @@
       sizeLarge: '大',
       codeWrap: '长行换行',
       wrapScroll: '横向滚动',
-      wrapAutomatic: '自动换行',
+      wrapAutomatic: '长行自动换行',
       lineNumbers: '行号',
       hide: '隐藏',
       show: '显示',
@@ -179,6 +197,7 @@
       settings: 'Theme & settings',
       nav: 'Documentation menu',
       outline: 'On this page',
+      mobileOutline: 'On this page',
       breadcrumb: 'Overview',
       breadcrumbAccessible: 'Breadcrumb',
       pageIndex: 'Complete page index',
@@ -186,20 +205,37 @@
       switchToEnglish: 'Switch interface to English',
       switchToChinese: 'Switch interface to Chinese',
       openSettings: 'Open theme and display settings',
-      settingsTitle: 'Theme, content, and code settings',
+      settingsTitle: 'Display and code settings',
       apiScope: 'API visibility',
-      publicApi: 'Public APIs only',
+      publicApi: 'Show public interface APIs only',
       allApi: 'Show all APIs',
       publicApiGroup: 'Public API',
       internalApiGroup: 'Internal implementation',
       contentVisibility: 'Content visibility',
+      treeHeading: 'Documentation',
+      scopePublic: 'Public only',
+      scopeAll: 'All APIs',
+      scopeNote:
+        '“Interface API” means the public/exported surface; All APIs also reveals internal implementation nodes.',
+      apiReference: 'API reference',
+      showMetadata: 'Show metadata',
+      showContract: 'Show contract',
+      showCoverage: 'Show coverage',
+      showProvenance: 'Show provenance',
+      showRelations: 'Show project relations',
+      showLines: 'Show line numbers',
+      codeThemePaper: 'Paper Light',
+      codeThemeMidnight: 'Midnight',
+      copy: 'Copy',
+      copied: 'Copied',
+      copyFailed: 'Copy failed',
       metadata: 'Metadata',
       contract: 'Contract',
       coverage: 'Coverage',
       provenance: 'Provenance',
       relations: 'Project relations',
       siteTheme: 'Site theme',
-      themeSystem: 'System',
+      themeSystem: 'Use system',
       themeLight: 'Light',
       themeDark: 'Dark',
       codeSettings: 'Code area / editor settings',
@@ -267,12 +303,59 @@
   const mobileOutlineHost = document.querySelector(
     '[data-hia-public-mobile-outline-list]'
   )
+  /** @lang zh-CN 复用同一个移动目录disclosure，在每个实际页首之后定位，保留监听器与展开状态。 @lang en Reuse one mobile outline disclosure after each actual page heading, retaining listeners and expansion state. */
+  const mobileOutline = mobileOutlineHost?.closest('details')
   /** @lang zh-CN breadcrumb 当前节点标签。 @lang en Current-node label in the breadcrumb. */
   const breadcrumbCurrent = document.querySelector(
     '[data-hia-public-breadcrumb-current]'
   )
   /** @lang zh-CN 设置保存状态使用 polite live region。 @lang en Settings status uses a polite live region. */
   const settingsStatus = document.querySelector('[data-hia-settings-status]')
+  /** @lang zh-CN 每个复制按钮只保留一个短期反馈计时器，重复激活先取消旧反馈。 @lang en Each copy button retains only one short-lived feedback timer, cancelling old feedback on repeated activation. */
+  const copyFeedbackTimers = new WeakMap()
+
+  /**
+   * @lang zh-CN 在读者激活复制按钮时写入对应公开代码的精确原文，拒绝或缺少API时只反馈失败。
+   * @lang en Writes the exact corresponding public code on reader activation, reporting failure when denied or unavailable.
+   * @param {MouseEvent} event <lang><zh-CN>原生按钮点击，包含键盘激活。</zh-CN><en>Native button click, including keyboard activation.</en></lang>
+   * @returns {Promise<void>} <lang><zh-CN>反馈使用当前界面语言，始终保留现有焦点和可选正文。</zh-CN><en>Feedback uses the current interface language and retains focus and selectable code.</en></lang>
+   * @sideEffects <lang><zh-CN>仅由用户动作写系统剪贴板，不读取剪贴板，不创建隐藏编辑器。</zh-CN><en>Writes the system clipboard only on user action, without reading it or creating a hidden editor.</en></lang>
+   */
+  async function copyPublicCode(event) {
+    if (!event.isTrusted || !(event.target instanceof Element)) return
+    /** @lang zh-CN 委托允许异步到达的API正文使用同一路径，不重复绑定监听器。 @lang en Delegation lets asynchronously loaded API content share one path without duplicate listeners. */
+    const button = event.target.closest('button[data-hia-public-copy]')
+    if (!button || button.hasAttribute('aria-busy')) return
+    /** @lang zh-CN 目标必须是该按钮本地代码块内的code节点，不能将其它页面文本当成复制来源。 @lang en The target must be a code node inside this button's own code block, excluding unrelated page text. */
+    const code = document.getElementById(button.dataset.hiaPublicCopy)
+    if (
+      !code?.matches('code') ||
+      !button.closest('.hia-public-code')?.contains(code)
+    )
+      return
+    clearTimeout(copyFeedbackTimers.get(button))
+    button.setAttribute('aria-busy', 'true')
+    /** @lang zh-CN 结果只选择双语字典中的固定反馈，不显示平台异常或敏感内容。 @lang en The outcome selects fixed bilingual feedback and exposes no platform errors or sensitive content. */
+    let outcome = 'copied'
+    try {
+      await navigator.clipboard.writeText(code.textContent)
+    } catch {
+      outcome = 'copyFailed'
+    } finally {
+      button.removeAttribute('aria-busy')
+    }
+    button.dataset.hiaPublicI18n = outcome
+    button.textContent = translate(outcome)
+    copyFeedbackTimers.set(
+      button,
+      setTimeout(() => {
+        button.dataset.hiaPublicI18n = 'copy'
+        button.textContent = translate('copy')
+        copyFeedbackTimers.delete(button)
+      }, 1200)
+    )
+  }
+  document.addEventListener('click', copyPublicCode)
 
   /**
    * <lang><zh-CN>从设备存储读取并按 closed sets 清洗偏好。</zh-CN><en>Reads preferences from device storage and sanitizes them against closed sets.</en></lang>
@@ -338,7 +421,9 @@
    */
   function applyProductLocale() {
     for (const element of document.querySelectorAll('[data-hia-public-i18n]')) {
-      element.textContent = translate(element.dataset.hiaPublicI18n)
+      /** @lang zh-CN 只写变化的词条，异步正文观察器可以安全复用翻译过程。 @lang en Write only changed messages so the asynchronous content observer can safely reuse localization. */
+      const message = translate(element.dataset.hiaPublicI18n)
+      if (element.textContent !== message) element.textContent = message
     }
     for (const element of document.querySelectorAll(
       '[data-hia-public-i18n-placeholder]'
@@ -394,6 +479,13 @@
     root.dataset.hiaShowCoverage = preferences.coverage
     root.dataset.hiaShowProvenance = preferences.provenance
     root.dataset.hiaShowRelations = preferences.relations
+    /** @lang zh-CN 范围提示跟随实际public/all状态并进入现有语言更新路径。 @lang en The scope hint follows actual public/all state and participates in the existing locale-update path. */
+    const scopeLabel = document.querySelector('[data-hia-public-scope-label]')
+    if (scopeLabel) {
+      scopeLabel.dataset.hiaPublicI18n =
+        preferences.apiScope === 'all' ? 'scopeAll' : 'scopePublic'
+      scopeLabel.textContent = translate(scopeLabel.dataset.hiaPublicI18n)
+    }
 
     for (const control of document.querySelectorAll('[data-hia-preference]')) {
       /** @lang zh-CN field 由 builder 生成的 closed data attribute 提供。 @lang en Field comes from a closed data attribute generated by the builder. */
@@ -401,7 +493,8 @@
       if (control.type === 'radio')
         control.checked = control.value === preferences[field]
       else if (control.type === 'checkbox')
-        control.checked = preferences[field] === 'show'
+        control.checked =
+          preferences[field] === (control.dataset.hiaCheckedValue || 'show')
       else control.value = preferences[field]
     }
     /** @lang zh-CN 原 Portal scheme select 同步当前站点主题，保持既有 theme contract 可观察。 @lang en The original Portal scheme select mirrors the site theme so the existing theme contract remains observable. */
@@ -424,7 +517,11 @@
         `input[type="checkbox"][data-hia-preference="${field}"]`
       )
       if (checkbox) {
-        next[field] = checkbox.checked ? 'show' : 'hide'
+        // <lang><zh-CN>换行复选框映射既有wrap/scroll，显隐和行号继续映射show/hide，所有值仍经过原闭集。</zh-CN><en>The wrapping checkbox maps to existing wrap/scroll values; visibility and line numbers retain show/hide, with every value still checked against the original closed set.</en></lang>
+        const value = checkbox.checked
+          ? checkbox.dataset.hiaCheckedValue || 'show'
+          : checkbox.dataset.hiaUncheckedValue || 'hide'
+        if (allowed[field].includes(value)) next[field] = value
         continue
       }
       const control = document.querySelector(
@@ -460,7 +557,13 @@
   function projectActiveArticle() {
     if (!contentHost) return undefined
     /** @lang zh-CN activeArticle 通过 DOM id equality 定位，避免含冒号 identity 的 selector escaping 风险。 @lang en ActiveArticle is located by DOM ID equality, avoiding selector-escaping risks for identities containing colons. */
-    const activeArticle = document.getElementById(activeEntryIdentity())
+    let activeArticle = document.getElementById(activeEntryIdentity())
+    // <lang><zh-CN>本页锚点会取代entry片段，后续复制/源码/展开仍以已显示条目为范围；显式entry请求继续精确匹配身份。</zh-CN><en>A local anchor replaces the entry fragment, so later copy/source/disclosure updates retain the already displayed article; explicit entry requests still require exact identity matching.</en></lang>
+    if (!activeArticle && !location.hash.startsWith('#entry=')) {
+      activeArticle = [
+        ...contentHost.querySelectorAll(':scope > article.hia-project-entry')
+      ].find((article) => !article.hidden)
+    }
     if (!activeArticle || !contentHost.contains(activeArticle)) return undefined
     /** @lang zh-CN siblings 来自当前 content host 的直接 article，隐藏不会改变 owner fragment 或搜索 identity。 @lang en Siblings are direct articles of the current content host; hiding them changes neither owner fragments nor search identities. */
     const siblings = contentHost.querySelectorAll(
@@ -478,6 +581,8 @@
    * @returns {boolean} <lang><zh-CN>是否应进入可见内容与 outline。</zh-CN><en>Whether the section belongs in visible content and the outline.</en></lang>
    */
   function isContentSectionVisible(candidate) {
+    // <lang><zh-CN>确认稿中隐藏的契约分组栏不生成不可见目录目标，实际签名等小节继续进入目录。</zh-CN><en>The contract grouping bar hidden by the confirmed layout creates no invisible outline target; actual signature sections remain listed.</en></lang>
+    if (getComputedStyle(candidate).display === 'none') return false
     /** @lang zh-CN section 从稳定 topic attribute 或 landing 父 section 读取。 @lang en Section comes from the stable topic attribute or the landing parent section. */
     const section =
       candidate.closest('[data-hia-topic-section]')?.dataset.hiaTopicSection ||
@@ -616,6 +721,7 @@
     link.className = 'hia-project-entry-link hia-public-overview-link'
     link.href =
       document.querySelector('.hia-public-brand')?.getAttribute('href') || './'
+    link.dataset.hiaPublicI18n = 'overview'
     link.textContent = translate('overview')
     link.title = link.textContent
     if (!activeEntryIdentity()) link.setAttribute('aria-current', 'page')
@@ -821,18 +927,28 @@
     if (!contentHost || !outlineHost || !mobileOutlineHost) return
     /** @lang zh-CN topicScope 优先使用当前 identity 对应的 article，避免把同容器 sibling 混入页面 outline。 @lang en TopicScope prefers the article matching the current identity so sibling entries in the same container cannot leak into the page outline. */
     const topicScope = projectActiveArticle()
-    /** @lang zh-CN candidates 包含语义 section summary 和主契约 h3；landing 使用 h2。 @lang en Candidates include semantic section summaries and primary-contract h3 headings; the landing uses h2 headings. */
+    /** @lang zh-CN 页首由当前真实article决定；移动目录在标题/导语后、正文小节前。 @lang en The actual current article determines the page heading; the mobile outline follows its title/lead and precedes body sections. */
+    const pageHeading = (topicScope || contentHost).querySelector(
+      '.hia-public-api-heading, .hia-project-topic-header, .hia-public-hero'
+    )
+    if (
+      mobileOutline &&
+      pageHeading &&
+      pageHeading.nextElementSibling !== mobileOutline
+    ) {
+      pageHeading.after(mobileOutline)
+    }
+    /** @lang zh-CN 单次查询保留真实正文顺序，仅纳入owner小节与契约标题，移动目录自身不成为目录项。 @lang en One query retains actual document order and includes only owner sections and contract headings, excluding the mobile outline itself. */
     const candidates = (
       topicScope
         ? [
-            ...topicScope.querySelectorAll(':scope > details > summary'),
             ...topicScope.querySelectorAll(
-              ':scope > details[data-hia-topic-section="contract"] h3[id]'
+              ':scope > details[data-hia-topic-section] > summary, :scope > details[data-hia-topic-section="contract"] :is(h2,h3)[id]'
             )
           ]
         : [
             ...contentHost.querySelectorAll(
-              ':scope > article > details > summary, :scope > article h2[id]'
+              ':scope > article > details[data-hia-topic-section] > summary, :scope > article h2[id]'
             )
           ]
     ).filter(isContentSectionVisible)
@@ -856,15 +972,34 @@
       item.append(link)
       list.append(item)
     })
-    outlineHost.replaceChildren(list)
-    mobileOutlineHost.replaceChildren(list.cloneNode(true))
+    // <lang><zh-CN>源码和复制反馈会触发观察器，目录内容相同时保留原节点及其真实焦点。</zh-CN><en>Source and copy feedback trigger the observer; identical outline content retains its original nodes and actual focus.</en></lang>
+    if (!outlineHost.firstElementChild?.isEqualNode(list)) {
+      outlineHost.replaceChildren(list)
+    }
+    if (!mobileOutlineHost.firstElementChild?.isEqualNode(list)) {
+      mobileOutlineHost.replaceChildren(list.cloneNode(true))
+    }
 
     /** @lang zh-CN 当前 label 只取可见 topic heading，不读取 search index 或源码正文。 @lang en Current label uses only the visible topic heading and reads neither the search index nor source bodies. */
     const heading = (topicScope || contentHost).querySelector('h1, h2')
     if (breadcrumbCurrent) {
-      breadcrumbCurrent.textContent =
-        heading?.textContent?.trim() || translate('breadcrumb')
+      /** @lang zh-CN 首页使用固定概览标签，API页显示实际标题中的调用名。 @lang en The landing uses the fixed overview label; API pages show the invocation name from the actual heading. */
+      let label = translate('breadcrumb')
+      if (topicScope && heading) {
+        label = heading.textContent.trim() || label
+        if (topicScope.hasAttribute('data-hia-public-api-topic'))
+          label = label.replace(/^Cookies\./u, '')
+      }
+      breadcrumbCurrent.textContent = label
     }
+    /** @lang zh-CN API参考中间层仅用于已登记API页，首页和其它文档仍由原面包屑表示。 @lang en The API-reference breadcrumb level applies only to registered API pages; the original breadcrumb represents landing and other documents. */
+    const apiBreadcrumb = document.querySelector(
+      '[data-hia-public-api-breadcrumb]'
+    )
+    if (apiBreadcrumb)
+      apiBreadcrumb.hidden = !topicScope?.hasAttribute(
+        'data-hia-public-api-topic'
+      )
   }
 
   /**
@@ -1159,7 +1294,12 @@
       true
     )
     /** @lang zh-CN content observer 在 topic 替换或源码状态变化后更新 outline/高亮，不记录正文。 @lang en The content observer updates outline/highlighting after topic replacement or source-state changes and records no body content. */
-    const contentObserver = new MutationObserver(() => {
+    const contentObserver = new MutationObserver((changes) => {
+      // <lang><zh-CN>目录移入正文后，忽略自身列表替换，避免观察器对自己的派生DOM反复重建。</zh-CN><en>After the outline moves into content, ignore replacement of its own list so the observer cannot repeatedly rebuild its derived DOM.</en></lang>
+      if (changes.every((change) => mobileOutline?.contains(change.target)))
+        return
+      // <lang><zh-CN>条目晚于产品壳到达时，新增复制入口仍使用已保存的当前界面语言。</zh-CN><en>When entries arrive after the shell, restored copy controls still use the persisted current interface language.</en></lang>
+      applyProductLocale()
       restoreMobileReadingFocus()
       rebuildOutline()
       highlightVerifiedSources()

@@ -28,9 +28,18 @@ const BUILD_COMMIT = '1234567890abcdef1234567890abcdef12345678'
 /** @lang zh-CN 当前测试模块目录用于读取将被原样发布的产品 runtime。 @lang en Current test-module directory is used to read the product runtime that is published verbatim. */
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 
-/** @lang zh-CN 模拟新版owner补全的附加字段，已投影参数与未映射备注并存。 @lang en Models additional fields completed by the current owner, combining an already-projected parameter and an unmapped remark. */
-function additionalFieldFixture() {
-  return '<section class="hia-i18n-fields"><h3>Localized Fields</h3><dl><div class="hia-i18n-field"><dt>params.name.description</dt><dd>Cookie 名称。</dd></div><div class="hia-i18n-field"><dt>remarks</dt><dd>Unmapped remark stays readable / 未映射备注仍可读。</dd></div></dl></section>'
+/**
+ * @lang zh-CN 模拟新版owner本地化标题，分别覆盖清空和保留未映射备注的分支。
+ * @lang en Models current owner-localized headings with both empty and retained-unmapped-remark branches.
+ * @param {string} entryIdentity <lang><zh-CN>测试条目身份，用于选择get空段或set备注。</zh-CN><en>Test identity selecting the empty get section or retained set remark.</en></lang>
+ * @returns {string} <lang><zh-CN>含真实标题span结构的公开附加字段夹具。</zh-CN><en>Public additional-field fixture with the actual heading-span structure.</en></lang>
+ */
+function additionalFieldFixture(entryIdentity) {
+  // <lang><zh-CN>get仅含已投影参数，清理后必须移除空section；set保留未映射备注。</zh-CN><en>Get contains only projected parameters and must lose its empty section; set retains unmapped remarks.</en></lang>
+  const remark = entryIdentity.endsWith('-get')
+    ? ''
+    : '<div class="hia-i18n-field"><dt>remarks</dt><dd>Unmapped remark stays readable / 未映射备注仍可读。</dd></div>'
+  return `<section class="hia-i18n-fields"><h3><span data-hia-ui-message="portal.section.localizedfields">Localized Fields</span></h3><dl><div class="hia-i18n-field"><dt>params.name.description</dt><dd>Cookie 名称。</dd></div>${remark}</dl></section>`
 }
 
 /**
@@ -61,7 +70,7 @@ function writeContractFixturePage(root, route, entryIdentity) {
   fs.mkdirSync(path.dirname(pagePath), { recursive: true })
   fs.writeFileSync(
     pagePath,
-    `<!doctype html><html lang="${documentLocale}"><head><title>API</title></head><body><article id="${entryIdentity}">${additionalFieldFixture()}<details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article></body></html>`,
+    `<!doctype html><html lang="${documentLocale}"><head><title>API</title></head><body><article id="${entryIdentity}"><header class="hia-project-topic-header"><h2>API</h2><span class="hia-kind">function</span></header><details class="hia-project-topic-section" data-hia-topic-section="summary" open><summary>摘要</summary><div class="hia-project-topic-section-body"><p>实际来源说明 / Actual source description.</p>${additionalFieldFixture(entryIdentity)}</div></details><details class="hia-project-topic-section" data-hia-topic-section="contract"><summary>契约</summary><div class="hia-project-topic-section-body">旧契约</div></details></article></body></html>`,
     'utf8'
   )
 }
@@ -366,7 +375,7 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   assert.match(publicHtml, /data-hia-search-dialog/u)
   assert.match(publicHtml, /aria-controls="hia-public-search"/u)
   assert.match(publicHtml, /代码区域 \/ 编辑器设置/u)
-  assert.match(publicHtml, /只显示接口 API/u)
+  assert.match(publicHtml, /只显示公开接口 API/u)
   assert.match(publicHtml, /data-hia-show-metadata="hide"/u)
   assert.match(publicHtml, /data-hia-code-lines="show"/u)
   assert.match(publicHtml, /assets\/prism\.js/u)
@@ -465,6 +474,25 @@ test('copies only the default Portal tree into an isolated public root', (t) => 
   // <lang><zh-CN>契约已完整承载的字段不能在签名前重复挤占正文，未映射备注仍必须保留。</zh-CN><en>Fields fully represented by the contract must not duplicate above the signature, while unmapped remarks remain readable.</en></lang>
   assert.doesNotMatch(setPage, /<dt>params\.name\.description<\/dt>/u)
   assert.match(setPage, /Unmapped remark stays readable/u)
+  // <lang><zh-CN>真实owner本地化标题不能阻止空段清理，非空备注与来源导语必须保全。</zh-CN><en>The actual localized owner heading must not bypass empty-section cleanup; retain nonempty remarks and the source lead.</en></lang>
+  assert.doesNotMatch(getPage, /class="hia-i18n-fields"/u)
+  assert.match(setPage, /<h1>Cookies\.set\(\)<\/h1>/u)
+  assert.match(getPage, /<h1>Cookies\.get\(\)<\/h1>/u)
+  assert.match(setPage, /实际来源说明 \/ Actual source description/u)
+  assert.match(setPage, /data-hia-public-copy/u)
+  assert.match(publicHtml, /data-hia-public-copy/u)
+  assert.ok(
+    publicHtml.indexOf('name="site-theme"') <
+      publicHtml.indexOf('name="api-scope"')
+  )
+  assert.match(
+    publicHtml,
+    /type="checkbox"[^>]*data-hia-preference="codeWrap"/u
+  )
+  assert.match(
+    publicHtml,
+    /type="checkbox"[^>]*data-hia-preference="codeLines"/u
+  )
   assert.match(setPage, /CookieAttributes/u)
   assert.match(setPage, /名称或值含有无法 URI 编码的输入时会抛出 URIError/u)
   assert.match(setPage, /id="hia-api-set-examples"/u)
@@ -578,7 +606,10 @@ test('keeps deep-link recovery bounded while tolerating remote shard latency', (
   assert.match(runtime, /window\.history\.pushState/u)
   assert.match(runtime, /window\.location\.reload\(\)/u)
   assert.match(runtime, /root\.classList\.remove\('no-js'\)/u)
-  assert.match(runtime, /data-hia-topic-section="contract"\] h3\[id\]/u)
+  assert.match(
+    runtime,
+    /data-hia-topic-section="contract"\] :is\(h2,h3\)\[id\]/u
+  )
   assert.ok(
     runtime.indexOf("nodeId.includes(':package:')") <
       runtime.indexOf("nodeId.includes(':repository:')")

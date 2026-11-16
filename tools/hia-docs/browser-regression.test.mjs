@@ -163,6 +163,275 @@ async function source(page) {
     .first()
 }
 
+test('confirmed API heading, open surface, tree density and mobile outline retain real contracts', async () => {
+  for (const width of [1440, 1024, 390, 320]) {
+    await scenario(width, async (page) => {
+      await page.goto(setUrl)
+      await page.locator('#hia-api-set-signature').waitFor()
+      assert.equal(
+        await page
+          .locator('[data-hia-public-api-topic]:visible h1')
+          .textContent(),
+        'Cookies.set()'
+      )
+      assert.equal(
+        await page
+          .locator('[data-hia-public-api-topic]:visible .hia-i18n-fields')
+          .count(),
+        0
+      )
+      // <lang><zh-CN>同一真实article同时检查开放表面和DOM阅读顺序，隐藏兄弟条目不能成为度量来源。</zh-CN><en>Check the open surface and DOM reading order on the same real article, excluding hidden sibling entries from measurement.</en></lang>
+      const shape = await page
+        .locator('[data-hia-public-api-topic]:visible')
+        .evaluate((article) => {
+          const style = getComputedStyle(article)
+          const header = article.querySelector('.hia-public-api-heading')
+          const outline = article.querySelector('.hia-public-mobile-outline')
+          return {
+            border: style.borderTopWidth,
+            padding: style.padding,
+            background: style.backgroundColor,
+            outlineAfterHeading: header.nextElementSibling === outline,
+            headingSize: getComputedStyle(header.querySelector('h1')).fontSize
+          }
+        })
+      assert.equal(shape.border, '0px')
+      assert.equal(shape.padding, '0px')
+      assert.equal(shape.background, 'rgba(0, 0, 0, 0)')
+      assert.equal(shape.outlineAfterHeading, true)
+      // <lang><zh-CN>固定画布的正文边界防止平板规则覆盖手机16px留白。</zh-CN><en>Content origins on fixed canvases prevent tablet rules from overriding the 16px mobile gutter.</en></lang>
+      const articleBounds = await page
+        .locator('[data-hia-public-api-topic]:visible')
+        .boundingBox()
+      const expectedOrigin = { 1440: 408, 1024: 272, 390: 16, 320: 16 }[width]
+      assert.equal(Math.round(articleBounds.x), expectedOrigin)
+      assert.equal(
+        await page
+          .locator('#hia-api-set-signature')
+          .evaluate((heading) => heading.tagName),
+        'H2'
+      )
+      assert.equal(
+        await page
+          .locator('.hia-public-outline-list a')
+          .first()
+          .getAttribute('href'),
+        '#hia-api-set-signature'
+      )
+      assert.ok(Number.parseFloat(shape.headingSize) >= 32)
+      if (width > 760) {
+        assert.equal(await page.locator('.hia-public-tree-heading').count(), 1)
+        assert.equal(
+          await page
+            .locator('.hia-public-tree-count')
+            .first()
+            .evaluate((node) => getComputedStyle(node).backgroundColor),
+          'rgba(0, 0, 0, 0)'
+        )
+      }
+      assert.ok(
+        (
+          await page.locator('.hia-public-api-lead:visible').innerText()
+        ).includes('浏览器')
+      )
+      await page.locator('[data-hia-public-locale]').click()
+      assert.equal(
+        await page
+          .locator('.hia-public-tree-heading > span')
+          .first()
+          .textContent(),
+        'Documentation'
+      )
+      assert.equal(
+        await page.locator('.hia-public-api-heading h1:visible').textContent(),
+        'Cookies.set()'
+      )
+      assert.equal(
+        await page
+          .locator('[data-hia-public-copy]:visible')
+          .first()
+          .textContent(),
+        'Copy'
+      )
+    })
+  }
+})
+
+test('confirmed settings cards preserve wrapping, line defaults, scope and stored values', async () => {
+  for (const width of [1440, 390, 320]) {
+    await scenario(width, async (page) => {
+      await page.goto(base)
+      await page.locator('html:not(.no-js)').waitFor()
+      await page.locator('[data-hia-settings-open]').click()
+      assert.deepEqual(
+        await page
+          .locator('.hia-public-settings-body legend')
+          .allTextContents(),
+        [
+          '站点主题',
+          'API 显示范围',
+          '内容显示',
+          '代码区域 / 编辑器设置',
+          '阅读设置'
+        ]
+      )
+      assert.equal(await page.locator('.hia-public-theme-swatch').count(), 3)
+      assert.equal(
+        await page
+          .locator('input[type="checkbox"][data-hia-preference="codeLines"]')
+          .isChecked(),
+        true
+      )
+      await page.locator('[data-hia-preference="codeWrap"]').check()
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-wrap'),
+        'wrap'
+      )
+      await page.locator('[data-hia-preference="codeLines"]').uncheck()
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-lines'),
+        'hide'
+      )
+      await page
+        .locator('[data-hia-preference="apiScope"][value="all"]')
+        .check()
+      assert.equal(
+        await page.locator('[data-hia-public-scope-label]').textContent(),
+        '全部'
+      )
+      await page.locator('[data-hia-settings-close]').click()
+      await page.reload()
+      await page.locator('html:not(.no-js)').waitFor()
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-wrap'),
+        'wrap'
+      )
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-lines'),
+        'hide'
+      )
+      await page.locator('[data-hia-settings-open]').click()
+      await page.locator('[data-hia-settings-reset]').click()
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-wrap'),
+        'scroll'
+      )
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-code-lines'),
+        'show'
+      )
+      assert.equal(
+        await page.locator('html').getAttribute('data-hia-api-scope'),
+        'public'
+      )
+    })
+  }
+})
+
+test('copy controls preserve exact code, keyboard focus and bilingual permission failure feedback', async () => {
+  await scenario(390, async (page) => {
+    // <lang><zh-CN>仅替换本测试上下文的剪贴板写入，记录已知公开输入；不读取宿主剪贴板。</zh-CN><en>Replace clipboard writing only in this test context and record known public input, without reading the host clipboard.</en></lang>
+    await page.addInitScript(() => {
+      window.copiedPublicCode = []
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text) => {
+            window.copiedPublicCode.push(text)
+          }
+        }
+      })
+    })
+    await page.goto(base)
+    await page.locator('html:not(.no-js)').waitFor()
+    // <lang><zh-CN>脚本合成点击不能写剪贴板，随后验证真正键盘激活。</zh-CN><en>A script-synthesized click cannot write the clipboard; verify real keyboard activation next.</en></lang>
+    await page
+      .locator('[data-hia-public-copy="hia-public-install-code"]')
+      .evaluate((button) => button.click())
+    assert.deepEqual(await page.evaluate(() => window.copiedPublicCode), [])
+    await page
+      .locator('[data-hia-public-copy="hia-public-install-code"]')
+      .focus()
+    await page.keyboard.press('Enter')
+    assert.deepEqual(await page.evaluate(() => window.copiedPublicCode), [
+      'npm install js-cookie'
+    ])
+    assert.equal(
+      await page
+        .locator('[data-hia-public-copy="hia-public-install-code"]')
+        .textContent(),
+      '已复制'
+    )
+    await page.locator('[data-hia-public-locale]').click()
+    await page.goto(setUrl)
+    // <lang><zh-CN>仅变更hash沿用原文档，必须实际刷新才验证已保存语言的冷启动。</zh-CN><en>A hash-only navigation retains the document, so reload to exercise initialization with the persisted language.</en></lang>
+    await page.reload()
+    await page.locator('#hia-api-set-signature').waitFor()
+    // <lang><zh-CN>保存英文后冷载，异步到达的复制控件必须直接使用英文，且复制精确的签名与多行示例。</zh-CN><en>After persisting English and cold-loading, asynchronous copy controls must use English immediately and copy the exact signature and multiline example.</en></lang>
+    assert.equal(
+      await page
+        .locator('[data-hia-public-copy="hia-api-set-signature-code"]')
+        .textContent(),
+      'Copy'
+    )
+    const expectedCode = []
+    for (const id of [
+      'hia-api-set-signature-code',
+      'hia-api-set-example-code'
+    ]) {
+      expectedCode.push(await page.locator('#' + id).textContent())
+      await page.locator(`[data-hia-public-copy="${id}"]`).focus()
+      await page.keyboard.press('Enter')
+    }
+    assert.deepEqual(
+      await page.evaluate(() => window.copiedPublicCode),
+      expectedCode
+    )
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => {
+        throw new DOMException('Denied', 'NotAllowedError')
+      }
+    })
+    await page
+      .locator('[data-hia-public-copy="hia-api-set-signature-code"]')
+      .focus()
+    await page.keyboard.press('Space')
+    assert.equal(
+      await page
+        .locator('[data-hia-public-copy="hia-api-set-signature-code"]')
+        .textContent(),
+      'Copy failed'
+    )
+    assert.equal(await page.locator('textarea').count(), 0)
+    assert.equal(
+      await page.evaluate(() => document.activeElement.dataset.hiaPublicCopy),
+      'hia-api-set-signature-code'
+    )
+    assert.ok(
+      (
+        await page.locator('#hia-api-set-signature-code').textContent()
+      ).startsWith('Cookies.set(')
+    )
+  })
+  await scenario(
+    320,
+    async (page) => {
+      await page.goto(base)
+      assert.equal(
+        await page
+          .locator('[data-hia-public-copy="hia-public-install-code"]')
+          .isVisible(),
+        false
+      )
+      assert.equal(
+        await page.locator('#hia-public-install-code').textContent(),
+        'npm install js-cookie'
+      )
+    },
+    true
+  )
+})
+
 test('localized static source links resolve to emitted files and readable native line pages', async () => {
   // <lang><zh-CN>实际54个静态链接逐项解析，错误目录相对基址会直接失败。</zh-CN><en>Resolve all actual 54 static links individually, failing on incorrect directory-relative bases.</en></lang>
   const pages = fs
@@ -406,7 +675,7 @@ test('outline focuses the selected section and retains native subsequent keyboar
         'hia-api-set-parameters'
       )
       await page.keyboard.press('Tab')
-      // <lang><zh-CN>完整可见的宽屏表格没有额外Tab控件，窄屏原生滚动区则必须可达。</zh-CN><en>A fully visible wide table adds no Tab control, while the narrow native scroll region must remain reachable.</en></lang>
+      // <lang><zh-CN>完整可见的表格后按正文顺序进入新增示例复制按钮；窄屏先到原生滚动区。</zh-CN><en>After a fully visible table, document order reaches the restored example copy button; a narrow viewport first reaches the native scroll region.</en></lang>
       const next = await page.evaluate(() => {
         const table = document.querySelector(
           'article:has(#hia-api-set-signature) .hia-public-api-table-scroll'
@@ -414,15 +683,32 @@ test('outline focuses the selected section and retains native subsequent keyboar
         return {
           overflow: table.scrollWidth > table.clientWidth,
           tableFocused: document.activeElement === table,
-          nextDisclosure: document.activeElement.matches(
-            'article details[data-hia-topic-section="provenance"] > summary'
+          nextCopy: document.activeElement.matches(
+            '[data-hia-public-copy="hia-api-set-example-code"]'
           )
         }
       })
       assert.equal(
-        next.overflow ? next.tableFocused : next.nextDisclosure,
+        next.overflow ? next.tableFocused : next.nextCopy,
         true,
         JSON.stringify(next)
+      )
+      // <lang><zh-CN>锚点后的原生展开触发重建，必须保留当前条目和正文顺序。</zh-CN><en>A native disclosure after anchor navigation triggers rebuilding and must retain the current article and document order.</en></lang>
+      await seek(
+        page,
+        'article details[data-hia-topic-section="provenance"] > summary'
+      )
+      await page.keyboard.press('Enter')
+      assert.equal(
+        await page.locator('.hia-public-api-heading h1:visible').textContent(),
+        'Cookies.set()'
+      )
+      assert.equal(
+        await page
+          .locator('.hia-public-outline-list a')
+          .first()
+          .getAttribute('href'),
+        '#hia-api-set-signature'
       )
     })
 })

@@ -27,7 +27,7 @@ Owner repositories must be clean and remain at these full commits:
 | `@mandolin/jsdoc-plugin-hia-sys` | `15970dc9da0f8e120677eab7eba3e959dcf42a34` | MIT               |
 | `@mandolin/jsdoc-theme-hia`      | `0df2ca9bbf40e159d8da69aac80b3c31136b1a05` | MIT               |
 | `hia-jsdoc` umbrella             | `4890e0bf1b943a14cf247f9b413d140a43a6bb5b` | MIT               |
-| HIA main Portal/CLI              | `b13203038ebcad604904575a70055d89d6027c50` | MIT package train |
+| HIA main Portal/CLI              | `ea6482f18581d960c441821b0235dd37aa5ab3a2` | MIT package train |
 
 JSDoc `4.0.5` is Apache-2.0 and is isolated under `runtime/package-lock.json`. PrismJS `1.30.0` is MIT and is isolated in the same private
 tooling runtime solely to highlight already fetched, byte-counted and SHA-384-verified JavaScript source. The public artifact receives
@@ -36,6 +36,10 @@ text as the failure fallback. hia-jsdoc uses its own workspace lock. None of the
 pipeline does not copy owner theme implementations into this repository.
 
 ## Matrix and defaults
+
+默认 Portal 的精选 API 使用限定一级标题和开放式正文，移动页内目录位于标题与导语之后。安装、签名和示例代码块提供复制按钮，复制失败时保留可选正文并给出反馈。设置依次组织站点主题、API 范围、内容显隐、代码和阅读宽度，代码换行与行号使用复选框，既有设备偏好继续可读。
+
+Featured APIs use qualified top-level headings and an open reading surface, with the mobile outline after the title and lead. Install, signature, and example blocks provide copy controls. A failed copy leaves code selectable and reports feedback. Settings order site theme, API scope, content visibility, code, and reading width. Wrapping and line numbers use checkboxes, preserving existing device preferences.
 
 已知 API 深链在首绘使用加载区并预留一屏高度，随后由真实正文接管。未知或损坏片段保留概览，脚本关闭或初始化故障时仍可使用静态首页和原生 API 链接。
 

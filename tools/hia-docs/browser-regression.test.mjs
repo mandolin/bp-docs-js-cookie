@@ -421,6 +421,12 @@ test('copy controls preserve exact code, keyboard focus and bilingual permission
         await page.locator('#hia-api-set-signature-code').textContent()
       ).startsWith('Cookies.set(')
     )
+    // <lang><zh-CN>屏幕跳正文链接在纸面必须隐藏，避免固定定位覆盖示例代码；原文在媒体切换前后保持一致。</zh-CN><en>Hide the screen skip link on paper so its fixed position cannot cover example code, preserving source text across media changes.</en></lang>
+    const printCode = await page.locator('#hia-api-set-example-code').textContent()
+    await page.emulateMedia({ media: 'print' })
+    assert.equal(await page.locator('.hia-public-skip').isVisible(), false)
+    assert.equal(await page.locator('[data-hia-public-copy]:visible').count(), 0)
+    assert.equal(await page.locator('#hia-api-set-example-code').textContent(), printCode)
   })
   await scenario(
     320,
@@ -439,6 +445,37 @@ test('copy controls preserve exact code, keyboard focus and bilingual permission
     },
     true
   )
+})
+
+test('asynchronous outline stays out of the loading slot and reveals settled breadcrumbs', async () => {
+  await scenario(390, async (page) => {
+    /** @lang zh-CN 真实条目响应门由本例释放，保持加载态确定可观察。 @lang en This case owns the actual entry-response gate so loading state remains deterministically observable. */
+    let releaseFragment
+    /** @lang zh-CN 共享门只暂停HTML片段，页面壳与脚本继续正常加载。 @lang en The shared gate pauses only HTML fragments while the shell and scripts load normally. */
+    const fragmentGate = new Promise((resolve) => { releaseFragment = resolve })
+    await page.route('**/*.html', async (route) => {
+      await fragmentGate
+      await route.continue()
+    })
+    try {
+      await page.goto(setUrl)
+      await page.locator('main > .hia-project-loading').waitFor()
+      assert.equal(await page.locator('.hia-public-mobile-outline').isVisible(), false)
+      assert.equal(await page.locator('.hia-public-breadcrumb').isVisible(), false)
+      /** @lang zh-CN 文档坐标排除浏览器正常焦点滚动，比较同一主容器的流内起点。 @lang en Document coordinates exclude normal browser focus scrolling when comparing the same main container's flow origin. */
+      const loadingTop = await page.locator('main').evaluate((node) => node.getBoundingClientRect().top + scrollY)
+      releaseFragment()
+      await page.getByRole('heading', { name: 'Cookies.set()', exact: true }).waitFor()
+      assert.equal(await page.locator('.hia-public-mobile-outline').isVisible(), true)
+      assert.equal(await page.locator('.hia-public-breadcrumb').isVisible(), true)
+      assert.equal(await page.locator('[data-hia-public-api-breadcrumb]').isVisible(), true)
+      /** @lang zh-CN 到达后目录仍按确认稿在标题之后，不额外推移主区域。 @lang en Once ready, the outline follows the confirmed heading without shifting the main region. */
+      const settledTop = await page.locator('main').evaluate((node) => node.getBoundingClientRect().top + scrollY)
+      assert.ok(Math.abs(settledTop - loadingTop) <= 1, JSON.stringify({ loadingTop, settledTop }))
+    } finally {
+      releaseFragment()
+    }
+  })
 })
 
 test('localized static source links resolve to emitted files and readable native line pages', async () => {

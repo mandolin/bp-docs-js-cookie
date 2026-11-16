@@ -187,6 +187,14 @@ On Windows, tests default to installed Chrome. Set `HIA_BP_BROWSER_CHANNEL` to c
 `HIA_BP_TEST_PORT` selects the dedicated loopback port, defaulting to 4187. Every test owns and closes its browser contexts and server.
 The Pages workflow runs these checks on Node.js 22.23.4 and 24.22.1 before uploading the public artifact.
 
-文档专用测试依赖固定Playwright 1.65.1及Apache-2.0许可证。默认Portal六项与第一方偏好指南三项回归在真实生成产物上执行，Pages上传前由两个受支持Node.js版本
+文档专用测试依赖固定Playwright 1.65.1及Apache-2.0许可证。默认Portal与第一方偏好指南回归在真实生成产物上执行，Pages上传前由两个受支持Node.js版本
 验证。源码高亮沿用校验后的原生行模型，跨行令牌保留语义；原生行号和同源链接继续用于定位。按每个语言静态页的基址核全部54个来源链接。
 指南以根滚动留白承接固定顶栏下的原生焦点与片段定位。打印时示例保留原文字节并自动折行，屏幕中的长表和代码继续提供局部滚动。
+
+纸面隐藏屏幕跳正文链接及复制控件，避免固定入口叠盖示例。打印媒体切换保持示例原文。
+
+Print hides the screen skip link and copy controls to preserve unobstructed examples. Media changes preserve the original example text.
+
+异步条目加载时，移动页内目录在真实标题之后就位再显示；面包屑保留行高，正文就绪时呈现实际层级。
+
+During asynchronous entry loading, the mobile outline appears after settling behind the actual heading. Breadcrumbs reserve their line height and reveal the actual hierarchy with ready content.

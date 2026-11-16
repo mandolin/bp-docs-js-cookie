@@ -582,6 +582,8 @@ html[data-hia-public-entry-route] .hia-main:has(> .hia-public-landing) {
 }
 
 @media print {
+  /* <lang zh-CN>纸面去掉固定定位的屏幕跳转入口，保留完整示例。</lang> <lang en>Remove the fixed screen navigation affordance from paper, preserving the full example.</lang> */
+  .hia-public-skip,
   .hia-public-header,
   .hia-sidebar,
   .hia-public-outline,
@@ -1943,4 +1945,15 @@ article[data-hia-public-api-topic],
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }
+}
+
+/* <lang zh-CN>移动目录只在就位到真实标题后显示，异步加载期间不在正文前额外占位。</lang> <lang en>Show the mobile outline only after it follows the actual heading, avoiding an extra pre-content slot during asynchronous loading.</lang> */
+.hia-public-content-column > .hia-public-mobile-outline {
+  display: none;
+}
+
+/* <lang zh-CN>加载期间保留面包屑行高并隐藏待定标签，正文就绪后一次呈现真实层级，防止插入API层导致可见跳动。</lang> <lang en>Reserve breadcrumb line height while hiding unresolved labels, then reveal the actual hierarchy with ready content, preventing shifts when the API level appears.</lang> */
+html[data-hia-public-entry-route] .hia-public-breadcrumb,
+.hia-public-content-column:has(> .hia-main > .hia-project-loading:not([role='alert'])) > .hia-public-breadcrumb {
+  visibility: hidden;
 }

@@ -324,6 +324,15 @@ test('confirmed settings cards preserve wrapping, line defaults, scope and store
         await page.locator('html').getAttribute('data-hia-api-scope'),
         'public'
       )
+      await page.locator('[data-hia-settings-close]').click()
+      await page.locator('[data-hia-public-locale]').click()
+      await page.locator('[data-hia-settings-open]').click()
+      assert.equal(
+        await page
+          .locator('label:has(input[data-hia-preference="codeWrap"])')
+          .innerText(),
+        'Wrap long lines'
+      )
     })
   }
 })

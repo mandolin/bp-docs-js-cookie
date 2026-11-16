@@ -1,4 +1,4 @@
-/* <lang><zh-CN>W-P121 的 BP 专属产品壳；通用 Portal owner 的结构主题留给后续周期。</zh-CN><en>BP-specific product shell for W-P121; structural themes in the shared Portal owner remain deferred.</en></lang> */
+/* <lang><zh-CN>bp-docs-js-cookie默认Portal产品样式，落实确认的阅读层级、目录与显示偏好。</zh-CN><en>Product styles for the bp-docs-js-cookie default Portal, implementing confirmed reading hierarchy, navigation, and display preferences.</en></lang> */
 :root {
   --hia-public-header-height: 4rem;
   --hia-public-content-width: 52rem;

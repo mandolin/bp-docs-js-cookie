@@ -1,9 +1,9 @@
 /**
- * <lang><zh-CN>实现 bp-docs-js-cookie 默认 Portal 的产品壳、显示偏好、移动导航与本页 outline。</zh-CN><en>Implements the product shell, display preferences, mobile navigation, and local outline for the bp-docs-js-cookie default Portal.</en></lang>
+ * <lang><zh-CN>实现 bp-docs-js-cookie 默认 Portal 的产品壳、显示偏好、移动导航、页内目录与公开代码复制。</zh-CN><en>Implements the product shell, display preferences, mobile navigation, local outline, and public-code copying for the bp-docs-js-cookie default Portal.</en></lang>
  *
  * @module bp-docs-js-cookie/public-product-runtime
- * @lang zh-CN 运行时只访问同页 DOM 和 localStorage 中的非个人显示偏好，不发送分析、credential 或跨源请求。
- * @lang en The runtime accesses only the same-page DOM and non-personal display preferences in localStorage; it sends no analytics, credentials, or cross-origin requests.
+ * @lang zh-CN 运行时交互范围为同页 DOM、设备本地显示偏好，以及读者原生激活后的公开代码剪贴板写入。
+ * @lang en Runtime interactions cover the same-page DOM, device-local display preferences, and clipboard writes of public code after native reader activation.
  */
 
 ;(() => {
@@ -248,7 +248,7 @@
       sizeLarge: 'Large',
       codeWrap: 'Long-line wrapping',
       wrapScroll: 'Horizontal scroll',
-      wrapAutomatic: 'Wrap',
+      wrapAutomatic: 'Wrap long lines',
       lineNumbers: 'Line numbers',
       hide: 'Hide',
       show: 'Show',

@@ -370,7 +370,11 @@ function checkStaticSourceLinks(files) {
   /** @lang zh-CN 公开基址用于按浏览器规则解析相对路径。 @lang en The public base resolves relative paths using browser URL rules. */
   const base = new URL(PAGES_SITE.canonicalUrl)
   /** @lang zh-CN 沿现有清单的绝对路径建立站内相对集合，供URL解析与资产身份核对。 @lang en Convert the existing absolute inventory into site-relative identities for URL and asset checks. */
-  const publicFiles = new Set(files.map(file => path.relative(topology.publicArtifactRoot, file).replaceAll('\\', '/')))
+  const publicFiles = new Set(
+    files.map((file) =>
+      path.relative(topology.publicArtifactRoot, file).replaceAll('\\', '/')
+    )
+  )
   /** @lang zh-CN 校验计数只覆盖来源行页，不把普通栏目链接混入。 @lang en Count source-line pages only, excluding ordinary navigation links. */
   let count = 0
   for (const relative of [...publicFiles].filter(
@@ -625,6 +629,7 @@ function main() {
     path.join(topology.publicArtifactRoot, 'index.html'),
     'utf8'
   )
+  // <lang><zh-CN>公开根同时满足确认稿的范围说明、主题选择卡和复制/换行入口；仅有旧产品壳标记不足以通过。</zh-CN><en>The public root must include the confirmed scope wording, theme cards, and copy/wrapping controls in addition to its existing product-shell markers.</en></lang>
   assert(
     rootHtml.includes('hia-project-split-site') &&
       rootHtml.includes('data-hia-skin-control') &&
@@ -634,7 +639,10 @@ function main() {
       rootHtml.includes('data-hia-public-outline') &&
       rootHtml.includes('data-hia-public-footer') &&
       rootHtml.includes('代码区域 / 编辑器设置') &&
-      rootHtml.includes('只显示接口 API') &&
+      rootHtml.includes('只显示公开接口 API') &&
+      rootHtml.includes('hia-public-theme-swatch') &&
+      rootHtml.includes('type="checkbox" data-hia-preference="codeWrap"') &&
+      rootHtml.includes('data-hia-public-copy="hia-public-install-code"') &&
       rootHtml.includes('data-hia-api-scope="public"') &&
       rootHtml.includes('data-hia-code-lines="show"') &&
       rootHtml.includes('assets/prism.js') &&

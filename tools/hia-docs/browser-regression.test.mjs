@@ -12,6 +12,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { after, before, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
+import { PUBLIC_PRODUCT_MESSAGES } from './public-messages.mjs'
 
 /** @lang zh-CN 文档专用锁确定浏览器测试依赖。 @lang en The documentation-only lock determines browser-test dependencies. */
 const runtimeRequire = createRequire(
@@ -974,5 +975,139 @@ test('guide A4 print preserves source text and fits every visible code token wit
       },
       true
     )
+  }
+})
+
+/** @lang zh-CN 显式双语首页覆盖旧偏好、拒绝存储及禁脚本，既有语言控件切换后可刷新并保留历史/查询/片段。 @lang en Explicit bilingual landings cover saved preferences, denied storage, and no script, while the existing switch preserves history, query, and fragment across reload. */
+test('keeps explicit Portal locales across preferences, storage denial, and reload', async () => {
+  for (const width of [1440, 1024, 390, 320]) {
+    for (const locale of ['zh-CN', 'en']) {
+      for (const mode of [
+        'fresh',
+        'opposite',
+        'denied',
+        'write-denied',
+        'noscript'
+      ]) {
+        await withPage(
+          width,
+          async (page) => {
+            // <lang><zh-CN>初始化脚本只伪造设备显示存储，不改文档DOM或正常语言处理器。</zh-CN><en>The init script models device display storage without changing document DOM or ordinary locale handlers.</en></lang>
+            await page.addInitScript(
+              ({ locale, mode }) => {
+                if (mode === 'denied') {
+                  Object.defineProperty(window, 'localStorage', {
+                    get() {
+                      throw new DOMException(
+                        'Test storage denial',
+                        'SecurityError'
+                      )
+                    }
+                  })
+                  return
+                }
+                if (mode === 'opposite' || mode === 'write-denied')
+                  localStorage.setItem(
+                    'hia-doc-portal-ui-locale',
+                    locale === 'en' ? 'zh-CN' : 'en'
+                  )
+                if (mode === 'write-denied')
+                  Storage.prototype.setItem = function () {
+                    throw new DOMException('Test write denial', 'SecurityError')
+                  }
+              },
+              { locale, mode }
+            )
+            const response = await page.goto(
+              base + `index.${locale}.html?from=rt15#hia-public-main`
+            )
+            assert.equal(response.status(), 200)
+            if (mode !== 'noscript')
+              await page.waitForFunction(
+                () => !document.documentElement.classList.contains('no-js')
+              )
+            assert.equal(
+              await page.locator('html').getAttribute('lang'),
+              locale
+            )
+            assert.equal(
+              await page.locator('h1:visible').first().innerText(),
+              PUBLIC_PRODUCT_MESSAGES[locale].landingTitle
+            )
+            assert.equal(
+              await page.locator('[data-hia-ui-locale-control]').inputValue(),
+              locale
+            )
+            if (mode === 'noscript') return
+            const length = await page.evaluate(() => history.length)
+            const other = locale === 'en' ? 'zh-CN' : 'en'
+            await page.locator('[data-hia-public-locale]').click()
+            assert.equal(await page.locator('html').getAttribute('lang'), other)
+            assert.equal(
+              new URL(page.url()).pathname.endsWith(`index.${other}.html`),
+              true
+            )
+            assert.equal(new URL(page.url()).search, '?from=rt15')
+            assert.equal(new URL(page.url()).hash, '#hia-public-main')
+            assert.equal(await page.evaluate(() => history.length), length)
+            // <lang><zh-CN>刷新沿新的明确地址恢复，包含setItem被拒绝而getItem保留相反旧值的场景。</zh-CN><en>Reload restores the new explicit address, including denied writes with an opposing value retained by getItem.</en></lang>
+            await page.reload()
+            await page.waitForFunction(
+              () => !document.documentElement.classList.contains('no-js')
+            )
+            assert.equal(await page.locator('html').getAttribute('lang'), other)
+            assert.equal(
+              await page.locator('h1:visible').first().innerText(),
+              PUBLIC_PRODUCT_MESSAGES[other].landingTitle
+            )
+          },
+          mode === 'noscript'
+        )
+      }
+    }
+  }
+})
+
+/** @lang zh-CN 六个独立指南页在脚本开关下均通过原生页脚返回同语言默认Portal。 @lang en All six independent guide pages return to the same-language default Portal through native footer links with scripts on and off. */
+test('returns every independent guide page to the matching Portal locale', async () => {
+  for (const locale of ['zh-CN', 'en']) {
+    const suffix = locale === 'en' ? '.en' : ''
+    for (const route of [
+      `index${suffix}.html`,
+      `guides/preferences${suffix}.html`,
+      `guides/troubleshooting${suffix}.html`
+    ]) {
+      for (const noScript of [false, true]) {
+        await withPage(
+          320,
+          async (page) => {
+            await page.goto(base + 'guides/first-party-preferences/' + route)
+            assert.equal(
+              await page.locator('html').getAttribute('lang'),
+              locale
+            )
+            await page.locator('a.portal-return').click()
+            await page.waitForLoadState('load')
+            if (!noScript)
+              await page.waitForFunction(
+                () => !document.documentElement.classList.contains('no-js')
+              )
+            assert.equal(
+              new URL(page.url()).pathname.endsWith(`index.${locale}.html`),
+              true
+            )
+            assert.equal(
+              await page.locator('html').getAttribute('lang'),
+              locale
+            )
+            assert.equal(
+              await page.locator('h1:visible').first().innerText(),
+              PUBLIC_PRODUCT_MESSAGES[locale].landingTitle
+            )
+          },
+          noScript
+        )
+      }
+    }
   }
 })

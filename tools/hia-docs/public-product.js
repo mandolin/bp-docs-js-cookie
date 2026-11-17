@@ -47,224 +47,9 @@
     relations: ['hide', 'show']
   })
   /** @lang zh-CN 产品壳自身的最小双语词典；owner 全量 locale 治理由 W-P125 承担。 @lang en Minimal bilingual dictionary for this product shell; W-P125 owns full owner-locale adoption. */
-  const messages = Object.freeze({
-    'zh-CN': {
-      skip: '跳到正文',
-      landingEyebrow: '浏览器 Cookie 工具库',
-      landingTitle: '轻量、明确地管理 Cookie。',
-      landingLede:
-        'js-cookie 提供熟悉、无依赖的浏览器 API。这里从一个默认、多页、可追溯的 Portal 开始阅读。',
-      startCta: '快速开始',
-      apiCta: '浏览 API',
-      installTitle: '安装',
-      installIntro: '使用包管理器安装，或从 ESM 入口导入。',
-      quickStartTitle: '第一段代码',
-      quickStartIntro: '写入、读取，再按同一作用域删除 Cookie。',
-      apiTitle: '核心 API',
-      apiIntro: '按任务进入独立 reference 页面，在统一 Portal 中查看完整契约。',
-      setCardDescription:
-        '写入值，并显式控制 expires、path、domain、secure 与 sameSite。',
-      getCardDescription: '读取指定名称，或取得当前文档可见的 Cookie 值。',
-      apiIndexTitle: '完整 API 索引',
-      apiIndexDescription:
-        '默认显示 7 个公开 API；可在设置中切换查看全部 18 个文档节点。',
-      provenanceTitle: '文档与源码溯源',
-      upstreamVersion: '上游版本',
-      publicProfile: '公开 profile',
-      sourceMode: '源码模式',
-      license: '许可证',
-      browser: '浏览器',
-      home: 'js-cookie 文档首页',
-      search: '搜索文档',
-      openSearch: '打开文档搜索',
-      searchTitle: '搜索文档',
-      searchPlaceholder: '搜索 API 或指南…',
-      searchClose: '关闭',
-      searchEmpty: '没有匹配结果',
-      overview: '概览',
-      searchOverview: '项目概览与快速开始',
-      searchSet: 'Cookies.set() · 写入 Cookie',
-      searchGet: 'Cookies.get() · 读取 Cookie',
-      settings: '主题与设置',
-      nav: '文档目录',
-      outline: '本页内容',
-      mobileOutline: '本页目录',
-      breadcrumb: '概览',
-      breadcrumbAccessible: '面包屑',
-      pageIndex: '完整页面索引',
-      backToContent: '返回正文顶部',
-      switchToEnglish: '切换到英语界面',
-      switchToChinese: '切换到中文界面',
-      openSettings: '打开主题与显示设置',
-      settingsTitle: '显示与代码设置',
-      apiScope: 'API 显示范围',
-      publicApi: '只显示公开接口 API',
-      allApi: '显示全部 API',
-      publicApiGroup: '公开接口 API',
-      internalApiGroup: '内部实现',
-      contentVisibility: '内容显示',
-      treeHeading: '文档',
-      scopePublic: '仅公开',
-      scopeAll: '全部',
-      scopeNote:
-        '“接口 API”指面向使用者的公开/导出 API；全部模式会补充内部实现节点。',
-      apiReference: 'API 参考',
-      showMetadata: '显示元数据',
-      showContract: '显示契约',
-      showCoverage: '显示覆盖情况',
-      showProvenance: '显示溯源',
-      showRelations: '显示项目关系',
-      showLines: '显示行号',
-      codeThemePaper: '纸张浅色',
-      codeThemeMidnight: '午夜深色',
-      copy: '复制',
-      copied: '已复制',
-      copyFailed: '复制失败',
-      metadata: '元数据',
-      contract: '契约',
-      coverage: '覆盖情况',
-      provenance: '溯源',
-      relations: '项目关系',
-      siteTheme: '站点主题',
-      themeSystem: '跟随系统',
-      themeLight: '浅色',
-      themeDark: '深色',
-      codeSettings: '代码区域 / 编辑器设置',
-      codeTheme: '代码主题',
-      codeThemeSite: '跟随站点',
-      codeThemeContrast: '高对比度',
-      codeSize: '代码字号',
-      sizeSmall: '小',
-      sizeDefault: '默认',
-      sizeLarge: '大',
-      codeWrap: '长行换行',
-      wrapScroll: '横向滚动',
-      wrapAutomatic: '长行自动换行',
-      lineNumbers: '行号',
-      hide: '隐藏',
-      show: '显示',
-      highlighterNote:
-        '源码须先通过字节数与 SHA-384 校验，再进行本地语法高亮；失败时保留纯文本。',
-      reading: '阅读设置',
-      contentWidth: '正文宽度',
-      widthComfortable: '舒适',
-      widthWide: '宽幅',
-      privacy: '仅保存显示偏好；不关联账号、不发送分析数据。',
-      reset: '恢复默认',
-      close: '关闭',
-      saved: '设置已保存在此设备。'
-    },
-    en: {
-      skip: 'Skip to content',
-      landingEyebrow: 'Browser Cookie library',
-      landingTitle: 'Manage Cookies with clarity and care.',
-      landingLede:
-        'js-cookie provides a familiar, dependency-free browser API. Start reading through one default, multi-page, traceable Portal.',
-      startCta: 'Quick start',
-      apiCta: 'Browse APIs',
-      installTitle: 'Install',
-      installIntro:
-        'Install with a package manager or import from the ESM entry.',
-      quickStartTitle: 'Quick start',
-      quickStartIntro: 'Write, read, then remove a Cookie with the same scope.',
-      apiTitle: 'Core APIs',
-      apiIntro:
-        'Open a focused reference page to read its full contract in the unified Portal.',
-      setCardDescription:
-        'Write a value and set expires, path, domain, secure, and sameSite explicitly.',
-      getCardDescription:
-        'Read a named value or the Cookie values visible to the current document.',
-      apiIndexTitle: 'Complete API index',
-      apiIndexDescription:
-        'Shows 7 public APIs by default; switch settings to view all 18 documented entries.',
-      provenanceTitle: 'Documentation and source provenance',
-      upstreamVersion: 'Upstream version',
-      publicProfile: 'Public profile',
-      sourceMode: 'Source mode',
-      license: 'License',
-      browser: 'Browser',
-      home: 'js-cookie documentation home',
-      search: 'Search documentation',
-      openSearch: 'Open documentation search',
-      searchTitle: 'Search documentation',
-      searchPlaceholder: 'Search APIs or guides…',
-      searchClose: 'Close',
-      searchEmpty: 'No matching result',
-      overview: 'Overview',
-      searchOverview: 'Project overview and quick start',
-      searchSet: 'Cookies.set() · write a Cookie',
-      searchGet: 'Cookies.get() · read a Cookie',
-      settings: 'Theme & settings',
-      nav: 'Documentation menu',
-      outline: 'On this page',
-      mobileOutline: 'On this page',
-      breadcrumb: 'Overview',
-      breadcrumbAccessible: 'Breadcrumb',
-      pageIndex: 'Complete page index',
-      backToContent: 'Back to content',
-      switchToEnglish: 'Switch interface to English',
-      switchToChinese: 'Switch interface to Chinese',
-      openSettings: 'Open theme and display settings',
-      settingsTitle: 'Display and code settings',
-      apiScope: 'API visibility',
-      publicApi: 'Show public interface APIs only',
-      allApi: 'Show all APIs',
-      publicApiGroup: 'Public API',
-      internalApiGroup: 'Internal implementation',
-      contentVisibility: 'Content visibility',
-      treeHeading: 'Documentation',
-      scopePublic: 'Public only',
-      scopeAll: 'All APIs',
-      scopeNote:
-        '“Interface API” means the public/exported surface; All APIs also reveals internal implementation nodes.',
-      apiReference: 'API reference',
-      showMetadata: 'Show metadata',
-      showContract: 'Show contract',
-      showCoverage: 'Show coverage',
-      showProvenance: 'Show provenance',
-      showRelations: 'Show project relations',
-      showLines: 'Show line numbers',
-      codeThemePaper: 'Paper Light',
-      codeThemeMidnight: 'Midnight',
-      copy: 'Copy',
-      copied: 'Copied',
-      copyFailed: 'Copy failed',
-      metadata: 'Metadata',
-      contract: 'Contract',
-      coverage: 'Coverage',
-      provenance: 'Provenance',
-      relations: 'Project relations',
-      siteTheme: 'Site theme',
-      themeSystem: 'Use system',
-      themeLight: 'Light',
-      themeDark: 'Dark',
-      codeSettings: 'Code area / editor settings',
-      codeTheme: 'Code theme',
-      codeThemeSite: 'Follow site',
-      codeThemeContrast: 'High contrast',
-      codeSize: 'Code size',
-      sizeSmall: 'Small',
-      sizeDefault: 'Default',
-      sizeLarge: 'Large',
-      codeWrap: 'Long-line wrapping',
-      wrapScroll: 'Horizontal scroll',
-      wrapAutomatic: 'Wrap long lines',
-      lineNumbers: 'Line numbers',
-      hide: 'Hide',
-      show: 'Show',
-      highlighterNote:
-        'Source is highlighted locally only after byte-length and SHA-384 verification; failures remain plain text.',
-      reading: 'Reading settings',
-      contentWidth: 'Content width',
-      widthComfortable: 'Comfortable',
-      widthWide: 'Wide',
-      privacy:
-        'Only display preferences are stored; no account link or analytics.',
-      reset: 'Reset defaults',
-      close: 'Close',
-      saved: 'Settings saved on this device.'
-    }
-  })
+  const messages = Object.freeze(
+    JSON.parse(document.querySelector('[data-hia-public-messages]').textContent)
+  )
 
   // <lang><zh-CN>产品壳的两份 bundle 必须保持 exact key parity；缺项时在交互绑定前 fail closed。</zh-CN><en>The two product-shell bundles must retain exact key parity and fail closed before interaction binding when an entry is missing.</en></lang>
   const chineseMessageIds = Object.keys(messages['zh-CN']).sort()
@@ -420,6 +205,30 @@
    * @returns {void}
    */
   function applyProductLocale() {
+    // <lang><zh-CN>显式语言首页随既有EN切换同步地址及普通回链，保留query、条目hash和历史状态。</zh-CN><en>Synchronize explicit locale landings and ordinary return links with the existing language switch, retaining query, entry hash, and history state.</en></lang>
+    if (root.dataset.hiaPublicRouteLocale) {
+      const locale = currentLocale()
+      root.dataset.hiaPublicRouteLocale = locale
+      for (const link of document.querySelectorAll(
+        'a[href="index.en.html"],a[href="index.zh-CN.html"]'
+      ))
+        link.setAttribute('href', `index.${locale}.html`)
+      for (const link of document.querySelectorAll(
+        'a[href="pages/en/index.html"],a[href="pages/zh-CN/index.html"]'
+      ))
+        link.setAttribute('href', `pages/${locale}/index.html`)
+      const address = new URL(window.location.href)
+      const pathname = address.pathname.replace(
+        /index\.(?:en|zh-CN)\.html$/u,
+        `index.${locale}.html`
+      )
+      if (pathname !== address.pathname) {
+        address.pathname = pathname
+        try {
+          window.history.replaceState(window.history.state, '', address)
+        } catch {}
+      }
+    }
     for (const element of document.querySelectorAll('[data-hia-public-i18n]')) {
       /** @lang zh-CN 只写变化的词条，异步正文观察器可以安全复用翻译过程。 @lang en Write only changed messages so the asynchronous content observer can safely reuse localization. */
       const message = translate(element.dataset.hiaPublicI18n)
@@ -1161,6 +970,12 @@
 
   /** @lang zh-CN 当前有效偏好在事件间保持同一对象身份。 @lang en Current valid preferences retain one object identity across events. */
   let preferences = readPreferences()
+  // <lang><zh-CN>显式首页选择通过owner既有控件落地，存储被拒绝或保留相反旧值时也能恢复请求语言。</zh-CN><en>Apply an explicit landing choice through the existing owner control even when storage is denied or retains an opposing saved value.</en></lang>
+  const routeLocale = root.dataset.hiaPublicRouteLocale
+  if (uiLocaleControl && ['zh-CN', 'en'].includes(routeLocale)) {
+    uiLocaleControl.value = routeLocale
+    uiLocaleControl.dispatchEvent(new Event('change', { bubbles: true }))
+  }
   applyPreferences(preferences, false)
   applyProductLocale()
   decorateTree()

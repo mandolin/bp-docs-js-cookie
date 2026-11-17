@@ -101,7 +101,7 @@ jobs:
           HIA_DOCS_OWNER_ROOT: ${{ github.workspace }}/.hia-docs-owners
         run: |
           mise exec node@24.22.1 -- node tools/hia-docs/build.mjs
-          mise exec node@24.22.1 -- node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs tools/hia-docs/sanitize.test.mjs
+          mise exec node@24.22.1 -- node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/public-locales.test.mjs tools/hia-docs/showcase.test.mjs tools/hia-docs/sanitize.test.mjs
           mise exec node@24.22.1 -- node tools/hia-docs/check.mjs
           mise exec node@24.22.1 -- node tools/hia-docs/check-determinism.mjs "${RUNNER_TEMP}/hia-docs-node22-fingerprint.json" "${RUNNER_TEMP}/hia-docs-node22-public-fingerprint.json"
           mise exec node@24.22.1 -- node tools/hia-docs/check-pages.mjs

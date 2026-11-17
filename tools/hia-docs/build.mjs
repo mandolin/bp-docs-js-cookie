@@ -37,6 +37,7 @@ import {
 } from './hub.mjs'
 import { materializePublicArtifact } from './public-artifact.mjs'
 import { materializePreferenceGuide } from './public-guide.mjs'
+import { materializeLocaleLandings } from './public-locales.mjs'
 import { sanitizeJsonFile } from './sanitize.mjs'
 
 /** @lang zh-CN 当前模块目录只用于推导 BP repository root，不进入公开产物。 @lang en Current module directory is used only to derive the BP repository root and never enters public artifacts. */
@@ -876,6 +877,8 @@ async function main() {
       repositoryRoot,
       publicRoot: topology.publicArtifactRoot
     })
+    // <lang><zh-CN>在独立指南加入后物化同一Portal的语言首页，确保静态副本含完整指南入口。</zh-CN><en>Materialize locale landings for the same Portal after adding the independent guide so every static alias retains its complete guide entries.</en></lang>
+    materializeLocaleLandings(topology.publicArtifactRoot)
     // <lang><zh-CN>publicationProfilePath 固定指向 public root 的发布 manifest，不带入宿主路径或生产事实。</zh-CN><en>PublicationProfilePath is fixed to the release manifest in the public root and introduces no host paths or production facts.</en></lang>
     const publicationProfilePath = path.join(
       topology.publicArtifactRoot,

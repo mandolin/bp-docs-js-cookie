@@ -9,6 +9,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { PUBLIC_PRODUCT_MESSAGES } from './public-messages.mjs'
 
 /** @lang zh-CN 当前工具目录只用于读取版本化产品资产，不会写入公开 manifest。 @lang en Current tool directory is used only to read versioned product assets and is never written to the public manifest. */
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url))
@@ -473,8 +474,13 @@ function resolvePublicHtmlRoute(publicRoot, route) {
   return candidatePath
 }
 
-/** @lang zh-CN HTML attribute/text 插值一律先编码，避免 manifest 值被解释为 markup。 @lang en HTML attribute/text interpolation is escaped so manifest values are never interpreted as markup. */
-function escapePublicHtml(value) {
+/**
+ * @lang zh-CN HTML属性和文本插值统一编码，供同一Portal的默认及静态语言页面复用。
+ * @lang en Escape HTML attributes and text consistently for the same Portal's neutral and static locale pages.
+ * @param {unknown} value <lang><zh-CN>转换为字符串后编码的显示值。</zh-CN><en>Display value converted to a string before encoding.</en></lang>
+ * @returns {string} <lang><zh-CN>编码&、尖括号和单双引号的文本。</zh-CN><en>Text with ampersands, angle brackets, and both quote types escaped.</en></lang>
+ */
+export function escapePublicHtml(value) {
   return String(value).replace(/[&<>"']/gu, (character) => {
     const entities = {
       '&': '&amp;',
@@ -958,7 +964,7 @@ function enhancePublicPortal(publicRoot) {
     )
     .replace(
       '</body>',
-      '<script>window.Prism=window.Prism||{};window.Prism.manual=true;</script><script defer src="assets/prism.js"></script><script defer src="assets/prism-line-numbers.js"></script><script defer src="assets/hia-public-product.js"></script></body>'
+      `<script type="application/json" data-hia-public-messages>${JSON.stringify(PUBLIC_PRODUCT_MESSAGES).replaceAll('<', '\\u003c')}</script><script>window.Prism=window.Prism||{};window.Prism.manual=true;</script><script defer src="assets/prism.js"></script><script defer src="assets/prism-line-numbers.js"></script><script defer src="assets/hia-public-product.js"></script></body>`
     )
 
   fs.writeFileSync(indexPath, html, 'utf8')

@@ -479,7 +479,7 @@ function checkWorkflow(workflow) {
   )
   assert(
     workflow.includes(
-      'node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/showcase.test.mjs'
+      'node --test tools/hia-docs/public-artifact.test.mjs tools/hia-docs/public-locales.test.mjs tools/hia-docs/showcase.test.mjs'
     ) &&
       workflow.includes('node tools/hia-docs/check.mjs') &&
       workflow.includes('node tools/hia-docs/check-determinism.mjs') &&

@@ -989,7 +989,7 @@ test('keeps explicit Portal locales across preferences, storage denial, and relo
         'write-denied',
         'noscript'
       ]) {
-        await withPage(
+        await scenario(
           width,
           async (page) => {
             // <lang><zh-CN>初始化脚本只伪造设备显示存储，不改文档DOM或正常语言处理器。</zh-CN><en>The init script models device display storage without changing document DOM or ordinary locale handlers.</en></lang>
@@ -1078,7 +1078,7 @@ test('returns every independent guide page to the matching Portal locale', async
       `guides/troubleshooting${suffix}.html`
     ]) {
       for (const noScript of [false, true]) {
-        await withPage(
+        await scenario(
           320,
           async (page) => {
             await page.goto(base + 'guides/first-party-preferences/' + route)

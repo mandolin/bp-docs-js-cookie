@@ -235,25 +235,20 @@ export function materializePreferenceGuide({ repositoryRoot, publicRoot }) {
     fs.writeFileSync(destinationFile, sourceBodies.get(relativeFile), 'utf8')
   }
 
-  // <lang><zh-CN>landingPath 是默认 Portal 的根首页；只允许唯一已确认 provenance section 作为稳定插入锚点。</zh-CN><en>LandingPath is the default Portal root page; only its unique confirmed provenance section is accepted as the insertion anchor.</en></lang>
-  const landingPath = path.join(artifactPath, 'index.html')
-  let landingHtml = fs.readFileSync(landingPath, 'utf8')
-  // <lang><zh-CN>guideEntryId 固定标识本次双语入口，重复执行或入口重叠时 fail closed。</zh-CN><en>GuideEntryId is the stable identity of this bilingual entry and fails closed on duplicate execution or overlap.</en></lang>
+  // <lang><zh-CN>中性与明确语言首页共享同一附加指南入口，先验证锚点再写入本轮产物。</zh-CN><en>Neutral and explicit locale landings share the same additive guide entry, validating its anchor before writing this build's output.</en></lang>
   const guideEntryId = 'hia-public-preference-guide'
-  if (landingHtml.includes(`id="${guideEntryId}"`)) {
-    throw new Error('Default Portal already contains the preference-guide entry.')
-  }
-  const provenanceStart = landingHtml.indexOf('<section aria-labelledby="hia-public-provenance"')
-  if (provenanceStart < 0 || landingHtml.indexOf('<section aria-labelledby="hia-public-provenance"', provenanceStart + 1) >= 0) {
-    throw new Error('Default Portal lacks one stable provenance section for guide navigation.')
-  }
-  // <lang><zh-CN>guideEntry 双语并列链接不依赖 JS locale runtime，无脚本时也能选择对应页面。</lang><en>GuideEntry presents both locale links without depending on the JS locale runtime, so readers can choose either page without scripts.</en></lang>
   const guideEntry = `<section id="${guideEntryId}" aria-labelledby="hia-public-preference-guide-title"><h2 id="hia-public-preference-guide-title">应用指南 / Integration guides</h2><p>按任务阅读访客语言与主题偏好流程；内容中的属性值均为说明模型。 / Follow the visitor language and theme preference flow; example attributes are illustrative only.</p><div class="hia-public-card-grid"><a class="hia-public-card" href="${GUIDE_PUBLIC_ROUTE}"><strong>访客语言与主题偏好</strong><p>中文指南：按步骤实现、恢复与清除显示偏好。</p></a><a class="hia-public-card" href="${GUIDE_PUBLIC_ROUTE}index.en.html" lang="en" hreflang="en"><strong>Visitor language and theme preferences</strong><p>English guide: implement, restore, and reset display preferences.</p></a></div></section>`
-  landingHtml = `${landingHtml.slice(0, provenanceStart)}${guideEntry}${landingHtml.slice(provenanceStart)}`
-  fs.writeFileSync(landingPath, landingHtml, 'utf8')
-
-  // <lang><zh-CN>只验证本次新增的首页入口片段，避免把 baseline B 既有应用链接策略纳入 guide 校验边界。</zh-CN><en>Validate only the newly added landing-entry fragment so baseline B's existing application-link policy stays outside the guide validation boundary.</en></lang>
-  validateLocalLinks(artifactPath, 'index.html', guideEntry)
+  for (const landingPage of ['index.html', 'index.en.html', 'index.zh-CN.html']) {
+    // <lang><zh-CN>三个首页由同一构建器生成，普通相对链接始终相对公开根解析。</zh-CN><en>All three landings come from the same builder, with ordinary relative links always resolved from the public root.</en></lang>
+    const landingPath = path.join(artifactPath, landingPage)
+    let landingHtml = fs.readFileSync(landingPath, 'utf8')
+    if (landingHtml.includes(`id="${guideEntryId}"`)) throw new Error('Default Portal already contains the preference-guide entry.')
+    const provenanceStart = landingHtml.indexOf('<section aria-labelledby="hia-public-provenance"')
+    if (provenanceStart < 0 || landingHtml.indexOf('<section aria-labelledby="hia-public-provenance"', provenanceStart + 1) >= 0) throw new Error('Default Portal lacks one stable provenance section for guide navigation.')
+    landingHtml = `${landingHtml.slice(0, provenanceStart)}${guideEntry}${landingHtml.slice(provenanceStart)}`
+    fs.writeFileSync(landingPath, landingHtml, 'utf8')
+    validateLocalLinks(artifactPath, landingPage, guideEntry)
+  }
   // <lang><zh-CN>htmlFiles 只列出新增 route 的六个页面；统一验证其回链、API 索引和 fragment 均在 Pages artifact 中可达。</zh-CN><en>HtmlFiles lists only the six pages on the added route and validates that their return links, API index, and fragments resolve in the Pages artifact.</en></lang>
   const htmlFiles = GUIDE_SOURCE_FILES.filter((relativeFile) => relativeFile.endsWith('.html')).map(
     (relativeFile) => `${GUIDE_PUBLIC_ROUTE}${relativeFile}`

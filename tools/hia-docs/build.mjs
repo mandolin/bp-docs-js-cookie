@@ -872,13 +872,13 @@ async function main() {
       ),
       publicRoot: topology.publicArtifactRoot
     })
+    // <lang><zh-CN>先提供同一Portal的明确语言首页，使指南复制时就能校验真实回链。</zh-CN><en>Provide explicit locale landings for the same Portal before guide copying so its real return links can be validated immediately.</en></lang>
+    materializeLocaleLandings(topology.publicArtifactRoot)
     // <lang><zh-CN>第一方偏好指南作为确认的附加 scope 加入同一 Pages artifact；baseline B 的 identity 与默认输出保持不变。</zh-CN><en>The first-party preference guide joins the same Pages artifact as a confirmed additional scope; baseline B identity and default output remain unchanged.</en></lang>
     const preferenceGuideScope = materializePreferenceGuide({
       repositoryRoot,
       publicRoot: topology.publicArtifactRoot
     })
-    // <lang><zh-CN>在独立指南加入后物化同一Portal的语言首页，确保静态副本含完整指南入口。</zh-CN><en>Materialize locale landings for the same Portal after adding the independent guide so every static alias retains its complete guide entries.</en></lang>
-    materializeLocaleLandings(topology.publicArtifactRoot)
     // <lang><zh-CN>publicationProfilePath 固定指向 public root 的发布 manifest，不带入宿主路径或生产事实。</zh-CN><en>PublicationProfilePath is fixed to the release manifest in the public root and introduces no host paths or production facts.</en></lang>
     const publicationProfilePath = path.join(
       topology.publicArtifactRoot,

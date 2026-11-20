@@ -995,7 +995,8 @@ test('keeps explicit Portal locales across preferences, storage denial, and relo
             // <lang><zh-CN>初始化脚本只伪造设备显示存储，不改文档DOM或正常语言处理器。</zh-CN><en>The init script models device display storage without changing document DOM or ordinary locale handlers.</en></lang>
             await page.addInitScript(
               ({ locale, mode }) => {
-                if (mode === 'denied') {
+                if (mode === 'malformed-english') localStorage.setItem('hia-doc-portal-ui-locale', 'en')
+          if (mode === 'denied') {
                   Object.defineProperty(window, 'localStorage', {
                     get() {
                       throw new DOMException(
@@ -1335,11 +1336,12 @@ test('homepage startup failures and disabled scripting retain static reading', a
 /** @lang zh-CN 默认、无效及拒绝存储的冷启动保持正文可见和稳定；与延迟脚本矩阵互补。 @lang en Cold starts with default, malformed or denied storage keep content visible and stable, complementing the delayed-script matrix. */
 test('homepage cold start tolerates absent malformed and denied preferences', async (t) => {
   for (const width of [1440, 1024, 390, 320]) {
-    for (const mode of ['default', 'malformed', 'denied']) {
+    for (const mode of ['default', 'malformed', 'malformed-english', 'denied']) {
       await scenario(width, async (page) => {
         await page.addInitScript((mode) => {
-          if (mode === 'malformed')
+          if (mode.startsWith('malformed'))
             localStorage.setItem('hia.bp-docs-js-cookie.display.v3', '{invalid')
+          if (mode === 'malformed-english') localStorage.setItem('hia-doc-portal-ui-locale', 'en')
           if (mode === 'denied')
             Object.defineProperty(Storage.prototype, 'getItem', {
               value() {
@@ -1363,6 +1365,7 @@ test('homepage cold start tolerates absent malformed and denied preferences', as
         await page.waitForTimeout(300)
         const geometry = await homepageGeometry(page)
         t.diagnostic(JSON.stringify({ width, mode, ...geometry }))
+        assert.equal(geometry.title, PUBLIC_PRODUCT_MESSAGES[mode === 'malformed-english' ? 'en' : 'zh-CN'].landingTitle)
         assert.equal(geometry.visible, true)
         assert.equal(geometry.opacity, 1)
         assert.ok(geometry.cls <= 0.01, `${width}/${mode}: CLS ${geometry.cls}`)

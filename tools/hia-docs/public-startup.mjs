@@ -67,9 +67,14 @@ function initializePublicPaint() {
     saved = JSON.parse(
       localStorage.getItem('hia.bp-docs-js-cookie.display.v3') || '{}'
     )
-    if (!locale) locale = localStorage.getItem('hia-doc-portal-ui-locale')
   } catch {
     /* <lang><zh-CN>拒绝存储不阻断阅读。</zh-CN><en>Denied storage does not block reading.</en></lang> */
+  }
+  // <lang><zh-CN>语言存储独立读取，损坏的显示偏好不得阻断有效语言。</zh-CN><en>Read locale storage independently so malformed display preferences cannot block a valid locale.</en></lang>
+  try {
+    if (!locale) locale = localStorage.getItem('hia-doc-portal-ui-locale')
+  } catch {
+    /* <lang><zh-CN>无权读取语言时保留静态语言。</zh-CN><en>Retain static language when locale reads are denied.</en></lang> */
   }
   if (!['zh-CN', 'en'].includes(locale))
     locale = root.lang === 'en' ? 'en' : 'zh-CN'

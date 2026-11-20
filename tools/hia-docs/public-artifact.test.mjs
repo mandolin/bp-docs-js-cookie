@@ -37,11 +37,12 @@ const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
  * @lang en Check first-paint closed sets, explicit-locale priority and real failure cleanup with a minimal DOM, without running product interactions.
  */
 test('first-paint bootstrap bounds stored preferences and releases temporary state', () => {
-  for (const denied of [false, true]) {
+  for (const mode of ['saved', 'denied', 'malformed']) {
+    const denied = mode === 'denied'
     /** @lang zh-CN 测试根节点模拟显式英文入口，存储中的中文不得覆盖它。 @lang en The test root models an explicit English route which stored Chinese must not override. */
     const root = {
-      lang: 'en',
-      dataset: { hiaPublicRouteLocale: 'en' },
+      lang: mode === 'malformed' ? 'zh-CN' : 'en',
+      dataset: mode === 'malformed' ? {} : { hiaPublicRouteLocale: 'en' },
       classList: { contains: () => true },
       setAttribute(name) {
         this[name] = true
@@ -70,6 +71,8 @@ test('first-paint bootstrap bounds stored preferences and releases temporary sta
       localStorage: {
         getItem(key) {
           if (denied) throw new Error('Denied')
+          if (mode === 'malformed')
+            return key.includes('display') ? '{invalid' : 'en'
           return key.includes('display')
             ? JSON.stringify({
                 contentWidth: 'wide',
@@ -100,8 +103,14 @@ test('first-paint bootstrap bounds stored preferences and releases temporary sta
       context
     )
     assert.equal(root.lang, 'en')
-    assert.equal(root.dataset.hiaContentWidth, denied ? 'comfortable' : 'wide')
-    assert.equal(root.dataset.hiaShowMetadata, denied ? 'hide' : 'show')
+    assert.equal(
+      root.dataset.hiaContentWidth,
+      mode === 'saved' ? 'wide' : 'comfortable'
+    )
+    assert.equal(
+      root.dataset.hiaShowMetadata,
+      mode === 'saved' ? 'show' : 'hide'
+    )
     assert.equal(root.dataset.hiaCodeFontSize, 'default')
     assert.equal(root['data-hia-public-starting'], true)
     assert.equal(root.dataset.arbitrary, undefined)

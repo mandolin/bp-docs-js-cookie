@@ -9,43 +9,10 @@
 ;(() => {
   /** @lang zh-CN 产品偏好的单一设备本地 key。 @lang en Sole device-local key for product preferences. */
   const storageKey = 'hia.bp-docs-js-cookie.display.v3'
-  /** @lang zh-CN 未找到有效设备偏好时使用的确认稿默认值。 @lang en Confirmed-baseline defaults used when no valid device preference exists. */
-  const defaults = Object.freeze({
-    siteTheme: 'light',
-    codeTheme: 'site',
-    codeFontSize: 'default',
-    codeWrap: 'scroll',
-    codeLines: 'show',
-    contentWidth: 'comfortable',
-    apiScope: 'public',
-    metadata: 'hide',
-    contract: 'show',
-    coverage: 'hide',
-    provenance: 'show',
-    relations: 'hide'
-  })
-  /** @lang zh-CN 每个偏好字段的 closed value set。 @lang en Closed value set for every preference field. */
-  const allowed = Object.freeze({
-    siteTheme: ['system', 'light', 'dark'],
-    codeTheme: [
-      'site',
-      'paper-light',
-      'midnight',
-      'solarized-light',
-      'solarized-dark',
-      'high-contrast'
-    ],
-    codeFontSize: ['small', 'default', 'large'],
-    codeWrap: ['scroll', 'wrap'],
-    codeLines: ['hide', 'show'],
-    contentWidth: ['comfortable', 'wide'],
-    apiScope: ['public', 'all'],
-    metadata: ['hide', 'show'],
-    contract: ['hide', 'show'],
-    coverage: ['hide', 'show'],
-    provenance: ['hide', 'show'],
-    relations: ['hide', 'show']
-  })
+  /** @lang zh-CN 首绘和交互使用构建器注入的同一偏好默认值及闭集。 @lang en First paint and interactions use the same builder-injected preference defaults and closed sets. */
+  const { defaults, allowed } = JSON.parse(
+    document.querySelector('[data-hia-public-preferences]').textContent
+  )
   /** @lang zh-CN 产品壳自身的最小双语词典；owner 全量 locale 治理由 W-P125 承担。 @lang en Minimal bilingual dictionary for this product shell; W-P125 owns full owner-locale adoption. */
   const messages = Object.freeze(
     JSON.parse(document.querySelector('[data-hia-public-messages]').textContent)
@@ -745,7 +712,11 @@
       pageHeading &&
       pageHeading.nextElementSibling !== mobileOutline
     ) {
-      pageHeading.after(mobileOutline)
+      // <lang><zh-CN>替换首绘占位而不额外插入目录高度；API异步页面仍复用原目录实例。</zh-CN><en>Replace the first-paint slot without adding outline height; asynchronous API pages still reuse the original outline instance.</en></lang>
+      const placeholder = pageHeading.nextElementSibling
+      if (placeholder?.hasAttribute('data-hia-public-outline-placeholder'))
+        placeholder.replaceWith(mobileOutline)
+      else pageHeading.after(mobileOutline)
     }
     /** @lang zh-CN 单次查询保留真实正文顺序，仅纳入owner小节与契约标题，移动目录自身不成为目录项。 @lang en One query retains actual document order and includes only owner sections and contract headings, excluding the mobile outline itself. */
     const candidates = (

@@ -1111,3 +1111,262 @@ test('returns every independent guide page to the matching Portal locale', async
     }
   }
 })
+
+/** @lang zh-CN 延迟真实产品脚本，核首绘可读内容和初始化完成后的几何及CLS，涵盖旧语言/显示偏好。 @lang en Delay the real product script and compare readable first-paint geometry with settled layout and CLS, including saved locale and display preferences. */
+test('homepage startup preserves painted geometry while product initialization is delayed', async (t) => {
+  for (const width of [1440, 1024, 390, 320]) {
+    for (const locale of ['zh-CN', 'en']) {
+      for (const kind of ['neutral', 'explicit']) {
+        await scenario(width, async (page) => {
+          await page.addInitScript(
+            ({ locale }) => {
+              localStorage.setItem('hia-doc-portal-ui-locale', locale)
+              localStorage.setItem(
+                'hia.bp-docs-js-cookie.display.v3',
+                JSON.stringify({
+                  contentWidth: 'wide',
+                  metadata: 'show',
+                  codeFontSize: 'large',
+                  codeWrap: 'wrap'
+                })
+              )
+              window.__homepageShifts = []
+              new PerformanceObserver((list) => {
+                for (const item of list.getEntries())
+                  if (!item.hadRecentInput)
+                    window.__homepageShifts.push({
+                      value: item.value,
+                      time: item.startTime
+                    })
+              }).observe({ type: 'layout-shift', buffered: true })
+            },
+            { locale }
+          )
+          // <lang><zh-CN>请求门保证页面真实绘制过初始化前状态，脚本正文来自正常产物。</zh-CN><en>The request gate guarantees an actual pre-initialization paint while script bytes come from ordinary output.</en></lang>
+          let release
+          let requested
+          const gate = new Promise((resolve) => {
+            release = resolve
+          })
+          const reached = new Promise((resolve) => {
+            requested = resolve
+          })
+          await page.route('**/assets/hia-public-product.js', async (route) => {
+            requested()
+            await gate
+            await route.continue()
+          })
+          try {
+            await page.goto(
+              base + (kind === 'explicit' ? `index.${locale}.html` : ''),
+              { waitUntil: 'commit' }
+            )
+            await reached
+            await page.locator('.hia-public-landing h1').waitFor()
+            await page.waitForTimeout(200)
+            const before = await homepageGeometry(page)
+            assert.equal(
+              before.title,
+              PUBLIC_PRODUCT_MESSAGES[locale].landingTitle
+            )
+            assert.ok(
+              before.boxes[0].width > 100 &&
+                before.opacity === 1 &&
+                before.visible
+            )
+            if (process.env.HIA_BP_CAPTURE_DIR)
+              await page.screenshot({
+                path: path.join(
+                  process.env.HIA_BP_CAPTURE_DIR,
+                  `startup-${width}-${locale}-${kind}-before.png`
+                )
+              })
+            release()
+            await page.waitForFunction(
+              () => !document.documentElement.classList.contains('no-js')
+            )
+            await page.waitForTimeout(300)
+            const after = await homepageGeometry(page)
+            if (process.env.HIA_BP_CAPTURE_DIR)
+              await page.screenshot({
+                path: path.join(
+                  process.env.HIA_BP_CAPTURE_DIR,
+                  `startup-${width}-${locale}-${kind}-ready.png`
+                )
+              })
+            t.diagnostic(JSON.stringify({ width, locale, kind, before, after }))
+            for (let index = 0; index < before.boxes.length; index += 1) {
+              for (const dimension of ['x', 'y', 'width', 'height'])
+                assert.ok(
+                  Math.abs(
+                    before.boxes[index][dimension] -
+                      after.boxes[index][dimension]
+                  ) < 1,
+                  `${width}/${locale}/${kind}: ${index}.${dimension}`
+                )
+            }
+            assert.ok(
+              after.cls <= 0.01,
+              `${width}/${locale}/${kind}: CLS ${after.cls}`
+            )
+          } finally {
+            release()
+          }
+        })
+      }
+    }
+  }
+})
+
+/** @lang zh-CN 读取真实首屏元素和标准最大会话窗口CLS，保持页面原文和布局。 @lang en Read actual first-screen elements and maximum-session-window CLS while preserving page text and layout. */
+async function homepageGeometry(page) {
+  return page.evaluate(() => {
+    const title = document.querySelector('.hia-public-landing h1')
+    const shifts = window.__homepageShifts || []
+    let score = 0
+    let current = 0
+    let start = 0
+    let previous = 0
+    for (const item of shifts) {
+      if (item.time - previous >= 1000 || item.time - start >= 5000) {
+        start = item.time
+        current = 0
+      }
+      current += item.value
+      previous = item.time
+      score = Math.max(score, current)
+    }
+    return {
+      title: title.textContent,
+      visible: getComputedStyle(title).visibility === 'visible',
+      opacity: Number(getComputedStyle(title).opacity),
+      boxes: [
+        '.hia-public-hero',
+        '.hia-public-landing h1',
+        '#hia-public-start-title'
+      ].map((selector) => {
+        const r = document.querySelector(selector).getBoundingClientRect()
+        return { x: r.x, y: r.y, width: r.width, height: r.height }
+      }),
+      cls: score
+    }
+  })
+}
+
+/** @lang zh-CN 真实拒载、抛错和禁脚本均恢复可读静态首页，不留下不可用交互或永久占位。 @lang en Actual blocked loads, exceptions and disabled scripts restore a readable static homepage without unusable interactions or permanent placeholders. */
+test('homepage startup failures and disabled scripting retain static reading', async (t) => {
+  for (const width of [1440, 1024, 390, 320]) {
+    for (const locale of ['zh-CN', 'en']) {
+      for (const mode of ['blocked', 'exception', 'no-script']) {
+        /** @lang zh-CN 故障注入使用独立上下文，预期异常单独验证而不放宽正常路径。 @lang en Fault injection uses an isolated context, checking expected exceptions separately without weakening normal paths. */
+        const context = await browser.newContext({
+          viewport: { width, height: 900 },
+          javaScriptEnabled: mode !== 'no-script'
+        })
+        const page = await context.newPage()
+        const errors = []
+        page.on('pageerror', (error) => errors.push(error.message))
+        try {
+          if (mode !== 'no-script')
+            await page.route('**/assets/hia-public-product.js', (route) =>
+              mode === 'blocked'
+                ? route.abort()
+                : route.fulfill({
+                    contentType: 'text/javascript',
+                    body: "throw new Error('Injected product startup failure')"
+                  })
+            )
+          await page.goto(base + `index.${locale}.html`)
+          await page.waitForFunction(
+            () =>
+              !document.documentElement.hasAttribute('data-hia-public-starting')
+          )
+          assert.equal(
+            await page.locator('.hia-public-landing h1').innerText(),
+            PUBLIC_PRODUCT_MESSAGES[locale].landingTitle
+          )
+          assert.equal(
+            await page.locator('.hia-public-landing h1').isVisible(),
+            true
+          )
+          assert.equal(
+            await page.locator('[data-hia-settings-open]').isVisible(),
+            false
+          )
+          assert.equal(
+            await page.locator('.hia-public-search-trigger').isVisible(),
+            false
+          )
+          assert.equal(
+            await page.locator('.hia-public-mobile-navigation').isVisible(),
+            true
+          )
+          assert.ok(
+            (await page
+              .locator('.hia-public-mobile-navigation a[href]')
+              .count()) > 0
+          )
+          assert.equal(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth
+            ),
+            true
+          )
+          assert.deepEqual(
+            errors,
+            mode === 'exception' ? ['Injected product startup failure'] : []
+          )
+          if (process.env.HIA_BP_CAPTURE_DIR && mode !== 'exception')
+            await page.screenshot({
+              path: path.join(
+                process.env.HIA_BP_CAPTURE_DIR,
+                `fallback-${width}-${locale}-${mode}.png`
+              )
+            })
+          t.diagnostic(JSON.stringify({ width, locale, mode, readable: true }))
+        } finally {
+          await context.close()
+        }
+      }
+    }
+  }
+})
+
+/** @lang zh-CN 默认、无效及拒绝存储的冷启动保持正文可见和稳定；与延迟脚本矩阵互补。 @lang en Cold starts with default, malformed or denied storage keep content visible and stable, complementing the delayed-script matrix. */
+test('homepage cold start tolerates absent malformed and denied preferences', async (t) => {
+  for (const width of [1440, 1024, 390, 320]) {
+    for (const mode of ['default', 'malformed', 'denied']) {
+      await scenario(width, async (page) => {
+        await page.addInitScript((mode) => {
+          if (mode === 'malformed')
+            localStorage.setItem('hia.bp-docs-js-cookie.display.v3', '{invalid')
+          if (mode === 'denied')
+            Object.defineProperty(Storage.prototype, 'getItem', {
+              value() {
+                throw new DOMException('Denied', 'SecurityError')
+              }
+            })
+          window.__homepageShifts = []
+          new PerformanceObserver((list) => {
+            for (const item of list.getEntries())
+              if (!item.hadRecentInput)
+                window.__homepageShifts.push({
+                  value: item.value,
+                  time: item.startTime
+                })
+          }).observe({ type: 'layout-shift', buffered: true })
+        }, mode)
+        await page.goto(base)
+        await page.waitForFunction(
+          () => !document.documentElement.classList.contains('no-js')
+        )
+        await page.waitForTimeout(300)
+        const geometry = await homepageGeometry(page)
+        t.diagnostic(JSON.stringify({ width, mode, ...geometry }))
+        assert.equal(geometry.visible, true)
+        assert.equal(geometry.opacity, 1)
+        assert.ok(geometry.cls <= 0.01, `${width}/${mode}: CLS ${geometry.cls}`)
+      })
+    }
+  }
+})

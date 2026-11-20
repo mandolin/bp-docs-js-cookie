@@ -1567,32 +1567,37 @@ body {
   flex: 0 0 auto;
 }
 
-html.no-js .hia-public-search-trigger,
-html.no-js .hia-public-mobile-search,
-html.no-js [data-hia-public-locale],
-html.no-js [data-hia-settings-open],
-html.no-js .hia-shell.hia-project-split-site > .hia-sidebar,
-html.no-js .hia-public-outline,
-html.no-js .hia-public-mobile-outline,
-html.no-js [data-hia-public-copy] {
+html.no-js:not([data-hia-public-starting]) .hia-public-search-trigger,
+html.no-js:not([data-hia-public-starting]) .hia-public-mobile-search,
+html.no-js:not([data-hia-public-starting]) [data-hia-public-locale],
+html.no-js:not([data-hia-public-starting]) [data-hia-settings-open],
+html.no-js:not([data-hia-public-starting])
+  .hia-shell.hia-project-split-site
+  > .hia-sidebar,
+html.no-js:not([data-hia-public-starting]) .hia-public-outline,
+html.no-js:not([data-hia-public-starting]) .hia-public-mobile-outline,
+html.no-js:not([data-hia-public-starting]) [data-hia-public-copy] {
   display: none !important;
 }
 
-html.no-js .hia-public-header {
+html.no-js:not([data-hia-public-starting]) .hia-public-header {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-html.no-js .hia-shell.hia-project-split-site {
+html.no-js:not([data-hia-public-starting]) .hia-shell.hia-project-split-site {
   display: block;
   max-width: none;
   min-height: 0;
 }
 
-html.no-js .hia-public-mobile-navigation {
+html.no-js:not([data-hia-public-starting]) .hia-public-mobile-navigation {
   display: block;
 }
 
-html.no-js .hia-public-mobile-navigation-host nav ul {
+html.no-js:not([data-hia-public-starting])
+  .hia-public-mobile-navigation-host
+  nav
+  ul {
   display: grid;
   gap: 0.45rem;
   list-style: none;
@@ -1600,7 +1605,9 @@ html.no-js .hia-public-mobile-navigation-host nav ul {
   padding: 0;
 }
 
-html.no-js .hia-public-mobile-navigation-host a {
+html.no-js:not([data-hia-public-starting])
+  .hia-public-mobile-navigation-host
+  a {
   color: var(--hia-accent);
 }
 
@@ -1954,6 +1961,26 @@ article[data-hia-public-api-topic],
 
 /* <lang zh-CN>加载期间保留面包屑行高并隐藏待定标签，正文就绪后一次呈现真实层级，防止插入API层导致可见跳动。</lang> <lang en>Reserve breadcrumb line height while hiding unresolved labels, then reveal the actual hierarchy with ready content, preventing shifts when the API level appears.</lang> */
 html[data-hia-public-entry-route] .hia-public-breadcrumb,
-.hia-public-content-column:has(> .hia-main > .hia-project-loading:not([role='alert'])) > .hia-public-breadcrumb {
+.hia-public-content-column:has(
+    > .hia-main > .hia-project-loading:not([role='alert'])
+  )
+  > .hia-public-breadcrumb {
+  visibility: hidden;
+}
+
+/* <lang><zh-CN>脚本首绘采用最终几何布局，尚未绑定的控件隐藏但保留空间；真实失败时恢复上述静态回退。</zh-CN><en>Scripted first paint uses final geometry; unbound controls are hidden while reserving space, with actual failures restoring the static fallback above.</en></lang> */
+html.no-js[data-hia-public-starting]
+  :is(
+    .hia-public-search-trigger,
+    .hia-public-mobile-search,
+    [data-hia-public-locale],
+    [data-hia-settings-open],
+    .hia-sidebar,
+    .hia-public-outline,
+    .hia-public-mobile-navigation,
+    .hia-public-mobile-outline,
+    [data-hia-public-copy]
+  ),
+[data-hia-public-outline-placeholder] {
   visibility: hidden;
 }

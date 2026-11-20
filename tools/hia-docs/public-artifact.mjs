@@ -10,6 +10,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PUBLIC_PRODUCT_MESSAGES } from './public-messages.mjs'
+import {
+  PUBLIC_PREFERENCES,
+  renderPublicPaintBootstrap
+} from './public-startup.mjs'
 
 /** @lang zh-CN 当前工具目录只用于读取版本化产品资产，不会写入公开 manifest。 @lang en Current tool directory is used only to read versioned product assets and is never written to the public manifest. */
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url))
@@ -757,6 +761,7 @@ function renderPublicLanding(setTopic, getTopic) {
     <div class="hia-public-hero-meta" data-hia-content-section="metadata"><span>JavaScript</span><span>v3.0.8</span><span>MIT</span><span data-hia-public-i18n="browser">浏览器</span></div>
     <div class="hia-public-hero-actions"><a class="hia-public-primary-action" href="#hia-public-start" data-hia-public-i18n="startCta">快速开始</a><a class="hia-public-secondary-action" href="#hia-public-api" data-hia-public-i18n="apiCta">浏览 API</a></div>
   </header>
+  <details class="hia-public-mobile-outline" data-hia-public-outline-placeholder aria-hidden="true" inert><summary data-hia-public-i18n="mobileOutline">本页目录</summary></details>
   <section aria-labelledby="hia-public-start-title">
     <h2 id="hia-public-start-title" data-hia-public-i18n="installTitle">安装</h2>
     <p data-hia-public-i18n="installIntro">使用包管理器安装，或从 ESM 入口导入。</p>
@@ -946,7 +951,7 @@ function enhancePublicPortal(publicRoot) {
     .replace('data-hia-scheme="system"', 'data-hia-scheme="light"')
     .replace(
       '</head>',
-      `<link rel="stylesheet" href="assets/hia-public-product.css">${renderPublicEntryBootstrap(projectIndex)}</head>`
+      `<link rel="stylesheet" href="assets/hia-public-product.css"><script type="application/json" data-hia-public-messages>${JSON.stringify(PUBLIC_PRODUCT_MESSAGES).replaceAll('<', '\\u003c')}</script><script type="application/json" data-hia-public-preferences>${JSON.stringify(PUBLIC_PREFERENCES)}</script>${renderPublicPaintBootstrap()}${renderPublicEntryBootstrap(projectIndex)}</head>`
     )
     .replace('<body>', `<body>${renderPublicHeader()}`)
     .replace(
@@ -964,7 +969,7 @@ function enhancePublicPortal(publicRoot) {
     )
     .replace(
       '</body>',
-      `<script type="application/json" data-hia-public-messages>${JSON.stringify(PUBLIC_PRODUCT_MESSAGES).replaceAll('<', '\\u003c')}</script><script>window.Prism=window.Prism||{};window.Prism.manual=true;</script><script defer src="assets/prism.js"></script><script defer src="assets/prism-line-numbers.js"></script><script defer src="assets/hia-public-product.js"></script></body>`
+      `<script>window.Prism=window.Prism||{};window.Prism.manual=true;</script><script defer src="assets/prism.js"></script><script defer src="assets/prism-line-numbers.js"></script><script defer src="assets/hia-public-product.js"></script></body>`
     )
 
   fs.writeFileSync(indexPath, html, 'utf8')

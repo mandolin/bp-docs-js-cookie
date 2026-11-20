@@ -13,6 +13,10 @@ import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
+import {
+  PUBLIC_PREFERENCES,
+  renderPublicPaintBootstrap
+} from './public-startup.mjs'
 
 import {
   PUBLICATION_BASELINE_ID,
@@ -27,6 +31,97 @@ import {
 const BUILD_COMMIT = '1234567890abcdef1234567890abcdef12345678'
 /** @lang zh-CN 当前测试模块目录用于读取将被原样发布的产品 runtime。 @lang en Current test-module directory is used to read the product runtime that is published verbatim. */
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * @lang zh-CN 用最小DOM核首绘闭集、显式语言优先与真实失败清理，不执行产品交互。
+ * @lang en Check first-paint closed sets, explicit-locale priority and real failure cleanup with a minimal DOM, without running product interactions.
+ */
+test('first-paint bootstrap bounds stored preferences and releases temporary state', () => {
+  for (const denied of [false, true]) {
+    /** @lang zh-CN 测试根节点模拟显式英文入口，存储中的中文不得覆盖它。 @lang en The test root models an explicit English route which stored Chinese must not override. */
+    const root = {
+      lang: 'en',
+      dataset: { hiaPublicRouteLocale: 'en' },
+      classList: { contains: () => true },
+      setAttribute(name) {
+        this[name] = true
+      },
+      removeAttribute(name) {
+        delete this[name]
+      }
+    }
+    /** @lang zh-CN 监听器集合证明成功/失败后均不保留临时观察。 @lang en The listener set proves temporary observation does not survive completion or failure. */
+    const listeners = new Map()
+    let disconnected = false
+    let notify
+    /** @lang zh-CN 只提供同步脚本实际需要的宿主能力。 @lang en Supply only the host capabilities actually needed by the synchronous script. */
+    const context = {
+      document: {
+        documentElement: root,
+        querySelector: (selector) => ({
+          textContent: JSON.stringify(
+            selector.includes('preferences')
+              ? PUBLIC_PREFERENCES
+              : { en: {}, 'zh-CN': {} }
+          )
+        }),
+        querySelectorAll: () => []
+      },
+      localStorage: {
+        getItem(key) {
+          if (denied) throw new Error('Denied')
+          return key.includes('display')
+            ? JSON.stringify({
+                contentWidth: 'wide',
+                metadata: 'show',
+                codeFontSize: 'untrusted',
+                arbitrary: 'x'
+              })
+            : 'zh-CN'
+        }
+      },
+      MutationObserver: class {
+        constructor(callback) {
+          notify = callback
+        }
+        observe() {}
+        disconnect() {
+          disconnected = true
+        }
+      },
+      ErrorEvent: class {},
+      window: {
+        addEventListener: (name, callback) => listeners.set(name, callback),
+        removeEventListener: (name) => listeners.delete(name)
+      }
+    }
+    runInNewContext(
+      renderPublicPaintBootstrap().replace(/^<script[^>]*>|<\/script>$/gu, ''),
+      context
+    )
+    assert.equal(root.lang, 'en')
+    assert.equal(root.dataset.hiaContentWidth, denied ? 'comfortable' : 'wide')
+    assert.equal(root.dataset.hiaShowMetadata, denied ? 'hide' : 'show')
+    assert.equal(root.dataset.hiaCodeFontSize, 'default')
+    assert.equal(root['data-hia-public-starting'], true)
+    assert.equal(root.dataset.arbitrary, undefined)
+    if (denied) {
+      root.classList.contains = () => false
+      notify()
+    } else {
+      listeners.get('error')({
+        target: { src: 'https://example.com/assets/prism.js' }
+      })
+      assert.equal(disconnected, false)
+      listeners.get('error')({
+        target: { src: 'https://example.com/assets/hia-public-product.js' }
+      })
+    }
+    assert.equal(disconnected, true)
+    assert.equal(root['data-hia-public-starting'], undefined)
+    assert.equal(listeners.size, 0)
+  }
+})
 
 /**
  * @lang zh-CN 模拟新版owner本地化标题，分别覆盖清空和保留未映射备注的分支。
